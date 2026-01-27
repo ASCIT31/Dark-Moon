@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # --- PROLOGUE OBLIGATOIRE ---
+export GOPROXY=direct
+export GOSUMDB=off
 set -euo pipefail
 # Empêche le téléchargement auto d'un toolchain Go différent
 export GOTOOLCHAIN=local
