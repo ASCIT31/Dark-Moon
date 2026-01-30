@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # --- PROLOGUE OBLIGATOIRE ---
-export GOPROXY=direct
-export GOSUMDB=off
+export GOPROXY="${GOPROXY:-https://proxy.golang.org,direct}"
+export GOSUMDB="${GOSUMDB:-sum.golang.org}"
+
 set -euo pipefail
 # Empêche le téléchargement auto d'un toolchain Go différent
 export GOTOOLCHAIN=local
@@ -287,6 +288,42 @@ if [ -x "$WAYBACKURLS_BIN" ]; then
 else
   warn "waybackurls KO (binaire introuvable)"
 fi
+
+# ------------------------------------------------------------------
+# 17) ---- Lightpanda — Headless Browser (latest stable release)
+# ------------------------------------------------------------------
+msg 'lightpanda (nightly) …'
+
+LIGHTPANDA_URL="https://github.com/lightpanda-io/browser/releases/download/nightly/lightpanda-x86_64-linux"
+TMP_LIGHTPANDA=/tmp/lightpanda
+
+if curl -fsSL "$LIGHTPANDA_URL" -o "$TMP_LIGHTPANDA"; then
+  chmod +x "$TMP_LIGHTPANDA"
+  install -D -m0755 "$TMP_LIGHTPANDA" /out/bin/lightpanda
+  ok 'lightpanda install (nightly)'
+else
+  echo "[WARN] lightpanda nightly unavailable → skipping"
+fi
+
+export LIGHTPANDA_DISABLE_TELEMETRY=true
+
+# ------------------------------------------------------------------
+# 18) ---- vulnx (cvemap) — DOC OFFICIELLE: go install
+# ------------------------------------------------------------------
+msg "vulnx …"
+
+GO111MODULE=on GOTOOLCHAIN=local \
+  go install github.com/projectdiscovery/cvemap/cmd/vulnx@latest
+
+VULNX_BIN="$(go env GOPATH)/bin/vulnx"
+
+if [ -x "$VULNX_BIN" ]; then
+  install -D -m0755 "$VULNX_BIN" "$BIN_OUT/vulnx"
+  ok "vulnx install (go install)"
+else
+  warn "vulnx KO (binaire introuvable)"
+fi
+
 
 # Récapitulatif et validation
 msg "Binaires installés dans $BIN_OUT :"

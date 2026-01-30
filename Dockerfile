@@ -4,7 +4,7 @@
 FROM golang:1.25.3-bookworm AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    GOTOOLCHAIN=auto \
+    GOTOOLCHAIN=local \
     GO111MODULE=on \
     GOWORK=off \
     GOPROXY=https://proxy.golang.org,direct \

@@ -99,6 +99,51 @@ fi
 log "Final agent directory content:"
 ls -la "$AGENTS_DIR"
 
+
+#######################################
+# OpenCode Markdown export watcher
+#######################################
+#######################################
+# Real-time Markdown watcher (inotify)
+#######################################
+
+SESSIONS_DIR="/root/.local/share/opencode/sessions"
+
+log "Preparing OpenCode sessions directory"
+mkdir -p "$SESSIONS_DIR"
+
+log "Starting real-time Markdown watcher (inotify on /)"
+
+inotifywait -m / \
+  -e create -e moved_to -e close_write \
+  --format '%w%f' |
+while read -r path; do
+  file="$(basename "$path")"
+
+  case "$file" in
+    *.md) ;;
+    *) continue ;;
+  esac
+
+  case "$path" in
+    /*.md) ;;
+    *) continue ;;
+  esac
+
+  src="$path"
+  dst="$SESSIONS_DIR/$file"
+
+  [ -f "$src" ] || continue
+
+  if [ -f "$dst" ]; then
+    ts=$(date '+%Y%m%d-%H%M%S')
+    dst="$SESSIONS_DIR/${file%.md}-$ts.md"
+  fi
+
+  log "Markdown detected → moving $src → $dst"
+  mv -f "$src" "$dst"
+done &
+
 #######################################
 # Start main process
 #######################################

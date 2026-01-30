@@ -46,6 +46,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     bash \
     docker.io \
+    inotify-tools \
  && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
@@ -103,7 +104,7 @@ ENV LANG=C.UTF-8
 COPY .env /root/.env
 RUN sed -i 's/\r$//' /root/.env
 
-RUN mkdir -p /root/.local/share/opencode/prompts \
+RUN mkdir -p /root/.local/share/opencode/sessions \
  && mkdir -p /root/.local/share/opencode/reports \
  && cat >> /root/.bashrc <<'EOF'
 
@@ -111,7 +112,7 @@ RUN mkdir -p /root/.local/share/opencode/prompts \
 # Darkmoon environment
 # ============================
 
-export opencode_PROMPT_DIR="$HOME/.local/share/opencode/prompts"
+export opencode_PROMPT_DIR="$HOME/.local/share/opencode/sessions"
 export opencode_REPORTS_DIR="$HOME/.local/share/opencode/reports"
 export PYTHONUNBUFFERED=1
 

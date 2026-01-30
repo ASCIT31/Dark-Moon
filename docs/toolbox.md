@@ -350,7 +350,8 @@ Voici **tous les outils réellement installés / présents dans l’image finale
 | `ffuf`                           | build Go (setup.sh)                          | `/out/bin/ffuf` (builder)                                               | /usr/local/bin/ |
 | `acl` (`setfacl`)                | `apt-get install acl`                        | `/usr/bin/setfacl`                                                      | Pour permissions par défaut `/opt/darkmoon/scripts`                            |
 | Subfinder | go install | énumération sous-domaines |
-
+| vulnx | go install | Modern CLI for exploring vulnerability |
+| lightpanda | téléchargé via lasted release | Lightpanda: the headless browser designed for AI and automation |
 
 
 ## “outils” installés par `pip install impacket==0.12.0` (scripts fournis par Impacket)

@@ -37,6 +37,8 @@ services:
       - ./darkmoon-settings:/root/.config/opencode/:rw
       - ./darkmoon-settings:/root/.local/share/opencode/:rw
       - ./darkmoon-settings/agents:/root/.opencode/agents/:rw
+      - ./reports:/root/.local/share/opencode/reports/:rw
+      - ./sessions:/root/.local/share/opencode/sessions/:rw
       - ./workflows:/opt/darkmoon/mcp/server/src/tools/workflows/:rw
 
     environment:

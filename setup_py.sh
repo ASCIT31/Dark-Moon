@@ -36,30 +36,25 @@ if [ ! -x "$PY_BIN" ]; then
 fi
 
 # Pas de cache, wheels manylinux quand dispo
-"$PIP_BIN" --version
+msg "Upgrade pip…"
+"$PIP_BIN" install --no-cache-dir --upgrade pip setuptools wheel
 
-# Pins raisonnables et compatibles 2025
-PIN_IMPACKET="==0.12.0"
-PIN_BLOODHOUND="==1.7.2"   # bloodhound (ingestor python)
+msg "Installation impacket (latest)…"
 
-msg "Installation impacket$PIN_IMPACKET …"
-"$PIP_BIN" install --no-cache-dir "impacket${PIN_IMPACKET}" && ok "impacket"
+"$PIP_BIN" install --no-cache-dir --prefer-binary \
+    impacket \
+    "ldap3<3" \
+    "pyasn1<0.6"
 
-msg "Installation bloodhound$PIN_BLOODHOUND …"
-"$PIP_BIN" install --no-cache-dir "bloodhound${PIN_BLOODHOUND}" && ok "bloodhound (ingestor)"
+"$PY_BIN" -c "import impacket"
+"$PIP_BIN" check
 
-# Wrappers pour impacket
-cat >"$BIN_OUT/impacket-smbclient" <<'EOF'
-#!/bin/sh
-exec /opt/darkmoon/python/bin/python3 -m impacket.smbclient "$@"
-EOF
-chmod +x "$BIN_OUT/impacket-smbclient"
+for bin in /opt/darkmoon/python/bin/impacket-*; do
+    [ -f "$bin" ] && ln -sf "$bin" "$BIN_OUT/"
+done
 
-cat >"$BIN_OUT/rpcdump.py" <<'EOF'
-#!/bin/sh
-exec /opt/darkmoon/python/bin/python3 -m impacket.examples.rpcdump "$@"
-EOF
-chmod +x "$BIN_OUT/rpcdump.py"
+ok "impacket latest installed"
+
 
 # netexec (ex-CrackMapExec) – utilise les binaires installés par pip (nxc / netexec)
 
