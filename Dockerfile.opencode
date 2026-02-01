@@ -27,6 +27,8 @@ COPY conf/tui/logo.tsx \
 COPY conf/tui/ui.ts \
      /app/packages/opencode/src/cli/ui.ts
 
+COPY conf/tui/app.tsx \
+     /app/packages/opencode/src/cli/cmd/tui/app.tsx
 
 ENV BUN_INSTALL_CACHE_DIR=/tmp/bun-cache
 RUN rm -rf ~/.bun /tmp/bun-cache
@@ -100,9 +102,6 @@ RUN chmod +x /usr/local/bin/opencode
 
 ENV TERM=xterm-256color
 ENV LANG=C.UTF-8
-
-COPY .env /root/.env
-RUN sed -i 's/\r$//' /root/.env
 
 RUN mkdir -p /root/.local/share/opencode/sessions \
  && mkdir -p /root/.local/share/opencode/reports \

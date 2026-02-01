@@ -18,7 +18,6 @@ AGENTS_DIR="/root/.opencode/agents"
 DEFAULT_AGENTS="/opt/darkmoon/default-agents"
 DEFAULT_WORKFLOWS="/opt/darkmoon/default-workflows"
 WORKFLOWS_DIR="/opt/darkmoon/mcp/server/src/tools/workflows/"
-ENV_FILE="/root/.env"
 OPENCODE_CONFIG_FILE="/root/.config/opencode/opencode.json"
 OPENCODE_AUTH_FILE="/root/.local/share/opencode/auth.json"
 APPLY_SCRIPT="/root/conf/apply-settings.sh"
@@ -27,7 +26,6 @@ APPLY_SCRIPT="/root/conf/apply-settings.sh"
 # Sanity checks
 #######################################
 [ -d "$DEFAULT_AGENTS" ] || fatal "Default agents dir missing: $DEFAULT_AGENTS"
-[ -f "$ENV_FILE" ] || fatal ".env not found at $ENV_FILE"
 
 #######################################
 # Prepare directories (bind-mount safe)
@@ -39,20 +37,17 @@ mkdir -p \
   "$(dirname "$OPENCODE_AUTH_FILE")"
 
 #######################################
-# Apply OpenCode config ONCE
+# Apply OpenCode config (ALWAYS)
 #######################################
-if [ ! -f "$OPENCODE_CONFIG_FILE" ]; then
-  log "Applying OpenCode configuration"
+log "Applying OpenCode configuration (forced)"
 
-  set -a
-  source "$ENV_FILE"
-  set +a
+log "Runtime environment variables available:"
+env | grep -E 'OPENROUTER_|OPENCODE_' || true
 
-  [ -x "$APPLY_SCRIPT" ] || fatal "Apply script not executable: $APPLY_SCRIPT"
+[ -x "$APPLY_SCRIPT" ] || fatal "Apply script not executable: $APPLY_SCRIPT"
 
-  "$APPLY_SCRIPT" || log "WARN: apply-settings failed (continuing)"
-else
-  log "OpenCode configuration already present"
+if ! "$APPLY_SCRIPT"; then
+  fatal "apply-settings failed"
 fi
 
 #######################################

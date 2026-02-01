@@ -44,3 +44,7 @@ services:
     environment:
       - TERM=xterm-256color
       - LANG=C.UTF-8
+      # 🔽 TEST runtime variables LLM conf
+      - OPENROUTER_PROVIDER=openai
+      - OPENCODE_MODEL=gpt-4o
+      - OPENROUTER_API_KEY=sk-svcacct-xxx

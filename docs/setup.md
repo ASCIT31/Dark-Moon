@@ -27,16 +27,18 @@ Les composants importants sont :
 
 ---
 
-## 3. Configuration du fichier `.env`
+## 3. Configuration des variables d'environement dans le docker compose
 
-Le fichier `.env` est **le point d’entrée de toute la configuration IA**.
+Le docker compose est **le point d’entrée de toute la configuration IA**.
 
-### Exemple de `.env`
+### Exemple de variable d'environement 
 
 ```env
-OPENROUTER_PROVIDER=anthropic
-OPENCODE_MODEL=claude-opus-4-5-20251101
-OPENROUTER_API_KEY=sk-xxxxxxxxxxxxxxxx
+    environment:
+      # 🔽 TEST runtime variables LLM conf
+      - OPENROUTER_PROVIDER=openai
+      - OPENCODE_MODEL=gpt-4o
+      - OPENROUTER_API_KEY=sk-svcacct-xxx
 ````
 
 ### Rôle des variables
@@ -55,7 +57,7 @@ OPENROUTER_API_KEY=sk-xxxxxxxxxxxxxxxx
 
 Au premier lancement, Darkmoon :
 
-1. lit le fichier `.env`,
+1. lit les variables`,
 2. génère automatiquement :
 
    * `opencode.json`,
@@ -71,7 +73,7 @@ conf/apply-settings.sh
 
 👉 Vous **n’avez rien à générer manuellement**.
 
-Vous pouvez faire le choix de ne pas remplir le fichier env, auxquel cas, le modèle d'opencode `opencode/big-pickle` par défaut sera exécuté
+Vous pouvez faire le choix de ne pas remplir les variables , auxquel cas, le modèle d'opencode `opencode/big-pickle` par défaut sera exécuté
 
 ---
 
