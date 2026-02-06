@@ -61,11 +61,11 @@ cat > "$OPENCODE_CONFIG_FILE" <<EOF
   "permission": { "*": "allow" },
 
   "agent": {
-    "fastcmp-pentest": {
+    "pentest-web": {
       "mode": "primary",
       "model": "$FINAL_MODEL",
       "mcp": ["darkmoon"],
-      "prompt_file": "/root/.opencode/agents/fastcmp-pentest.md"
+      "prompt_file": "/root/.opencode/agents/pentest-web.md"
     }
   }
 }
