@@ -62,10 +62,27 @@ cat > "$OPENCODE_CONFIG_FILE" <<EOF
 
   "agent": {
     "pentest-web": {
-      "mode": "primary",
       "model": "$FINAL_MODEL",
       "mcp": ["darkmoon"],
       "prompt_file": "/root/.opencode/agents/pentest-web.md"
+    },
+
+    "pentest-ad": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "prompt_file": "/root/.opencode/agents/pentest-ad.md"
+    },
+
+    "pentest-kubernetes": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "prompt_file": "/root/.opencode/agents/pentest-kubernetes.md"
+    },
+    
+    "pentest-network": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "prompt_file": "/root/.opencode/agents/pentest-network.md"
     }
   }
 }

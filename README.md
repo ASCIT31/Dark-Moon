@@ -112,16 +112,16 @@ Cela ouvre l’interface OpenCode (TUI ou CLI selon le contexte).
 Dans l’interface OpenCode, tapez :
 
 ```
-@
+/agent
 ```
 
 ➡️ OpenCode affiche la **liste des agents disponibles**
-(ex: `FastMCP Pentest Agent`, `pentest-web`, etc.)
+(ex: `pentest-ad`, `pentest-web`, etc.)
 
 Sélectionnez :
 
 ```
-@FastMCP Pentest Agent
+@pentest-ad
 ```
 
 ---
@@ -130,10 +130,72 @@ Sélectionnez :
 
 Une fois l’agent sélectionné, saisissez simplement :
 
+#### Pour Juice Shop
+
 ```
-@FastMCP Pentest Agent lance un test d'intrusion de bout en bout sur le domaine dark-moon.org
+lance un pentest sur http://juice-shop:3000 afin d’identifier des vulnérabilités,
+et réalise des attaques web telles que XSS, injection SQL, CSRF, XXE, contournement de l’authentification, etc.
+Tu peux extraire des informations sensibles. Utilise darkmoon mcp pour l’outillage offensif
+et mcp darkmoon (using lightpanda) pour naviguer sur la cible.
+
+pour cela, 
+
+tu dois d'abord découvrir les endpoint API avec katana et httpx avec ces commandes:
+
+httpx -mc 200,302 
+katana -aff -fx -jc -jsl -xhr -kf all -depth 5
+
+et ensuite une fois qur tu as les endpoint,tu vas tenter avec les endpoint trouvé de faire des attaques web telles que XSS, injection SQL, CSRF, XXE, contournement de l’authentification 
+
+obligatoirement 
+
+en utilisant la tolbox du MCP de darkmoon, décrit dans l'agent de pentest web
+
+ps: ne lance pas de scan de vuln, cette app n'en a pas
 ```
 
+#### Pour DVGA
+
+```
+ance un pentest sur l'application graphql http://dvga:5013 afin d’identifier des vulnérabilités,
+et réalise des attaques web telles que XSS, injection SQL, CSRF, XXE, contournement de l’authentification, etc.
+Tu peux extraire des informations sensibles. Utilise darkmoon mcp pour l’outillage offensif
+et mcp darkmoon (using lightpanda) pour naviguer sur la cible.
+
+pour cela, 
+
+tu dois d'abord découvrir les endpoint API avec katana et httpx avec ces commandes:
+
+httpx -mc 200,302 
+katana -aff -fx -jc -jsl -xhr -kf all -depth 5
+
+et ensuite une fois qur tu as les endpoint,tu vas tenter avec les endpoint trouvé de faire des attaques web telles que XSS, injection SQL, CSRF, XXE, contournement de l’authentification 
+
+voici le type d'attaque que tu dois obligatoirement réaliser (chainé, orchestré entres eux avec une logique de dépendance et de maillage d'attaque classique):
+
+-Introspection GraphQL (schema, type, types/fields/args).
+-Users loot (users { id username password/... }).
+-Pastes loot (pastes { id title content owner {...} }).
+-Audit logs (audits { id gqloperation gqlquery timestamp ... }).
+-XSS via mutations (createPaste/uploadPaste/editPaste/createUser + lecture du payload).
+-File/SSRF/LFI (importPaste, uploadPaste, chemins/hosts dangereux).
+-SQLi / logique sur recherches/filtres (search, filter, etc.).
+-JWT/Auth abuse (login, me(token), tokens forgés/invalides).
+-System* (systemDiagnostics, systemDebug, systemHealth, systemUpdate).
+-Logic/Authorization abuse (IDOR, mass-assignment, readAndBurn, owner/pastes).
+-DoS / complexité GraphQL (deep nesting, alias flooding, duplication).
+-RCE-like persistants (payloads shell stockés dans pastes).
+-Subscriptions / temps réel (/subscriptions, type Subscription).
+-Endpoints complémentaires (/solutions, /graphql, /graphiql, /audit, REST, etc.).
+
+obligatoirement 
+
+Tu exploites en priorité : 1) /graphql (+ éventuellement /graphiql, /subscriptions). 2) Endpoints découverts dans <recon> (REST, /solutions, /audit, etc.).
+Tu ne fais pas de bruteforce bourrin (login limité, tests intelligents).
+en utilisant la tolbox du MCP de darkmoon, décrit dans l'agent de pentest web
+
+ps: ne lance pas de scan de vuln, cette app n'en a pas
+```
 ---
 
 ### 🔹 Ce qu’il se passe automatiquement
@@ -157,15 +219,15 @@ Sans aucune autre action de votre part, l’agent va :
 ### 🔹 Exemple de prompts équivalents
 
 ```text
-@FastMCP Pentest Agent exécute un scan de vulnérabilité complet sur dark-moon.org
+exécute un scan de vulnérabilité complet sur dark-moon.org
 ```
 
 ```text
-@FastMCP Pentest Agent réalise un pentest web approfondi sur https://dark-moon.org
+réalise un pentest web approfondi sur https://dark-moon.org
 ```
 
 ```text
-@FastMCP Pentest Agent analyse la surface d’attaque publique du domaine dark-moon.org
+analyse la surface d’attaque publique du domaine dark-moon.org
 ```
 
 L’agent choisira **lui-même** :
