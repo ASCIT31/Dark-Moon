@@ -175,7 +175,7 @@ def list_allowed_tools() -> Dict[str, Any]:
 
     Categories:
     - Port scanners: naabu, masscan
-    - Web tools: httpx, nuclei, ffuf, dirb, wafw00f, sqlmap, arjun, finalrecon
+    - Web tools: httpx, nuclei, ffuf, dirb, wafw00f, sqlmap, arjun, finalrecon, lightpanda
     - Recon: subfinder, waybackurls, katana
     - DNS: dig, nslookup
     - Network: curl, wget, ping
@@ -192,7 +192,7 @@ def list_allowed_tools() -> Dict[str, Any]:
         "count": len(tools),
         "categories": {
             "port_scanners": ["naabu", "masscan"],
-            "web": ["httpx", "nuclei", "ffuf", "dirb", "wafw00f", "sqlmap", "arjun", "finalrecon"],
+            "web": ["httpx", "nuclei", "ffuf", "dirb", "wafw00f", "sqlmap", "arjun", "finalrecon", "lightpanda"],
             "recon": ["subfinder", "waybackurls", "katana"],
             "dns": ["dig", "nslookup"],
             "network": ["curl", "wget", "ping"],

@@ -27,6 +27,13 @@ class GenericExecutor:
             "sqlmap",
             "arjun",
             "finalrecon",
+            "lightpanda",
+            "bash",
+            "cat",
+            "chmod",
+            "node",
+            "npm",
+            "npx",
             # Recon
             "subfinder",
             "waybackurls",

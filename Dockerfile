@@ -114,41 +114,55 @@ ENV DEBIAN_FRONTEND=noninteractive \
     DM_HOME=/opt/darkmoon
 
 # ------------------------------------------------------------
-# Runtime OS dependencies
+# Runtime OS dependencies + Playwright Chromium deps
 # ------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # base runtime
-    ca-certificates tzdata bash dnsutils jq curl \
-    # libs runtime
+    ca-certificates tzdata bash dnsutils jq curl git \
+    \
+    # libs runtime générales
     libssl3 zlib1g libnghttp2-14 libidn2-0 libpsl5 \
     libkrb5-3 libssh2-1 libyaml-0-2 libreadline8 \
     libffi8 libgmp10 libncursesw6 libpcap0.8 \
     hydra snmp openssh-client inotify-tools \
-    # requis pour pip + git installs
-    git \
-    # requis pour compiler des wheels (arc4, etc.)
-    build-essential pkg-config \
-    # headers/libs souvent nécessaires à des wheels Python
-    libffi-dev libssl-dev \
+    \
+    # requis pour pip / wheels
+    build-essential pkg-config libffi-dev libssl-dev \
+    \
+    # dépendances Chromium / Playwright
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libgtk-3-0 \
  && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
-# Core artefacts copiés depuis builder
+# Node.js + Playwright (stable project install)
 # ------------------------------------------------------------
-# /out/bin/*                → Tous les binaires et wrappers (Go, Python, Ruby)
-# /out/seclists             → Wordlists SecLists
-# /out/nuclei-templates     → Templates Nuclei
-# /opt/darkmoon/python      → Python 3.12.6 custom compilé
-# /opt/darkmoon/ruby        → Ruby 3.3.5 custom compilé
-# /opt/darkmoon/curl        → libcurl custom compilé
-# /opt/darkmoon/finalrecon  → FinalRecon source
-# /opt/darkmoon/whatweb     → WhatWeb source
+WORKDIR /opt/darkmoon
+
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && npm init -y \
+ && npm install playwright \
+ && npx playwright install chromium \
+ && npm cache clean --force
+
+# ------------------------------------------------------------
+# Core artefacts copiés depuis builder
 # ------------------------------------------------------------
 COPY --from=builder /out /out
 COPY --from=builder /opt/darkmoon /opt/darkmoon
 
 # ------------------------------------------------------------
-# Environment runtime : PATH et library paths
+# Environment runtime
 # ------------------------------------------------------------
 ENV PATH="/opt/darkmoon/curl/bin:/opt/darkmoon/python/bin:/opt/darkmoon/ruby/bin:${PATH}" \
     LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:/opt/darkmoon/curl/lib:/opt/darkmoon/python/lib:/opt/darkmoon/ruby/lib"
@@ -171,19 +185,20 @@ ENV SECLISTS=/usr/share/seclists \
 # ------------------------------------------------------------
 # Binary and wrapper installations
 # ------------------------------------------------------------
-# Validation que /out/bin contient des binaires
 RUN test -d /out/bin || { echo "ERROR: /out/bin directory not found"; exit 1; } \
  && test "$(ls -A /out/bin 2>/dev/null)" || { echo "ERROR: /out/bin is empty"; exit 1; }
 
-# Binary installation Go/Python/Ruby in /usr/local/bin
 RUN for bin in /out/bin/*; do \
-      name="$(basename "$bin")"; \
-      install -m 755 "$bin" "/usr/local/bin/$name"; \
+      install -m 755 "$bin" "/usr/local/bin/$(basename "$bin")"; \
     done
 
-# Post-install validation
-RUN command -v nuclei >/dev/null || { echo "ERROR: nuclei not found in PATH"; exit 1; } \
- && command -v finalrecon >/dev/null || { echo "ERROR: finalrecon not found in PATH"; exit 1; }
+# ------------------------------------------------------------
+# Post-install validation minimale
+# ------------------------------------------------------------
+RUN command -v nuclei >/dev/null \
+ && command -v finalrecon >/dev/null \
+ && command -v node >/dev/null \
+ && node -e "require('playwright')"
 
 # ------------------------------------------------------------
 # Nuclei bootstrap
@@ -193,7 +208,7 @@ RUN mkdir -p /root/nuclei-templates \
  && nuclei -tl >/dev/null 2>&1 || true
 
 # ------------------------------------------------------------
-# Hardening 
+# Hardening
 # ------------------------------------------------------------
 RUN apt-get purge -y login passwd libpam* gnupg* apt || true \
  && rm -rf /etc/apt /var/lib/apt /var/cache/apt
