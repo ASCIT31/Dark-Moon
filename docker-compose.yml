@@ -13,6 +13,7 @@ services:
     user: "0:0"
     ports:
     - "9222:9222"
+    network_mode: "host"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/.kube:/root/.kube:ro

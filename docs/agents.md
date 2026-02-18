@@ -53,13 +53,22 @@ Un agent est un fichier Markdown structuré.
 
 ```markdown
 ---
-id: fastmcp-pentest
-name: FastMCP Pentest Agent
+id: pentest-web
+name: pentest-web
 description: Fully autonomous pentest agent
 ---
 
 You are an autonomous AI cybersecurity agent.
 ````
+
+### 3.1 Liste des agents
+
+Il existe 4 agents à ce jour:
+
+* `pentest-web` est l'agent dédié au pentest applicatif web, tente des attaques de type XSS,SQLi, SSRF, XXE etc.
+* `pentest-ad` est l'agent de pentest dédié au pentest d'infrastructure windows et active directory (ADDS, SMB, Windows etc).
+* `pentest-kubernetes` est l'agent de pentest dédié au pentest de surface d'attaque pour un cluster kubernetes.
+* `pentest-network` est l'agent de pentest dédié au attaques réseaux d'infrastructure (FTP, FTPS, SFTP, SSH, TELNET, SMTP, SNMP etc)
 
 ### Sections courantes
 
@@ -72,9 +81,9 @@ You are an autonomous AI cybersecurity agent.
 
 ---
 
-## 4. Exemple réel : FastMCP Pentest Agent
+## 4. Exemple réel : pentest-web
 
-L’agent `fastmcp-pentest` est :
+L’agent `pentest-web` est :
 
 * totalement autonome,
 * orienté pentest réel,
