@@ -4,6 +4,7 @@ Ce document décrit **l’architecture complète de Darkmoon**, ses composants, 
 et les **choix techniques assumés**.
 
 Public cible :
+
 - architectes
 - experts sécurité
 - reviewers techniques
@@ -31,12 +32,14 @@ Principe fondamental :
 ### 2.1 OpenCode (orchestrateur IA)
 
 Rôle :
+
 - gère les agents IA,
 - dialogue avec le LLM,
 - décide quelles actions exécuter,
 - appelle le MCP.
 
 Caractéristiques :
+
 - LLM agnostique (Anthropic, OpenAI, Mistral, etc.)
 - agents définis en **Markdown**
 - configuration dynamique (`opencode.json`)
@@ -46,11 +49,13 @@ Caractéristiques :
 ### 2.2 Agents IA (Markdown)
 
 Rôle :
+
 - définir la **stratégie offensive**,
 - imposer des règles strictes (autonomie, non-interactivité),
 - enchaîner les phases de pentest.
 
 Caractéristiques :
+
 - auditables (Markdown),
 - versionnables (Git),
 - modifiables sans rebuild,
@@ -61,11 +66,13 @@ Caractéristiques :
 ### 2.3 MCP Darkmoon (FastMCP)
 
 Rôle :
+
 - exposer des **fonctions sécurisées** à l’IA,
 - exécuter les outils **à sa place**,
 - orchestrer les workflows.
 
 Le MCP agit comme :
+
 - une **API interne contrôlée**,
 - une barrière de sécurité,
 - un point d’extension.
@@ -75,11 +82,13 @@ Le MCP agit comme :
 ### 2.4 Toolbox Darkmoon (Docker)
 
 Rôle :
+
 - contenir **les vrais outils de pentest**,
 - garantir reproductibilité et isolation,
 - fournir un environnement industriel.
 
 Caractéristiques :
+
 - image Docker dédiée,
 - outils compilés une seule fois,
 - runtime minimal,
@@ -90,6 +99,7 @@ Caractéristiques :
 ### 2.5 Docker & Volumes
 
 Rôle :
+
 - isoler les composants,
 - persister la configuration,
 - permettre la modification à chaud.
@@ -104,7 +114,7 @@ flowchart LR
     DarkmoonCLI --> OpenCode
     OpenCode --> MCP
     MCP -->|Docker API| Toolbox
-````
+```
 
 ---
 
@@ -167,9 +177,9 @@ Darkmoon impose **des frontières strictes** :
 
 👉 L’IA :
 
-* ne lance **jamais** de commandes système directement,
-* ne gère **jamais** Docker elle-même,
-* ne sort **jamais** de son périmètre.
+- ne lance **jamais** de commandes système directement,
+- ne gère **jamais** Docker elle-même,
+- ne sort **jamais** de son périmètre.
 
 ---
 
@@ -177,16 +187,16 @@ Darkmoon impose **des frontières strictes** :
 
 FastMCP est utilisé car :
 
-* protocole simple et explicite,
-* facile à auditer,
-* extensible,
-* compatible avec l’approche agentique.
+- protocole simple et explicite,
+- facile à auditer,
+- extensible,
+- compatible avec l’approche agentique.
 
 Il permet :
 
-* l’exposition de fonctions métiers,
-* la découverte dynamique de workflows,
-* le contrôle strict des entrées/sorties.
+- l’exposition de fonctions métiers,
+- la découverte dynamique de workflows,
+- le contrôle strict des entrées/sorties.
 
 ---
 
@@ -194,25 +204,25 @@ Il permet :
 
 Choix assumé :
 
-* **build lourd**,
-* **runtime minimal**.
+- **build lourd**,
+- **runtime minimal**.
 
 Avantages :
 
-* images plus petites,
-* moins de dépendances,
-* moins de surface d’attaque,
-* comportement stable.
+- images plus petites,
+- moins de dépendances,
+- moins de surface d’attaque,
+- comportement stable.
 
 ---
 
 ## 9. Pourquoi cette architecture est robuste
 
-* séparation claire des responsabilités,
-* aucune logique “magique”,
-* chaque couche est remplaçable,
-* aucun verrou fournisseur IA,
-* adaptée aux environnements sensibles.
+- séparation claire des responsabilités,
+- aucune logique “magique”,
+- chaque couche est remplaçable,
+- aucun verrou fournisseur IA,
+- adaptée aux environnements sensibles.
 
 ---
 
@@ -220,16 +230,16 @@ Avantages :
 
 Darkmoon est :
 
-* modulaire,
-* sécurisé,
-* extensible,
-* industriel.
+- modulaire,
+- sécurisé,
+- extensible,
+- industriel.
 
 Chaque composant :
 
-* a un rôle unique,
-* communique via des interfaces claires,
-* peut évoluer sans casser l’ensemble.
+- a un rôle unique,
+- communique via des interfaces claires,
+- peut évoluer sans casser l’ensemble.
 
 ---
 

@@ -1,487 +1,133 @@
-# 🌑 Darkmoon — Agentic AI Pentest Platform
+<center>
 
-Darkmoon est une **plateforme de pentest agentique basée sur l’IA**, conçue pour exécuter **de vrais tests d’intrusion**, de bout en bout, en combinant :
+![DarkMoon Logo](docs/pics/DARKMOON%20LOGOTYPE%20PRINCIPAL%20CHRYSLER%20RVB%20900PX%20W%2072PPI.png)
 
-- des **agents IA autonomes**,
-- un **serveur MCP sécurisé**,
-- une **toolbox Docker industrielle**,
-- et un **orchestrateur LLM agnostique**.
+A platform that allows you to conduct a complete penetration testing campaign
 
-> Une phrase → une campagne de pentest complète.
+</center>
 
----
+## Summary
 
-## 🚀 Pourquoi Darkmoon existe
+- [Summary](#summary)
+- [I. Preview](#i-preview)
+- [II. Prerequisites](#ii-prerequisites)
+  - [II.1. Dependencies](#ii1-dependencies)
+- [III. Architecture](#iii-architecture)
+  - [III.1. 🧠 Core Idea](#iii1--core-idea)
+  - [III.2. 🧩 Main Components (Who Does What)](#iii2--main-components-who-does-what)
+    - [III.2.a. 🧠 OpenCode — The Brain](#iii2a--opencode--the-brain)
+    - [III.2.b. 🤖 AI Agents — The Strategy Layer](#iii2b--ai-agents--the-strategy-layer)
+    - [III.2.c. 🔐 MCP Darkmoon — The Security Gatekeeper](#iii2c--mcp-darkmoon--the-security-gatekeeper)
+    - [III.2.d. 🧰 Darkmoon Toolbox — The Real Tools](#iii2d--darkmoon-toolbox--the-real-tools)
+    - [III.2.e. 🐳 Docker \& Volumes — Isolation and Persistence](#iii2e--docker--volumes--isolation-and-persistence)
+  - [III.3. 🔄 Execution Flow (Simple Overview)](#iii3--execution-flow-simple-overview)
+  - [III.4. 🔐 Security by Design](#iii4--security-by-design)
+  - [III.5. 🧱 Why This Architecture Is Robust](#iii5--why-this-architecture-is-robust)
+- [IV. Uses](#iv-uses)
+- [X. License](#x-license)
 
-Les outils de sécurité sont :
-- fragmentés,
-- manuels,
-- peu corrélés,
-- difficiles à industrialiser.
+## I. Preview
 
-Darkmoon répond à ce problème en proposant :
-- une **orchestration agentique**,
-- une **exécution réelle des outils**,
-- une **corrélation automatique des résultats**,
-- une **architecture reproductible et extensible**.
+[Back to Summary](#summary)
 
-Darkmoon **n’est pas** :
-- un simple scanner,
-- un wrapper d’outils,
-- un chatbot qui lance des commandes.
+## II. Prerequisites
 
-Darkmoon est une **chaîne d’exécution offensive complète**, pilotée par l’IA.
+### II.1. Dependencies
 
----
+[Back to Summary](#summary)
 
-## 🧠 Vue d’ensemble (simple)
+## III. Architecture
 
-1. L’utilisateur écrit un objectif :
-   > *“Exécute un scan de vulnérabilité sur example.com”*
+This document explains how Darkmoon is built, who is responsible for what, and why the architecture is robust. It avoids unnecessary low-level details while remaining technically clear.
 
-2. Un **agent IA** comprend la mission.
-3. Il appelle le **serveur MCP Darkmoon**.
-4. Le MCP exécute **de vrais outils** dans la toolbox Docker.
-5. Les résultats sont analysés.
-6. L’agent **enchaîne, exploite, itère**.
+**Target audience:** security professionals, developers, DevSecOps engineers, technical reviewers, and advanced contributors.
 
----
+[Back to Summary](#summary)
 
-## 🧩 Composants principaux
+### III.1. 🧠 Core Idea
 
-| Composant | Rôle |
-|---------|------|
-| **OpenCode** | Orchestrateur IA / agents |
-| **Agents Markdown** | Logique offensive autonome |
-| **MCP Darkmoon (FastMCP)** | Pont IA ↔ outils |
-| **Toolbox Docker** | Outils de pentest réels |
-| **Docker & volumes** | Isolation et persistance |
+Darkmoon is built around a strict and deliberate principle:
 
----
+> The AI never interacts directly with pentesting tools.
 
-## ⚡ Démarrage rapide
+The AI is responsible for reasoning, planning, and decision-making, but it does not execute anything itself. Every concrete action goes through a controlled intermediary layer. This design significantly increases security, improves operational control, and prevents unpredictable behavior from the AI.
 
-```bash
-docker compose build --no-cache
-docker compose up -d
-````
+[Back to Summary](#summary)
 
-Puis :
+### III.2. 🧩 Main Components (Who Does What)
 
-```bash
-chmod +x ./darkmoon.sh
-./darkmoon.sh
-```
+#### III.2.a. 🧠 OpenCode — The Brain
 
-ou
+OpenCode acts as the central orchestrator of the system. It communicates with the LLM, manages AI agents, determines the next actions to perform, and calls the MCP whenever a real-world action is required. Importantly, OpenCode never executes any pentesting tool directly. It strictly remains at the orchestration and reasoning level.
 
-```bash
-sudo mv ./darkmoon.sh /usr/local/bin/darkmoon
-sudo chmod 755 /usr/local/bin/darkmoon
-darkmoon
-```
+[Back to Summary](#summary)
 
-### 🧪 Lancer un test d’intrusion complet avec un agent IA
+#### III.2.b. 🤖 AI Agents — The Strategy Layer
 
-Darkmoon utilise **OpenCode** pour orchestrer des **agents IA spécialisés**.
-Les agents sont sélectionnables **directement dans l’interface** via `@`.
+AI agents are defined in Markdown files. Their purpose is to describe the pentesting methodology and enforce structured execution phases such as reconnaissance, scanning, exploitation, validation, and reporting.
 
----
+Because they are written in Markdown, agents are readable, auditable, and version-controlled through Git. They can be modified without rebuilding the entire project. This design ensures transparency and flexibility while maintaining strict behavioral constraints such as autonomy and non-interactivity.
 
-### 🔹 Principe
+[Back to Summary](#summary)
 
-* Chaque agent représente une **stratégie de pentest autonome**
-* Les agents sont définis en **Markdown**
-* Ils utilisent **exclusivement le MCP Darkmoon** pour exécuter de vrais outils
-* L’orchestration est **automatique, sans interaction humaine**
+#### III.2.c. 🔐 MCP Darkmoon — The Security Gatekeeper
 
----
+The MCP is the central security boundary of Darkmoon. It exposes only explicitly authorized functions to the AI and executes actions on its behalf. All inputs and outputs are strictly controlled and structured.
 
-### 🔹 Lancer Darkmoon (mode interactif)
+This means the AI can only perform operations that the MCP explicitly allows. The MCP effectively acts as an internal controlled API layer, ensuring that the AI never gains direct access to the system or execution environment.
 
-```bash
-darkmoon
-```
+[Back to Summary](#summary)
 
-Cela ouvre l’interface OpenCode (TUI ou CLI selon le contexte).
+#### III.2.d. 🧰 Darkmoon Toolbox — The Real Tools
 
----
+The Toolbox contains the actual pentesting tools and runs inside a dedicated Docker container. Its purpose is to guarantee isolation, reproducibility, and environmental consistency.
 
-### 🔹 Sélectionner un agent avec `@`
+Tools are compiled once and executed within a minimal runtime environment. This reduces dependencies, minimizes the attack surface, and ensures stable behavior across deployments.
 
-Dans l’interface OpenCode, tapez :
+[Back to Summary](#summary)
 
-```
-/agent
-```
+#### III.2.e. 🐳 Docker & Volumes — Isolation and Persistence
 
-➡️ OpenCode affiche la **liste des agents disponibles**
-(ex: `pentest-ad`, `pentest-web`, etc.)
+Docker is used to isolate system components from each other and from the host system. This reduces risk exposure and enforces strict runtime boundaries. Volumes allow configuration and data to persist while still enabling dynamic modifications without requiring full redeployment.
 
-Sélectionnez :
+[Back to Summary](#summary)
 
-```
-@pentest-ad
-```
+### III.3. 🔄 Execution Flow (Simple Overview)
 
----
+When a user submits a prompt, OpenCode analyzes the request and delegates the mission to an AI agent. The agent determines the appropriate strategy and, when an action is needed, calls a function exposed by the MCP. The MCP then executes the corresponding tool inside the Docker-based Toolbox. Results are returned to the MCP, passed back to the agent in structured form, and used to determine the next step or produce a final report. The entire flow remains controlled and traceable.
 
-### 🔹 Exemple : lancer un pentest de bout en bout
+[Back to Summary](#summary)
 
-Une fois l’agent sélectionné, saisissez simplement :
+### III.4. 🔐 Security by Design
 
-#### Pour Juice Shop
+Darkmoon enforces clear boundaries:
 
-```
-lance un pentest sur http://juice-shop:3000 afin d’identifier des vulnérabilités,
-et réalise des attaques web telles que XSS, injection SQL, CSRF, XXE, contournement de l’authentification, etc.
-Tu peux extraire des informations sensibles. Utilise darkmoon mcp pour l’outillage offensif
-et mcp darkmoon (using lightpanda) pour naviguer sur la cible.
+| From    | To      | Role             |
+| ------- | ------- | ---------------- |
+| Agent   | MCP     | Action control   |
+| MCP     | Toolbox | Secure execution |
+| Toolbox | Host    | Docker isolation |
 
-pour cela, 
+The AI does:
 
-tu dois d'abord découvrir les endpoint API avec katana et httpx avec ces commandes:
+- Never executes system commands
+- Never controls Docker
+- Never leaves its designated scope
 
-httpx -mc 200,302 
-katana -aff -fx -jc -jsl -xhr -kf all -depth 5
+[Back to Summary](#summary)
 
-et ensuite une fois qur tu as les endpoint,tu vas tenter avec les endpoint trouvé de faire des attaques web telles que XSS, injection SQL, CSRF, XXE, contournement de l’authentification 
+### III.5. 🧱 Why This Architecture Is Robust
 
-obligatoirement 
+The architecture is robust because responsibilities are clearly separated and there is no hidden or implicit logic. Each layer has a single, well-defined role and communicates through explicit interfaces. Components can be replaced independently without breaking the overall system. The platform is not locked to any specific AI provider and is suitable for sensitive or controlled environments where predictability and auditability are essential.
 
-en utilisant la tolbox du MCP de darkmoon, décrit dans l'agent de pentest web
+For a deeper understanding of how agents operate, see `docs/agents.md`.
 
-ps: ne lance pas de scan de vuln, cette app n'en a pas
-```
+[Back to Summary](#summary)
 
-#### Pour DVGA
+## IV. Uses
 
-```
-ance un pentest sur l'application graphql http://dvga:5013 afin d’identifier des vulnérabilités,
-et réalise des attaques web telles que XSS, injection SQL, CSRF, XXE, contournement de l’authentification, etc.
-Tu peux extraire des informations sensibles. Utilise darkmoon mcp pour l’outillage offensif
-et mcp darkmoon (using lightpanda) pour naviguer sur la cible.
+[Back to Summary](#summary)
 
-pour cela, 
-
-tu dois d'abord découvrir les endpoint API avec katana et httpx avec ces commandes:
+## X. License
 
-httpx -mc 200,302 
-katana -aff -fx -jc -jsl -xhr -kf all -depth 5
-
-et ensuite une fois qur tu as les endpoint,tu vas tenter avec les endpoint trouvé de faire des attaques web telles que XSS, injection SQL, CSRF, XXE, contournement de l’authentification 
-
-voici le type d'attaque que tu dois obligatoirement réaliser (chainé, orchestré entres eux avec une logique de dépendance et de maillage d'attaque classique):
-
--Introspection GraphQL (schema, type, types/fields/args).
--Users loot (users { id username password/... }).
--Pastes loot (pastes { id title content owner {...} }).
--Audit logs (audits { id gqloperation gqlquery timestamp ... }).
--XSS via mutations (createPaste/uploadPaste/editPaste/createUser + lecture du payload).
--File/SSRF/LFI (importPaste, uploadPaste, chemins/hosts dangereux).
--SQLi / logique sur recherches/filtres (search, filter, etc.).
--JWT/Auth abuse (login, me(token), tokens forgés/invalides).
--System* (systemDiagnostics, systemDebug, systemHealth, systemUpdate).
--Logic/Authorization abuse (IDOR, mass-assignment, readAndBurn, owner/pastes).
--DoS / complexité GraphQL (deep nesting, alias flooding, duplication).
--RCE-like persistants (payloads shell stockés dans pastes).
--Subscriptions / temps réel (/subscriptions, type Subscription).
--Endpoints complémentaires (/solutions, /graphql, /graphiql, /audit, REST, etc.).
-
-obligatoirement 
-
-Tu exploites en priorité : 1) /graphql (+ éventuellement /graphiql, /subscriptions). 2) Endpoints découverts dans <recon> (REST, /solutions, /audit, etc.).
-Tu ne fais pas de bruteforce bourrin (login limité, tests intelligents).
-en utilisant la tolbox du MCP de darkmoon, décrit dans l'agent de pentest web
-
-ps: ne lance pas de scan de vuln, cette app n'en a pas
-```
-
-#### Pour le headless (Exemple: DOM XSS) sur Juice Shop
-
-```
-Tu es un agent autonome de pentest web opérant exclusivement via un navigateur Chromium headless exécuté par Playwright **en tant que capacité MCP**.
-
-IMPORTANT — CONTRAT D’EXÉCUTION :
-- Playwright est déjà installé dans l’environnement
-- Le navigateur NE DOIT PAS être implémenté par toi
-- Toute interaction navigateur DOIT passer par l’exécution de scripts Playwright via MCP
-- Tu ne tentes JAMAIS d’installer Playwright, Node ou des dépendances
-- Tu n’implémentes PAS de moteur navigateur
-- Tu fournis des scripts Playwright complets à exécuter par MCP
-
-Cible unique et définitive :
-http://juice-shop:3000
-
-Contraintes absolues :
-- Navigation navigateur uniquement (Playwright)
-- Headless uniquement
-- Blackbox stricte
-- Aucun scan automatisé
-- Aucune connaissance préalable de l’application
-- Aucune liste d’endpoints ou de challenges en dur
-- Aucune interaction hors navigateur
-- Aucun bruteforce
-- Aucun outil de découverte HTTP externe
-- Aucun code backend
-- Aucun outil réseau hors navigateur
-
-Modèle d’action :
-- Tu pilotes un navigateur Chromium headless
-- Tu agis via des scripts Playwright complets (Node.js)
-- Chaque script peut :
-  - ouvrir un navigateur
-  - créer un contexte
-  - intercepter les dialogs JavaScript
-  - intercepter le trafic réseau
-  - exécuter du JavaScript dans la page
-  - naviguer dans la SPA
-- Le navigateur est considéré comme un humain automatisé
-
-Objectif global :
-Découvrir dynamiquement la surface d’attaque réelle exposée par le frontend (SPA), construire implicitement un graphe de navigation et d’interactions, identifier les failles exploitables uniquement via un navigateur moderne, et résoudre des challenges OWASP Juice Shop exploitables par abus client-side, logique UI, XSS et comportements JavaScript runtime.
-
-Méthodologie implicite (non verbalisée en étapes) :
-- Charger l’application cible
-- Observer le DOM, le JavaScript chargé et les routes SPA (#/)
-- Intercepter toutes les requêtes réseau initiées par le navigateur
-- Identifier dynamiquement les routes et fonctionnalités accessibles
-- Naviguer activement (clics, formulaires, navigation interne)
-- Injecter des payloads dans les points d’entrée découverts
-- Exploiter les failles visibles uniquement côté navigateur
-- Valider les succès via signaux applicatifs réels
-
-Surfaces à analyser prioritairement :
-- Recherche
-- Authentification / inscription
-- Panier
-- Feedback
-- Reviews
-- Profil utilisateur
-- Administration (si accessible)
-- Pages légales, privacy, about
-- Fonctionnalités cachées révélées par la SPA
-- Paramètres, langues, options
-- Tout composant manipulant des données utilisateur
-
-Types d’attaques autorisées (exclusivement via Playwright) :
-- DOM XSS
-- Reflected XSS
-- Persisted XSS
-- Bypass de protections client-side
-- Bypass CSP via navigation
-- Abus logique UI
-- Manipulation de paramètres frontend
-- Exposition d’informations client-side
-- Abus de session / JWT via navigateur
-- Exploitation de comportements Angular et JavaScript runtime
-
-Types d’attaques interdites :
-- SQL Injection backend
-- NoSQL Injection backend
-- XXE
-- SSRF
-- RCE backend
-- Bruteforce
-- Scans de vulnérabilités
-- Fuzzing massif hors navigateur
-
-Instrumentation Playwright obligatoire :
-- Chromium headless
-- Hooks `page.on('dialog')`
-- Interception des requêtes et réponses réseau
-- Analyse du DOM après chaque interaction
-- Exécution de JavaScript via `page.evaluate`
-- Navigation persistante dans un même contexte
-
-Validation des exploitations :
-- alert() déclenchée
-- DOM modifié
-- Comportement applicatif anormal
-- Vérification via endpoints accessibles depuis le navigateur (ex: /api/Challenges)
-
-Comportement attendu :
-- Découverte progressive
-- Raisonnement adaptatif
-- Attaques discrètes et plausibles
-- Enchaînement naturel des exploitations
-- Aucun arrêt tant que des surfaces exploitables existent
-
-RÈGLE CRITIQUE — DOM XSS :
-
-Toute tentative DOM XSS DOIT aller jusqu’à une exécution JavaScript observable.
-Une injection sans exécution (simple modification de logique UI, activation de bouton, ou modification statique du DOM) est considérée comme un échec.
-
-Une tentative DOM XSS n’est considérée comme réussie QUE si au moins un des événements suivants se produit :
-- Déclenchement d’un dialog JavaScript (alert, confirm, prompt)
-- Exécution de code JavaScript mesurable via `page.evaluate`
-- Déclenchement d’un événement Angular/JS lié au payload injecté
-
-Tant qu’aucune exécution JavaScript n’est observée, l’agent DOIT continuer à chercher, injecter et naviguer.
-
-PRIORITÉ OFFENSIVE :
-
-Parmi toutes les surfaces découvertes, l’agent DOIT prioriser les contextes suivants :
-1. Routes SPA avec paramètres reflétés (search, filters, query, hash)
-2. Contextes DOM manipulés par JavaScript runtime (Angular bindings, innerHTML, eval-like)
-3. Pages dont le comportement dépend du hash (#/) ou de paramètres client-side
-
-Si une surface DOM XSS potentielle est détectée, toute autre activité est suspendue jusqu’à confirmation ou invalidation par exécution JavaScript.
-
-BOUCLE DOM XSS OBLIGATOIRE (BLACKBOX) :
-
-Lorsqu’un point d’injection DOM est suspecté, l’agent DOIT :
-- Injecter plusieurs variantes de payloads DOM XSS
-- Recharger ou naviguer dynamiquement la vue concernée
-- Observer le DOM post-render
-- Surveiller les dialogs JavaScript
-- Répéter tant qu’aucune exécution JS n’est observée
-
-L’abandon d’un point DOM XSS n’est autorisé qu’après échec explicite de l’exécution JavaScript.
-
-Toutes les actions sont exécutées via l’infrastructure MCP Darkmoon en utilisant Playwright comme moteur navigateur.
-```
----
-
-### 🔹 Ce qu’il se passe automatiquement
-
-Sans aucune autre action de votre part, l’agent va :
-
-1. Construire une **cartographie de la cible**
-2. Lancer des **phases de reconnaissance**
-3. Exécuter des **scans de vulnérabilités**
-4. Enchaîner des **workflows MCP** (nuclei, recon, crawling, etc.)
-5. Exploiter si des failles sont détectées
-6. Corréler les résultats
-7. Itérer jusqu’à épuisement des vecteurs
-
-👉 **Aucune confirmation demandée**
-👉 **Aucune commande à écrire**
-👉 **Aucune orchestration manuelle**
-
----
-
-### 🔹 Exemple de prompts équivalents
-
-```text
-exécute un scan de vulnérabilité complet sur dark-moon.org
-```
-
-```text
-réalise un pentest web approfondi sur https://dark-moon.org
-```
-
-```text
-analyse la surface d’attaque publique du domaine dark-moon.org
-```
-
-L’agent choisira **lui-même** :
-
-* les workflows MCP à appeler,
-* les outils à exécuter,
-* l’ordre et la profondeur des attaques.
-
----
-
-### 🔹 Vérifier l’état de la toolbox (optionnel)
-
-Avant ou pendant une mission, vous pouvez demander :
-
-```
-exécute la fonction health_check
-```
-
-L’agent (ou OpenCode) appellera le MCP pour :
-
-* vérifier que la toolbox est prête,
-* lister les outils disponibles,
-* confirmer l’état global du système.
-
----
-
-### 🔹 Important à comprendre
-
-* Le langage utilisé est **du langage naturel**
-* Il n’y a **pas de syntaxe spéciale**
-* L’IA comprend l’intention, pas une commande
-
-👉 Vous **décrivez un objectif**, pas une procédure.
-
----
-
-### 🧠 Résumé rapide
-
-| Action                     | Résultat                    |
-| -------------------------- | --------------------------- |
-| `darkmoon`                 | Lance OpenCode              |
-| `@`                        | Liste les agents            |
-| `@FastMCP Pentest Agent …` | Lance un pentest complet    |
-| Langage naturel            | Orchestration automatique   |
-| MCP                        | Exécution réelle des outils |
-
-
----
-
-## 📁 Documentation complète
-
-👉 Toute la documentation détaillée est dans `/docs`.
-
-* [`docs/setup.md`](docs/setup.md)
-  Installation, configuration, lancement
-
-* [`docs/architecture.md`](docs/architecture.md)
-  Architecture détaillée + diagrammes Mermaid
-
-* [`docs/agents.md`](docs/agents.md)
-  Agents IA, règles, exemples
-
-* [`docs/mcp.md`](docs/mcp.md)
-  MCP Darkmoon, outils, workflows
-
-* [`docs/workflows.md`](docs/workflows.md)
-  Création et exécution des workflows
-
-* [`docs/rebuild-and-troubleshooting.md`](docs/rebuild-and-troubleshooting.md)
-  Rebuild propre, erreurs Docker, WSL
-
-* [`docs/security-threat-model.md`](docs/security-threat-model.md)
-  Threat model de Darkmoon lui-même
-
-* [`docs/contributing.md`](docs/contributing.md)
-  Guide contributeur
-
-* [`docs/toolbox.md`](docs/toolbox.md)
-  Documentation de la toolbox de Darkmoon
-
----
-
-## 🔐 Sécurité & philosophie
-
-* Aucun secret hardcodé
-* Isolation Docker stricte
-* Outils exécutés uniquement via MCP
-* LLM **agnostique**
-* Agents **auditables en Markdown**
-
----
-
-## 🧠 À qui s’adresse Darkmoon
-
-* Pentesters
-* Red Team
-* RSSI / CTO
-* Chercheurs sécurité
-* Équipes DevSecOps
-
----
-
-## 🌓 Conclusion
-
-Darkmoon est une **plateforme offensive agentique**, conçue pour :
-
-* penser comme un pentester,
-* agir comme une toolbox industrielle,
-* évoluer comme un framework IA moderne.
-
-Ce n’est pas une promesse marketing.
-C’est une **architecture complète, observable et extensible**.
+[Back to Summary](#summary)
