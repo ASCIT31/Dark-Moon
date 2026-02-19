@@ -1,103 +1,92 @@
 # 🤝 Contributing to Darkmoon
 
-Merci de votre intérêt pour Darkmoon.
+Thank you for your interest in Darkmoon.
 
-Ce document définit **les règles de contribution**, afin de garantir :
-- qualité,
-- sécurité,
-- maintenabilité.
+This document defines **the contribution guidelines** to ensure:
 
----
+- quality,
+- security,
+- maintainability.
 
-## 1. Philosophie du projet
+## 1. Project Philosophy
 
-Darkmoon est :
+Darkmoon is:
+
 - open-source,
-- orienté sécurité,
-- conçu pour être audité.
+- security-oriented,
+- designed to be auditable.
 
-Toute contribution doit :
-- être lisible,
-- être justifiée,
-- respecter l’architecture existante.
+Any contribution must:
 
----
+- be readable,
+- be justified,
+- respect the existing architecture.
 
-## 2. Types de contributions acceptées
+## 2. Accepted Contribution Types
 
-- nouveaux outils de pentest
-- nouveaux workflows MCP
-- améliorations d’agents
+- new pentesting tools
+- new MCP workflows
+- agent improvements
 - documentation
-- correctifs de sécurité
+- security fixes
 
----
+## 3. Adding a Tool
 
-## 3. Ajouter un outil
+### Where to Add It?
 
-### Où ajouter ?
+| Tool Type | File            |
+| --------- | --------------- |
+| Binary    | `setup.sh`      |
+| Python    | `setup_py.sh`   |
+| Ruby      | `setup_ruby.sh` |
 
-| Type d’outil | Fichier |
-|-----------|--------|
-| Binaire | `setup.sh` |
-| Python | `setup_py.sh` |
-| Ruby | `setup_ruby.sh` |
+Rules:
 
-Règles :
-- un outil = un bloc clair
-- validation obligatoire
-- installation propre
+- one tool = one clear block
+- mandatory validation
+- clean installation
 
----
+## 4. Adding an MCP Workflow
 
-## 4. Ajouter un workflow MCP
+1. Copy `mcp/src/tools/workflows/TEMPLATE.py`
+2. Implement coherent logic
+3. Structure the outputs
+4. Test locally
+5. Document it
 
-1. Copier `mcp/src/tools/workflows/TEMPLATE.py`
-2. Implémenter une logique cohérente
-3. Structurer les outputs
-4. Tester localement
-5. Documenter
+📄 See `mcp/WORKFLOW_GUIDE.md`
 
-📄 Voir `mcp/WORKFLOW_GUIDE.md`
+## 5. Adding or Modifying an Agent
 
----
+- agents = Markdown files
+- strict rules
+- MCP mandatory
+- no dangerous logic
 
-## 5. Ajouter ou modifier un agent
+👉 An agent is a **strategy**, not a script.
 
-- agents = Markdown
-- règles strictes
-- MCP obligatoire
-- pas de logique dangereuse
+## 6. Best Practices
 
-👉 Un agent est une **stratégie**, pas un script.
-
----
-
-## 6. Bonnes pratiques
-
-- ne pas casser la compatibilité
-- pas de “quick hacks”
-- penser sécurité avant performance
-- documenter toute décision
-
----
+- do not break compatibility
+- no “quick hacks”
+- prioritize security over performance
+- document every decision
 
 ## 7. Code of Conduct
 
 - respect
-- clarté
-- transparence
-- sécurité avant ego
-
----
+- clarity
+- transparency
+- security before ego
 
 ## 8. Conclusion
 
-Darkmoon est un projet sérieux.
+Darkmoon is a serious project.
 
-Si vous contribuez :
-- faites-le proprement,
-- faites-le lisiblement,
-- faites-le de manière responsable.
+If you contribute:
 
-Merci 🙏
+- do it cleanly,
+- do it clearly,
+- do it responsibly.
+
+Thank you 🙏

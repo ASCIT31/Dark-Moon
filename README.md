@@ -46,8 +46,8 @@ A platform that allows you to conduct a complete penetration testing campaign
     - [V.8.b. Method 2 — Before Build](#v8b-method-2--before-build)
   - [V.9. Best Practices](#v9-best-practices)
   - [V.10. Summary](#v10-summary)
-- [X. Contributing](#x-contributing)
-- [X. License](#x-license)
+- [VI. Contributing](#vi-contributing)
+- [VII. License](#vii-license)
 
 ## I. Preview
 
@@ -392,10 +392,14 @@ see `docs/workflows.md`
 
 [Back to Summary](#summary)
 
-## X. Contributing
+## VI. Contributing
+
+If you to contribute to the project, you access to the coding guideline at [CONTRIBUTING.md](CONTRIBUTING.md)
 
 [Back to Summary](#summary)
 
-## X. License
+## VII. License
+
+Code licensed under [GNU GPL v3](LICENSE)
 
 [Back to Summary](#summary)
