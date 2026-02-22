@@ -160,12 +160,12 @@ COPY conf/apply-settings.sh /root/conf/apply-settings.sh
 RUN sed -i 's/\r$//' /root/conf/apply-settings.sh \
  && chmod +x /root/conf/apply-settings.sh
 
-COPY conf/entrypoint.sh /entrypoint.sh
-RUN sed -i 's/\r$//' /entrypoint.sh \
- && chmod +x /entrypoint.sh
+COPY conf/entrypoint-opencode.sh /entrypoint-opencode.sh
+RUN sed -i 's/\r$//' /entrypoint-opencode.sh \
+ && chmod +x /entrypoint-opencode.sh
 
 # 🔒 Normalisation LF (CRLF Windows safe)
 RUN sed -i 's/\r$//' /root/.bashrc
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint-opencode.sh"]
 CMD ["bash"]

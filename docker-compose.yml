@@ -11,9 +11,19 @@ services:
       dockerfile: Dockerfile
     container_name: darkmoon
     user: "0:0"
-    ports:
-    - "9222:9222"
     network_mode: "host"
+
+    # GPU support (Compose v2 compatible)
+    gpus: all
+
+    environment:
+      - DM_MODE=default
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+    ports:
+      - "9222:9222"
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/.kube:/root/.kube:ro
@@ -21,8 +31,7 @@ services:
     cap_add:
       - NET_RAW
       - NET_ADMIN
-    environment:
-      - DM_MODE=default
+
     restart: unless-stopped
 
   opencode:

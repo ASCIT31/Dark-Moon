@@ -34,6 +34,7 @@ class GenericExecutor:
             "node",
             "npm",
             "npx",
+            "vulx",
             # Recon
             "subfinder",
             "waybackurls",
@@ -50,6 +51,7 @@ class GenericExecutor:
             "crackmapexec",
             "bloodhound-python",
             "impacket-smbclient",
+            "hashcat",
             # Kubernetes
             "kubectl",
             "kubeletctl",

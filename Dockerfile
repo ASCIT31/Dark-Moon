@@ -106,15 +106,15 @@ RUN git -c http.version=HTTP/1.1 clone --depth=1 --branch ${SECLISTS_REF} \
  && rm -rf ${OUT}/seclists/.git
 
 # ============================================================
-# STAGE 2 — RUNTIME
+# STAGE 2 — CUDA DEVEL (GPU + CPU fallback)
 # ============================================================
-FROM debian:bookworm-slim
+FROM nvidia/cuda:13.1.0-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     DM_HOME=/opt/darkmoon
 
 # ------------------------------------------------------------
-# Runtime OS dependencies + Playwright Chromium deps
+# Runtime OS dependencies
 # ------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # base runtime
@@ -141,7 +141,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     libpangocairo-1.0-0 \
     libgtk-3-0 \
+    \
+    # OpenCL loader
+    ocl-icd-libopencl1 \
+    opencl-headers \
+    \
+    # CPU OpenCL backend (fallback)
+    pocl-opencl-icd \
+    \
+    # tools
+    clinfo \
+    wget \
+    xz-utils \
+    p7zip-full \
  && rm -rf /var/lib/apt/lists/*
+
+# ------------------------------------------------------------
+# Install official hashcat (CUDA enabled build)
+# ------------------------------------------------------------
+RUN wget https://hashcat.net/files/hashcat-6.2.6.7z \
+ && 7z x hashcat-6.2.6.7z \
+ && mv hashcat-6.2.6 /opt/hashcat \
+ && ln -sf /opt/hashcat/hashcat.bin /usr/local/bin/hashcat \
+ && rm hashcat-6.2.6.7z
 
 # ------------------------------------------------------------
 # Node.js + Playwright (stable project install)
@@ -217,5 +239,10 @@ RUN mkdir -p /var/lib/dpkg \
  && : > /var/lib/dpkg/status \
  && rm -rf /var/lib/dpkg/info /var/lib/dpkg/updates
 
-ENTRYPOINT ["bash"]
-CMD ["-lc", "sleep infinity"]
+
+COPY conf/entrypoint-darkmoon.sh /entrypoint-darkmoon.sh
+RUN sed -i 's/\r$//' /entrypoint-darkmoon.sh \
+ && chmod +x /entrypoint-darkmoon.sh
+
+ENTRYPOINT ["/entrypoint-darkmoon.sh"]
+CMD ["bash","-lc", "sleep infinity"]
