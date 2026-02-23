@@ -34,7 +34,7 @@ class GenericExecutor:
             "node",
             "npm",
             "npx",
-            "vulx",
+            "vulnx",
             # Recon
             "subfinder",
             "waybackurls",

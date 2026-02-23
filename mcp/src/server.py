@@ -109,13 +109,12 @@ def diagnose() -> Dict[str, Any]:
 # GENERIC EXECUTOR (2 tools)
 # ============================================================================
 
-
 @mcp.tool()
 def execute_command(
     command: str,
     timeout: Optional[int] = 300,
     workdir: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> str:
     """
     Execute any whitelisted security tool command in the Darkmoon toolbox.
 
@@ -151,20 +150,40 @@ def execute_command(
 
     Note: Use list_allowed_tools() to see all available tools.
     """
+
     result = executor.execute(
         command=command,
         timeout=timeout,
         workdir=workdir,
     )
 
-    return {
-        "success": result.execution_result.success,
-        "stdout": result.raw_output,
-        "stderr": result.execution_result.stderr,
-        "exit_code": result.execution_result.exit_code,
-        "duration": result.execution_result.duration,
-    }
+    exit_code = result.execution_result.exit_code
+    duration = result.execution_result.duration
+    stdout = result.raw_output or ""
+    stderr = result.execution_result.stderr or ""
 
+    output = []
+    output.append("=" * 60)
+    output.append(f"COMMAND  : {command}")
+    output.append(f"EXIT CODE: {exit_code}")
+    output.append(f"DURATION : {duration:.2f}s")
+    output.append("=" * 60)
+    output.append("")
+
+    if stdout:
+        output.append("STDOUT:")
+        output.append(stdout.strip())
+        output.append("")
+
+    if stderr:
+        output.append("STDERR:")
+        output.append(stderr.strip())
+        output.append("")
+
+    if not stdout and not stderr:
+        output.append("[NO OUTPUT]")
+
+    return "\n".join(output)
 
 @mcp.tool()
 def list_allowed_tools() -> Dict[str, Any]:
@@ -282,7 +301,6 @@ def run_workflow(
         run_workflow("web_crawler", "crawl_website", {"target": "https://example.com"})
     """
     return workflow_registry.run_workflow(workflow, method, params)
-
 
 # ============================================================================
 # SERVER STARTUP
