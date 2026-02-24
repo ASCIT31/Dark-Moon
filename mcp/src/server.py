@@ -211,13 +211,13 @@ def list_allowed_tools() -> Dict[str, Any]:
         "count": len(tools),
         "categories": {
             "port_scanners": ["naabu", "masscan"],
-            "web": ["httpx", "nuclei", "ffuf", "dirb", "wafw00f", "sqlmap", "arjun", "finalrecon", "lightpanda"],
+            "web": ["httpx", "nuclei", "ffuf", "dirb", "wafw00f", "sqlmap", "arjun", "finalrecon", "lightpanda", "vulnx", "hydra"],
             "recon": ["subfinder", "waybackurls", "katana"],
             "dns": ["dig", "nslookup"],
             "network": ["curl", "wget", "ping"],
-            "ad_windows": ["netexec", "bloodhound-python", "impacket-smbclient"],
+            "ad_windows": ["netexec", "bloodhound-python", "smbclient.py", "hashcat", "Get-GPPPassword.py", "GetADComputer.py", "GetADUsers.py", "GetLAPSassword.py", "GetNPUsers.py", "GetUserSPNs.py", "ldapdomaindump.py", "smbclient.py", "smbexec.py", "smbserver.py", "findDelegation.py", "addcomputer.py", "exchanger.py", "raiseChild.py", "rdp-check.py", "registry-read.py", "regsecrets.py", "rpcdump.py", "rpcmap.py", "ticketConverter.py", "ticketer.py", "tstool.py", "owneredit.py", "ping.py", "psexec.py", "sambaPipe.py", "samedit.py", "samrdump.py", "sniff.py", "sniffer.py", "secretsdump.py", "snmpwalk", "dcomexec.py", "dpapi.py", "filetime.py", "getArch.py", "getPac.py", "getST.py", "getTGT.py", "goldenPac.py", "jp.py", "keylistattack.py", "lookupsid.py", "mimikatz.py", "minikerberos-asreproast", "minikerberos-ccache2kirbi", "minikerberos-ccacheedit", "minikerberos-ccacheroast", "minikerberos-cve202233647", "minikerberos-cve202233679", "minikerberos-getNTPKInit", "minikerberos-getS4U2proxy", "minikerberos-getS4U2self", "minikerberos-getTGS", "minikerberos-kerb23hashdecrypt", "minikerberos-kerberoast", "minikerberos-keylist", "minikerberos-kirbi2ccache", "minikerberos-pw", "mqtt_check.py", "mssqlclient.py", "mssqlinstance.py", "wmiexec.py", "wmipersist.py", "wmiquery.py", "changepasswd.py", "badsuccessor.py", "net.py", "netview.py", "ntfs-read.py", "ntmlrelayx.py",],
             "kubernetes": ["kubectl", "kubeletctl", "kubescape"],
-            "misc": ["jq", "grep", "awk", "sed"],
+            "misc": ["jq", "grep", "awk", "sed", "zip", "unzip",],
         },
     }
 
