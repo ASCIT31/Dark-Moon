@@ -131,7 +131,7 @@ chmod +x darkmoon.sh
 sudo cp darkmoon.sh /usr/local/bin/darkmoon
 ```
 
-### Lancer Darkmoon
+### Lancer Darkmoon avec la console TUI
 
 ```bash
 darkmoon
@@ -140,8 +140,64 @@ darkmoon
 Ou avec une commande directe :
 
 ```bash
-darkmoon "exécute un scan de vulnérabilité sur example.com"
+darkmoon "TARGET: mondomaine.com"
 ```
+
+### Visualiser les logs
+
+When executing the darkmoon TUI, the session initializes, to view the logs in real time, you must open a new additional bash console and type the command described in the chat of Darkmmon `./darkmoon.sh --log {{session_id}}`.
+
+
+```bash
+Let me start with that.
+I'll begin by initializing the session as required by the protocol.
+⚙ darkmoon_get_session 
+Thinking: Good, I have the session ID: c0d67d10. Now I need to display the monitoring command to the user as required.
+Session Initialized
+Monitoring Command:
+./darkmoon.sh --log c0d67d10
+Now I'll proceed with the vulnerability assessment. Let me first identify the target's technological landscape.
+```
+
+you will be able to view the logs in bash session in real time:
+
+
+
+```bash
+└─$ ./darkmoon.sh --log c0d67d10
+
+darkmoon(live)> streaming MCP output…
+[11:37:59] darkmoon> httpx -mc 200,302 -u https://dark-moon.org
+
+
+    __    __  __       _  __
+   / /_  / /_/ /_____ | |/ /
+  / __ \/ __/ __/ __ \|   /
+ / / / / /_/ /_/ /_/ /   |
+/_/ /_/\__/\__/ .___/_/|_|
+             /_/
+
+                projectdiscovery.io
+
+
+[11:37:59] darkmoon> katana -aff -fx -jc -jsl -xhr -kf all -depth 5 -u https://dark-moon.org
+
+
+   __        __
+  / /_____ _/ /____ ____  ___ _
+ /  '_/ _  / __/ _  / _ \/ _  /
+/_/\_\\_,_/\__/\_,_/_//_/\_,_/
+
+                projectdiscovery.io
+
+[INF] Current httpx version v1.8.1 (latest)
+[WRN] UI Dashboard is disabled, Use -dashboard option to enable
+[INF] Current katana version v1.4.0 (latest)
+
+^C
+darkmoon(live)> stopped.
+```
+
 
 ---
 

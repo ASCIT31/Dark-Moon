@@ -55,8 +55,8 @@ class GenericExecutor:
 	    "Get-GPPPassword.py",
 	    "GetADComputers.py",
 	    "GetADUsers.py",
-	    "GetLAPSPassword.py"
-	    "GetNPUsers.py"
+	    "GetLAPSPassword.py",
+	    "GetNPUsers.py",
 	    "GetUserSPNs.py",
 	    "ldapdomaindump",
             "smbclient.py",
@@ -189,6 +189,7 @@ class GenericExecutor:
         workdir: Optional[str] = None,
         environment: Optional[Dict[str, str]] = None,
         skip_validation: bool = False,
+        session_id: Optional[str] = None,
     ) -> ToolOutput:
         """
         Execute a generic command in the toolbox.
@@ -203,7 +204,7 @@ class GenericExecutor:
         Returns:
             ToolOutput with execution results
         """
-        # Validate command (unless explicitly skipped)
+        # Validate command
         if not skip_validation:
             is_valid, error_msg = self.validate_command(command)
             if not is_valid:
@@ -218,24 +219,28 @@ class GenericExecutor:
                     ),
                 )
 
-        # Execute command
+        # Execute command in Docker
         result = self.docker_client.execute_command(
             command=command,
             timeout=timeout or 300,
             workdir=workdir,
             environment=environment,
+            session_id=session_id,
         )
 
-        # Extract tool name from command
+        # Extract tool name
         try:
             tool_name = shlex.split(command)[0].split("/")[-1]
-        except:
+        except Exception:
             tool_name = "unknown"
 
         return ToolOutput(
             tool_name=tool_name,
             raw_output=result.stdout,
-            parsed_data={"command": command, "exit_code": result.exit_code},
+            parsed_data={
+                "command": command,
+                "exit_code": result.exit_code,
+            },
             execution_result=result,
         )
 

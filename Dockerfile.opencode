@@ -1,7 +1,7 @@
 # =========================
 # Stage 1 — Builder
 # =========================
-FROM oven/bun:1.3.9 AS builder
+FROM oven/bun:1.3.10 AS builder
 
 WORKDIR /app
 
@@ -96,6 +96,24 @@ RUN printf '%s\n' \
   'exec python -m src.server' \
   > /usr/local/bin/darkmoon-mcp \
  && chmod +x /usr/local/bin/darkmoon-mcp
+
+# ------------------------------------------------------------
+# Darkmoon CLI (Interactive Monitoring)
+# ------------------------------------------------------------
+
+# Install prompt_toolkit inside MCP venv
+RUN cd ${DM_MCP_HOME}/server \
+ && . .venv/bin/activate \
+ && pip install prompt_toolkit
+
+# Expose CLI as system binary
+RUN printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'cd /opt/darkmoon/mcp/server' \
+  'source .venv/bin/activate' \
+  'exec python -m src.mcp_monitoring' \
+  > /usr/local/bin/darkmoon-cli \
+ && chmod +x /usr/local/bin/darkmoon-cli
 
 COPY --from=builder /opencode-bin /usr/local/bin/opencode
 RUN chmod +x /usr/local/bin/opencode

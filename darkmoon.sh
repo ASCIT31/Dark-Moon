@@ -20,7 +20,21 @@ else
 fi
 
 # ------------------------------------------------------------
-# Command execution
+# --log mode (darkmoon-cli)
+# ------------------------------------------------------------
+if [[ "${1:-}" == "--log" ]]; then
+  if [[ $# -lt 2 ]]; then
+    echo "Usage: $0 --log <session_id>"
+    exit 1
+  fi
+
+  SESSION_ID="$2"
+
+  exec $DC exec $TTY_FLAGS "$SERVICE" bash -lc "darkmoon-cli \"$SESSION_ID\""
+fi
+
+# ------------------------------------------------------------
+# Default behaviour
 # ------------------------------------------------------------
 
 if [[ $# -eq 0 ]]; then

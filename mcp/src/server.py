@@ -10,6 +10,7 @@ Architecture:
 """
 
 import os
+import uuid
 from typing import Optional, Dict, Any
 from fastmcp import FastMCP
 
@@ -40,6 +41,25 @@ workflow_registry = WorkflowRegistry(docker_client)
 # HEALTH & DIAGNOSTICS (3 tools)
 # ============================================================================
 
+# ============================================================
+# SESSION MANAGEMENT
+# ============================================================
+
+# Generate a unique session ID when the MCP server starts
+SESSION_ID = uuid.uuid4().hex[:8]
+
+
+@mcp.tool()
+def get_session() -> Dict[str, str]:
+    """
+    Return the current MCP session ID.
+
+    This ID is generated automatically when the server starts.
+    It stays the same for the entire lifetime of the server.
+    """
+    return {
+        "session_id": SESSION_ID
+    }
 
 @mcp.tool()
 def health_check() -> Dict[str, Any]:
@@ -114,6 +134,7 @@ def execute_command(
     command: str,
     timeout: Optional[int] = 300,
     workdir: Optional[str] = None,
+    session_id: Optional[str] = None,  # NEW
 ) -> str:
     """
     Execute any whitelisted security tool command in the Darkmoon toolbox.
@@ -155,6 +176,7 @@ def execute_command(
         command=command,
         timeout=timeout,
         workdir=workdir,
+        session_id=session_id,   # pass through
     )
 
     exit_code = result.execution_result.exit_code

@@ -60,3 +60,6 @@ services:
       - OPENROUTER_PROVIDER=openai
       - OPENCODE_MODEL=gpt-4o
       - OPENROUTER_API_KEY=sk-svcacct-xxx
+
+    ports:
+      - "8765:8765"

@@ -61,29 +61,89 @@ cat > "$OPENCODE_CONFIG_FILE" <<EOF
   "permission": { "*": "allow" },
 
   "agent": {
-    "pentest-web": {
+    "pentest": {
       "model": "$FINAL_MODEL",
       "mcp": ["darkmoon"],
-      "prompt_file": "/root/.opencode/agents/pentest-web.md"
+      "primary": true,
+      "prompt_file": "/root/.opencode/agents/pentest.md"
     },
 
-    "pentest-ad": {
+    "active-directory": {
       "model": "$FINAL_MODEL",
       "mcp": ["darkmoon"],
-      "prompt_file": "/root/.opencode/agents/pentest-ad.md"
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/ad.md"
     },
 
-    "pentest-kubernetes": {
+    "aspnet": {
       "model": "$FINAL_MODEL",
       "mcp": ["darkmoon"],
-      "prompt_file": "/root/.opencode/agents/pentest-kubernetes.md"
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/aspnet.md"
     },
-    
-    "pentest-network": {
+
+    "python-flask": {
       "model": "$FINAL_MODEL",
       "mcp": ["darkmoon"],
-      "prompt_file": "/root/.opencode/agents/pentest-network.md"
-    }
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/flask.md"
+    },
+
+    "graphql": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/graphql.md"
+    },
+
+    "headless-browser": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/headless-browser.md"
+    },
+
+    "kubernetes": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/kubernetes.md"
+    },
+
+    "nest": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/nest.md"
+    },
+
+    "php": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/php.md"
+    },
+
+    "ruby-on-rails": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/ruby.md"
+    },
+
+    "springboot": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/springboot.md"
+    },
+
+    "nodejs": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/nodejs-express-angular.md"
+    },
   }
 }
 EOF
