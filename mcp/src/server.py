@@ -233,7 +233,7 @@ def list_allowed_tools() -> Dict[str, Any]:
         "count": len(tools),
         "categories": {
             "port_scanners": ["naabu", "masscan"],
-            "web": ["httpx", "nuclei", "ffuf", "dirb", "wafw00f", "sqlmap", "arjun", "finalrecon", "lightpanda", "vulnx", "hydra"],
+            "web": ["httpx", "nuclei", "ffuf", "dirb", "wafw00f", "sqlmap", "arjun", "finalrecon", "lightpanda", "vulnx", "hydra","whatweb"],
             "recon": ["subfinder", "waybackurls", "katana"],
             "dns": ["dig", "nslookup"],
             "network": ["curl", "wget", "ping"],
