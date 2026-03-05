@@ -144,6 +144,48 @@ cat > "$OPENCODE_CONFIG_FILE" <<EOF
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/nodejs-express-angular.md"
     },
+
+    "wordpress": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/wordpress.md"
+    },
+
+    "prestashop": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/prestashop.md"
+    },
+
+    "moodle": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/moodle.md"
+    },
+
+    "magento": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/magento.md"
+    },
+
+    "joomla": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/joomla.md"
+    },
+
+    "drupal": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/drupal.md"
+    },
   }
 }
 EOF

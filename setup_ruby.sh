@@ -37,3 +37,21 @@ chmod +x "$BIN_OUT/whatweb"
 test -x "$BIN_OUT/whatweb" || { echo "ERROR: whatweb wrapper not created"; exit 1; }
 
 ok "WhatWeb installed"
+
+# ------------------------------------------------------------
+# WPScan — DOC OFFICIELLE: gem install
+# ------------------------------------------------------------
+msg "Installing WPScan (Ruby)…"
+
+"$GEM_BIN" install wpscan --no-document
+
+# wrapper
+cat >"$BIN_OUT/wpscan" <<'EOF'
+#!/bin/sh
+exec /opt/darkmoon/ruby/bin/wpscan "$@"
+EOF
+chmod +x "$BIN_OUT/wpscan"
+
+test -x "$BIN_OUT/wpscan" || { echo "ERROR: wpscan wrapper not created"; exit 1; }
+
+ok "WPScan installed"

@@ -239,6 +239,28 @@ test -f "$FR_DIR/finalrecon.py" || { warn "finalrecon.py not found in $FR_DIR"; 
 ok "FinalRecon $FINALRECON_VERSION"
 
 # ------------------------------------------------------------
+# CMSeeK — DOC OFFICIELLE: git clone + requirements
+# ------------------------------------------------------------
+msg "Installation CMSeeK …"
+
+CMSEEK_DIR="/opt/darkmoon/cmseek"
+
+git clone --depth=1 https://github.com/Tuhinshubhra/CMSeeK "$CMSEEK_DIR"
+
+"$PIP_BIN" install --no-cache-dir -r "$CMSEEK_DIR/requirements.txt"
+
+# wrapper
+cat >"$BIN_OUT/cmseek" <<'EOF'
+#!/bin/sh
+exec /opt/darkmoon/python/bin/python3 /opt/darkmoon/cmseek/cmseek.py "$@"
+EOF
+chmod +x "$BIN_OUT/cmseek"
+
+test -x "$BIN_OUT/cmseek" || { warn "cmseek wrapper not created"; exit 1; }
+
+ok "CMSeeK installed"
+
+# ------------------------------------------------------------
 # Création des wrappers dans /out/bin (copiés dans runtime)
 # ------------------------------------------------------------
 msg "Création des wrappers Python…"

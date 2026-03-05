@@ -37,6 +37,8 @@ class GenericExecutor:
             "vulnx",
 	        "hydra",
             "whatweb",
+            "cmseek",
+            "wpscan",
             # Recon
             "subfinder",
             "waybackurls",
