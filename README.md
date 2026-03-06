@@ -104,8 +104,19 @@ A platform that allows you to conduct a complete penetration testing campaign
     - [VI.11.d CLOUD (AWS / AZURE / GCP / OVH)](#vi11d-cloud-aws--azure--gcp--ovh)
     - [VI.11.e IOT / EMBEDDED / SCADA / ICS](#vi11e-iot--embedded--scada--ics)
     - [VI.11.f MULTI-INFRA ORCHESTRATION (RARE \& CRITICAL)](#vi11f-multi-infra-orchestration-rare--critical)
-- [VII. Contributing](#vii-contributing)
-- [VIII. License](#viii-license)
+- [VII. MCP Workflows](#vii-mcp-workflows)
+  - [VII.1. What is an MCP Workflow?](#vii1-what-is-an-mcp-workflow)
+  - [VII.2. Where Workflows Live](#vii2-where-workflows-live)
+  - [VII.3. Dynamic Discovery](#vii3-dynamic-discovery)
+  - [VII.4. Workflow Structure](#vii4-workflow-structure)
+  - [VII.5. Example: Vulnerability Scan](#vii5-example-vulnerability-scan)
+  - [VII.6. Called by an Agent](#vii6-called-by-an-agent)
+  - [VII.7. Advantages of Workflows](#vii7-advantages-of-workflows)
+  - [VII.8. Creating a New Workflow](#vii8-creating-a-new-workflow)
+  - [VII.9. Best Practices](#vii9-best-practices)
+  - [VII.10. Summary](#vii10-summary)
+- [VIII. Contributing](#viii-contributing)
+- [IX. License](#ix-license)
 
 # I. Preview
 
@@ -789,7 +800,7 @@ Darkmoon agents:
 They form **the strategic brain** of the platform.
 
 > [!NOTE]
-> To understand how agents execute actions, see [workflows.md](docs/workflows.md)
+> To understand how agents execute actions, see [MCP Workflows](#vii-mcp-workflows)
 
 [Back to Summary](#summary)
 
@@ -1289,13 +1300,155 @@ These scripts are installed as commands in `/opt/darkmoon/python/bin/` (so in th
 
 [Back to Summary](#summary)
 
-# VII. Contributing
+# VII. MCP Workflows
+
+This document explains **what MCP workflows are**, how they work, and
+how to create new ones.
+
+Target audience:
+
+- developers
+- advanced pentesters
+- contributors
+
+[Back to Summary](#summary)
+
+## VII.1. What is an MCP Workflow?
+
+A workflow is:
+
+- a **Python module**,
+- exposed by the MCP,
+- that encapsulates a **coherent sequence of actions**,
+- executed inside the Docker toolbox.
+
+> [!NOTE]
+> A workflow = a complete operational task.
+
+[Back to Summary](#summary)
+
+## VII.2. Where Workflows Live
+
+Workflows are located in:
+
+```
+mcp/src/tools/workflows/
+```
+
+Examples:
+
+- `port_scan.py`
+- `vulnerability_scan.py`
+- `web_crawler.py`
+
+[Back to Summary](#summary)
+
+## VII.3. Dynamic Discovery
+
+At startup:
+
+- the MCP automatically scans workflows,
+- exposes their methods,
+- makes them accessible to the AI.
+
+> [!TIP]
+> No manual registration required.
+
+[Back to Summary](#summary)
+
+## VII.4. Workflow Structure
+
+Each workflow:
+
+- inherits from `BaseWorkflow`,
+- defines one or more methods,
+- manages its timeouts,
+- structures its results.
+
+[Back to Summary](#summary)
+
+## VII.5. Example: Vulnerability Scan
+
+The `VulnerabilityScanWorkflow`:
+
+- creates a dedicated workspace,
+- runs Nuclei,
+- parses JSON results,
+- correlates findings by severity,
+- returns a structured summary.
+
+> [!IMPORTANT]
+> This is not just a tool call. It is **complete operational logic**.
+
+[Back to Summary](#summary)
+
+## VII.6. Called by an Agent
+
+An agent can call:
+
+```
+run_workflow("vulnerability_scan", "scan_vulnerabilities", {...})
+```
+
+The agent:
+
+- chooses the appropriate workflow,
+- decides when to execute it,
+- interprets the results.
+
+[Back to Summary](#summary)
+
+## VII.7. Advantages of Workflows
+
+- reusable
+- testable
+- auditable
+- safer than raw command execution
+
+[Back to Summary](#summary)
+
+## VII.8. Creating a New Workflow
+
+1.  Copy `TEMPLATE.py`
+2.  Implement the logic
+3.  Respect the structure
+4.  Test locally
+5.  Restart the MCP
+
+> [!TIP]
+> For detailed guide, see [WORKFLOW_GUIDE.md](/mcp/WORKFLOW_GUIDE.md)
+
+[Back to Summary](#summary)
+
+## VII.9. Best Practices
+
+- One workflow = one mission
+- Avoid mixing too many responsibilities
+- Always structure outputs
+- Handle timeouts properly
+
+[Back to Summary](#summary)
+
+## VII.10. Summary
+
+Workflows:
+
+- are the operational backbone of Darkmoon,
+- encapsulate offensive logic,
+- secure the execution of tools.
+
+> [!NOTE]
+> To understand the MCP itself, see [mcp.md](/docs/mcp.md)
+
+[Back to Summary](#summary)
+
+# VIII. Contributing
 
 If you to contribute to the project, you access to the coding guideline at [CONTRIBUTING.md](CONTRIBUTING.md)
 
 [Back to Summary](#summary)
 
-# VIII. License
+# IX. License
 
 Code licensed under [GNU GPL v3](LICENSE)
 
