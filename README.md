@@ -24,9 +24,9 @@ A platform that allows you to conduct a complete penetration testing campaign
     - [IV.2.d. 🧰 Darkmoon Toolbox — The Real Tools](#iv2d--darkmoon-toolbox--the-real-tools)
     - [IV.2.e. 🐳 Docker \& Volumes — Isolation and Persistence](#iv2e--docker--volumes--isolation-and-persistence)
   - [IV.3. 🔄 Execution Flow (Simple Overview)](#iv3--execution-flow-simple-overview)
-    - [IV.3.a Diagramme de déploiement (Mermaid)](#iv3a-diagramme-de-déploiement-mermaid)
-    - [IV.3.b Diagramme de flux réseau](#iv3b-diagramme-de-flux-réseau)
-    - [IV.3.c Diagramme d’activité — Pentest end-to-end](#iv3c-diagramme-dactivité--pentest-end-to-end)
+    - [IV.3.a Deployment diagram](#iv3a-deployment-diagram)
+    - [IV.3.b Network flow diagram](#iv3b-network-flow-diagram)
+    - [IV.3.c Activity diagram — End-to-end penetration testing](#iv3c-activity-diagram--end-to-end-penetration-testing)
   - [IV.4. 🔐 Security by Design](#iv4--security-by-design)
   - [IV.5. 🧱 Why This Architecture Is Robust](#iv5--why-this-architecture-is-robust)
 - [V. 🤖 AI Agents](#v--ai-agents)
@@ -141,7 +141,7 @@ When a user submits a prompt, OpenCode analyzes the request and delegates the mi
 
 [Back to Summary](#summary)
 
-#### IV.3.a Diagramme de déploiement (Mermaid)
+#### IV.3.a Deployment diagram
 
 This diagram illustrates the overall architecture and data flow of the system. The User interacts with the platform through a command-line interface or prompt sent to DarkmoonCLI. This interface forwards the request to OpenCode, which acts as the orchestration layer responsible for managing AI-driven tasks. OpenCode communicates with MCP (Model Context Protocol) to access external capabilities. MCP then interacts with the Toolbox, a collection of tools executed through the Docker API, allowing isolated and reproducible execution environments. This layered architecture separates the user interface, AI orchestration, tool abstraction, and actual execution of security tools.
 
@@ -155,7 +155,7 @@ flowchart LR
 
 [Back to Summary](#summary)
 
-#### IV.3.b Diagramme de flux réseau
+#### IV.3.b Network flow diagram
 
 This sequence diagram describes the step-by-step interaction between the user, the AI system, and the execution environment. The process begins when the User submits a prompt to OpenCode. OpenCode delegates the task to an AI Agent, which determines the appropriate actions to perform. The agent calls a function exposed through MCP Darkmoon, which serves as a standardized interface to external tools. MCP then triggers the execution of a real tool inside the Docker Toolbox. Once the tool finishes its execution, the results are returned to MCP, which formats them into a structured output. The AI agent analyzes these results to decide the next action or produce a conclusion. Finally, OpenCode delivers a summarized result back to the user.
 
@@ -179,7 +179,7 @@ sequenceDiagram
 
 [Back to Summary](#summary)
 
-#### IV.3.c Diagramme d’activité — Pentest end-to-end
+#### IV.3.c Activity diagram — End-to-end penetration testing
 
 This diagram represents the logical workflow followed by the AI agent during an automated security testing process. The workflow starts when a user prompt triggers the AI Agent, which initiates a reconnaissance phase to gather information about the target system. The process then moves to automated scanning, where vulnerabilities are searched using automated tools. If potential weaknesses are discovered, the agent attempts targeted exploitation to verify their existence. The impact validation phase confirms whether the exploitation leads to a meaningful security impact. If further exploration is required, the workflow loops back to the scanning phase for deeper analysis. Once sufficient findings are collected, the system performs correlation and reporting, producing a structured report before reaching the final step of the process.
 
