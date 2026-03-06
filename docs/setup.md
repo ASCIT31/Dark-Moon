@@ -1,87 +1,88 @@
 # ⚙️ Darkmoon — Installation & Setup
 
-Ce document explique **comment installer, configurer et lancer Darkmoon**, pas à pas.
+This document explains **how to install, configure, and run Darkmoon**, step by step.
 
-Aucune connaissance interne du projet n’est requise.
+No internal knowledge of the project is required.
 
 ---
 
-## 1. Prérequis
+## 1. Prerequisites
 
-Avant de commencer, vous devez avoir :
+Before starting, you must have:
 
 - Docker
 - Docker Compose
-- Un accès à un fournisseur LLM (OpenRouter, Anthropic, OpenAI…)
+- Access to an LLM provider (OpenRouter, Anthropic, OpenAI…)
 
 ---
 
-## 2. Structure générale du projet
+## 2. General project structure
 
-Darkmoon repose sur **Docker** et **Docker Compose**.
+Darkmoon relies on **Docker** and **Docker Compose**.
 
-Les composants importants sont :
-- un conteneur **OpenCode** (IA + agents),
-- un conteneur **Darkmoon Toolbox** (outils de pentest),
-- des **volumes partagés** pour la configuration.
+The important components are :
+
+- an **OpenCode** container (AI + agents),
+- a **Darkmoon Toolbox** container (pentest tools),
+- **shared volumes** for configuration.
 
 ---
 
-## 3. Configuration des variables d'environement dans le docker compose
+## 3. Configuration of environment variables in docker compose
 
-Le docker compose est **le point d’entrée de toute la configuration IA**.
+Docker Compose is **the entry point for the entire AI configuration**.
 
-### Exemple de variable d'environement 
+### Example environment variable
 
 ```env
-    environment:
-      # 🔽 TEST runtime variables LLM conf
-      - OPENROUTER_PROVIDER=openai
-      - OPENCODE_MODEL=gpt-4o
-      - OPENROUTER_API_KEY=sk-svcacct-xxx
-````
+environment:
+   # 🔽 TEST runtime variables LLM conf
+   - OPENROUTER_PROVIDER=openai
+   - OPENCODE_MODEL=gpt-4o
+   - OPENROUTER_API_KEY=sk-svcacct-xxx
+```
 
-### Rôle des variables
+### Role of the variables
 
-| Variable              | Rôle                      |
-| --------------------- | ------------------------- |
-| `OPENROUTER_PROVIDER` | Fournisseur du modèle LLM |
-| `OPENCODE_MODEL`      | Modèle exact utilisé      |
-| `OPENROUTER_API_KEY`  | Clé API du fournisseur    |
+| Variable              | Role               |
+| --------------------- | ------------------ |
+| `OPENROUTER_PROVIDER` | LLM model provider |
+| `OPENCODE_MODEL`      | Exact model used   |
+| `OPENROUTER_API_KEY`  | Provider API key   |
 
-👉 Aucun secret n’est stocké dans l’image Docker.
+👉 No secret is stored in the Docker image.
 
 ---
 
-## 4. Génération automatique des fichiers OpenCode
+## 4. Automatic generation of OpenCode files
 
-Au premier lancement, Darkmoon :
+On first launch, Darkmoon :
 
-1. lit les variables`,
-2. génère automatiquement :
+1. reads the variables,
+2. automatically generates :
+   - `opencode.json`,
+   - `auth.json`,
 
-   * `opencode.json`,
-   * `auth.json`,
-3. configure l’agent principal,
-4. initialise OpenCode.
+3. configures the main agent,
+4. initializes OpenCode.
 
-Tout cela est fait par le script :
+All of this is done by the script :
 
 ```
 conf/apply-settings.sh
 ```
 
-👉 Vous **n’avez rien à générer manuellement**.
+👉 You **do not need to generate anything manually**.
 
-Vous pouvez faire le choix de ne pas remplir les variables , auxquel cas, le modèle d'opencode `opencode/big-pickle` par défaut sera exécuté
+You can choose not to fill in the variables, in which case the default opencode model `opencode/big-pickle` will be executed
 
 ---
 
-## 5. Volumes et persistance
+## 5. Volumes and persistence
 
-Les fichiers de configuration sont persistés via des volumes Docker.
+Configuration files are persisted via Docker volumes.
 
-### Volumes importants
+### Important volumes
 
 ```yaml
 - ./darkmoon-settings:/root/.config/opencode/:rw
@@ -89,69 +90,68 @@ Les fichiers de configuration sont persistés via des volumes Docker.
 - ./darkmoon-settings/agents:/root/.opencode/agents/:rw
 ```
 
-### Ce que cela permet
+### What this allows
 
-* Modifier la configuration **sans rebuild**
-* Ajouter ou modifier des agents IA
-* Conserver les logs et l’état OpenCode
+- Modify the configuration **without rebuild**
+- Add or modify AI agents
+- Keep logs and OpenCode state
 
 ---
 
-## 6. Build et lancement de Darkmoon
+## 6. Build and launch Darkmoon
 
-### Construction des images
+### Building the images
 
 ```bash
 docker compose build
 ```
 
-### Lancement de la stack
+### Launching the stack
 
 ```bash
 docker compose up -d
 ```
 
-👉 Le premier lancement peut prendre du temps (build des images).
+👉 The first launch may take some time (image build).
 
 ---
 
-## 7. Lancer Darkmoon (CLI utilisateur)
+## 7. Launch Darkmoon (User CLI)
 
-Un wrapper est fourni : `darkmoon.sh`.
+A wrapper is provided : `darkmoon.sh`.
 
-### Rendre le wrapper exécutable
+### Make the wrapper executable
 
 ```bash
 chmod +x darkmoon.sh
 ```
 
-### Installer globalement (optionnel)
+### Install globally (optional)
 
 ```bash
 sudo cp darkmoon.sh /usr/local/bin/darkmoon
 ```
 
-### Lancer Darkmoon avec la console TUI
+### Launch Darkmoon with TUI Console
 
 ```bash
 darkmoon
 ```
 
-Ou avec une commande directe :
+Or with a direct command :
 
 ```bash
 darkmoon "TARGET: mondomaine.com"
 ```
 
-### Visualiser les logs
+### View logs
 
 When executing the darkmoon TUI, the session initializes, to view the logs in real time, you must open a new additional bash console and type the command described in the chat of Darkmmon `./darkmoon.sh --log {{session_id}}`.
-
 
 ```bash
 Let me start with that.
 I'll begin by initializing the session as required by the protocol.
-⚙ darkmoon_get_session 
+⚙ darkmoon_get_session
 Thinking: Good, I have the session ID: c0d67d10. Now I need to display the monitoring command to the user as required.
 Session Initialized
 Monitoring Command:
@@ -160,8 +160,6 @@ Now I'll proceed with the vulnerability assessment. Let me first identify the ta
 ```
 
 you will be able to view the logs in bash session in real time:
-
-
 
 ```bash
 └─$ ./darkmoon.sh --log c0d67d10
@@ -198,45 +196,44 @@ darkmoon(live)> streaming MCP output…
 darkmoon(live)> stopped.
 ```
 
-
 ---
 
-## 8. Accès direct au conteneur (debug)
+## 8. Direct access to the container (debug)
 
-Il est possible d’entrer directement dans le conteneur OpenCode :
+It is possible to enter the OpenCode container directly :
 
 ```bash
 docker exec -ti opencode bash
 ```
 
-Cela permet :
+This allows :
 
-* d’inspecter les fichiers,
-* de modifier des agents,
-* de tester OpenCode directement.
-
----
-
-## 9. Où modifier quoi (récapitulatif)
-
-| Action                       | Où                                |
-| ---------------------------- | --------------------------------- |
-| Modifier le modèle LLM       | `.env`                            |
-| Modifier `opencode.json`     | `darkmoon-settings/opencode.json` |
-| Modifier `auth.json`         | `darkmoon-settings/auth.json`     |
-| Ajouter un agent             | `darkmoon-settings/agents/`       |
-| Ajouter un agent avant build | `conf/agents/`                    |
+- to inspect files,
+- to modify agents,
+- to test OpenCode directly.
 
 ---
 
-## 10. Résumé rapide
+## 9. Where to modify what (summary)
 
-* `.env` → configuration IA
-* `docker compose up -d` → lancement
-* `darkmoon` → utilisation
-* Volumes → persistance & modification à chaud
+| Action                    | Where                             |
+| ------------------------- | --------------------------------- |
+| Change the LLM model      | `.env`                            |
+| Modify `opencode.json`    | `darkmoon-settings/opencode.json` |
+| Modify `auth.json`        | `darkmoon-settings/auth.json`     |
+| Add an agent              | `darkmoon-settings/agents/`       |
+| Add an agent before build | `conf/agents/`                    |
 
 ---
 
-➡️ Pour les problèmes de build ou de rebuild :
-voir `docs/rebuild-and-troubleshooting.md`
+## 10. Quick summary
+
+- `.env` → AI configuration
+- `docker compose up -d` → launch
+- `darkmoon` → usage
+- Volumes → persistence & live modification
+
+---
+
+➡️ For build or rebuild issues :
+see `docs/rebuild-and-troubleshooting.md`
