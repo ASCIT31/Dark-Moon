@@ -165,7 +165,8 @@ environment:
 | `OPENCODE_MODEL`      | Exact model used   |
 | `OPENROUTER_API_KEY`  | Provider API key   |
 
-👉 No secret is stored in the Docker image.
+> [!IMPORTANT]
+> No secret is stored in the Docker image.
 
 [Back to Summary](#summary)
 
@@ -187,7 +188,8 @@ All of this is done by the script :
 conf/apply-settings.sh
 ```
 
-👉 You **do not need to generate anything manually**.
+> [!IMPORTANT]
+> You **do not need to generate anything manually**.
 
 You can choose not to fill in the variables, in which case the default opencode model `opencode/big-pickle` will be executed
 
@@ -231,7 +233,8 @@ docker compose build
 docker compose up -d
 ```
 
-👉 The first launch may take some time (image build).
+> [!NOTE]
+> The first launch may take some time (image build).
 
 [Back to Summary](#summary)
 
@@ -386,6 +389,7 @@ This document explains how Darkmoon is built, who is responsible for what, and w
 
 Darkmoon is built around a strict and deliberate principle:
 
+> [!NOTE]
 > The AI never interacts directly with pentesting tools.
 
 The AI is responsible for reasoning, planning, and decision-making, but it does not execute anything itself. Every concrete action goes through a controlled intermediary layer. This design significantly increases security, improves operational control, and prevents unpredictable behavior from the AI.
@@ -535,8 +539,8 @@ The AI does:
 
 The architecture is robust because responsibilities are clearly separated and there is no hidden or implicit logic. Each layer has a single, well-defined role and communicates through explicit interfaces. Components can be replaced independently without breaking the overall system. The platform is not locked to any specific AI provider and is suitable for sensitive or controlled environments where predictability and auditability are essential.
 
-> [!note]
-> For a deeper understanding of how agents operate, see [🤖 AI Agents](#v--ai-agents).
+> [!NOTE]
+> For a deeper understanding of how agents operate, see [AI Agents](#v-ai-agents).
 
 [Back to Summary](#summary)
 
@@ -567,8 +571,8 @@ A Darkmoon agent is:
 - that defines **autonomous behavior**,
 - and controls the MCP to perform real actions.
 
-👉 It is **not** a standard prompt.
-👉 It is a **complete operational strategy**.
+> [!IMPORTANT]
+> It is **not** a standard prompt. It is a **complete operational strategy**.
 
 [Back to Summary](#summary)
 
@@ -587,7 +591,8 @@ An agent **does not ask**:
 - “Do you want to continue?”
 - “What is the scope?”
 
-👉 The scope is **already defined by the user**.
+> [!NOTE]
+> The scope is **already defined by the user**.
 
 [Back to Summary](#summary)
 
@@ -649,7 +654,8 @@ It:
 - correlates results between steps,
 - iterates until attack vectors are exhausted.
 
-👉 It is an **AI pentester**, not an assistant.
+> [!IMPORTANT]
+> It is an **AI pentester**, not an assistant.
 
 [Back to Summary](#summary)
 
@@ -728,7 +734,8 @@ Advantages:
 4. Dynamic loading
 5. On-demand execution
 
-👉 The seed only happens **once**.
+> [!NOTE]
+> The seed only happens **once**.
 
 [Back to Summary](#summary)
 
@@ -781,8 +788,8 @@ Darkmoon agents:
 
 They form **the strategic brain** of the platform.
 
-➡️ To understand how agents execute actions:
-see `docs/workflows.md`
+> [!NOTE]
+> To understand how agents execute actions, see [workflows.md](docs/workflows.md)
 
 [Back to Summary](#summary)
 
@@ -830,8 +837,8 @@ This project uses **Docker** with **two stages**:
 - We remove everything that is not necessary.
 - The final image is **smaller** and **cleaner**.
 
-👉 This separation is intentional.
-👉 It avoids errors and reduces risks.
+> [!IMPORTANT]
+> This separation is intentional. It avoids errors and reduces risks.
 
 [Back to Summary](#summary)
 
@@ -856,8 +863,8 @@ Each file has **a single role**:
   - Installs **Python tools**.
   - Creates simple commands (`netexec`, `sqlmap`, etc.).
 
-👉 This avoids “magic scripts”.
-👉 Everything is readable and verifiable.
+> [!NOTE]
+> This avoids “magic scripts”. Everything is readable and verifiable.
 
 [Back to Summary](#summary)
 
@@ -875,9 +882,8 @@ Then they are exposed in:
 /usr/local/bin
 ```
 
-👉 A simple rule:
-
-- **if a tool is in `/out/bin`, it will be usable**.
+> [!IMPORTANT]
+> **If a tool is in `/out/bin`, it will be usable**.
 
 [Back to Summary](#summary)
 
@@ -914,16 +920,12 @@ Then they are exposed in:
 
 ### VI.4.b Included languages
 
-- **Go**
-  - used to compile many network and security tools
+- **Go**: used to compile many network and security tools
+- **Python**: (compiled version) installed in `/opt/darkmoon/python`
+- **Ruby**: (compiled version) installed in `/opt/darkmoon/ruby`
 
-- **Python** (compiled version)
-  - installed in `/opt/darkmoon/python`
-
-- **Ruby** (compiled version)
-  - installed in `/opt/darkmoon/ruby`
-
-👉 The versions are **pinned** to avoid surprises.
+> [!NOTE]
+> The versions are **pinned** to avoid surprises.
 
 [Back to Summary](#summary)
 
@@ -963,7 +965,8 @@ Examples (non-exhaustive):
 - `sqlmap`
 - `wafw00f`
 
-👉 All are directly accessible in the terminal.
+> [!TIP]
+> All are directly accessible in the terminal.
 
 [Back to Summary](#summary)
 
@@ -993,7 +996,8 @@ naabu -h
 netexec -h
 ```
 
-👉 No complicated path is required.
+> [!NOTE]
+> No complicated path is required.
 
 [Back to Summary](#summary)
 
@@ -1087,8 +1091,9 @@ If you propose a contribution:
 
 Here are **all the tools actually installed / present in the final image** via **Dockerfile + setup.sh + setup_py.sh** (and the symlinks/wrappers), in a table.
 
-> ⚠️ I **do not include** the _libs_ (libssl, zlib, etc.) nor the _build tools_ from the `builder` stage (gcc, make…), because they are not in the final runtime image.
-> ⚠️ `docker-compose` also installs/includes **ZAP** in another container (`ghcr.io/zaproxy/zaproxy:weekly`) → **not included here** because it is **not** “installed via the darkmoon Dockerfile”.
+> [!WARNING]
+> I **do not include** the _libs_ (libssl, zlib, etc.) nor the _build tools_ from the `builder` stage (gcc, make…), because they are not in the final runtime image.
+> `docker-compose` also installs/includes **ZAP** in another container (`ghcr.io/zaproxy/zaproxy:weekly`) → **not included here** because it is **not** “installed via the darkmoon Dockerfile”.
 
 [Back to Summary](#summary)
 
