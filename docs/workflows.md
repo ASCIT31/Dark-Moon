@@ -1,136 +1,119 @@
-# 🔁 Darkmoon — Workflows MCP
+# Darkmoon --- MCP Workflows
 
-Ce document explique **ce que sont les workflows MCP**, comment ils fonctionnent,
-et comment en créer de nouveaux.
+This document explains **what MCP workflows are**, how they work, and
+how to create new ones.
 
-Public cible :
-- développeurs
-- pentesters avancés
-- contributeurs
+Target audience:
 
----
+- developers
+- advanced pentesters
+- contributors
 
-## 1. Qu’est-ce qu’un workflow MCP ?
+## 1. What is an MCP Workflow?
 
-Un workflow est :
-- un **module Python**,
-- exposé par le MCP,
-- qui encapsule une **suite cohérente d’actions**,
-- exécutée dans la toolbox Docker.
+A workflow is:
 
-👉 Un workflow = une tâche métier complète.
+- a **Python module**,
+- exposed by the MCP,
+- that encapsulates a **coherent sequence of actions**,
+- executed inside the Docker toolbox.
 
----
+> [!NOTE]
+> A workflow = a complete operational task.
 
-## 2. Où vivent les workflows
+## 2. Where Workflows Live
 
-Les workflows sont situés dans :
+Workflows are located in:
 
-````
-
+```
 mcp/src/tools/workflows/
+```
 
-````
+Examples:
 
-Exemples :
 - `port_scan.py`
 - `vulnerability_scan.py`
 - `web_crawler.py`
 
----
+## 3. Dynamic Discovery
 
-## 3. Découverte dynamique
+At startup:
 
-Au démarrage :
-- le MCP scanne automatiquement les workflows,
-- expose leurs méthodes,
-- les rend accessibles à l’IA.
+- the MCP automatically scans workflows,
+- exposes their methods,
+- makes them accessible to the AI.
 
-👉 Aucun enregistrement manuel requis.
+> [!TIP]
+> No manual registration required.
 
----
+## 4. Workflow Structure
 
-## 4. Structure d’un workflow
+Each workflow:
 
-Chaque workflow :
-- hérite de `BaseWorkflow`,
-- définit une ou plusieurs méthodes,
-- gère ses timeouts,
-- structure ses résultats.
+- inherits from `BaseWorkflow`,
+- defines one or more methods,
+- manages its timeouts,
+- structures its results.
 
----
+## 5. Example: Vulnerability Scan
 
-## 5. Exemple : scan de vulnérabilités
+The `VulnerabilityScanWorkflow`:
 
-Le workflow `VulnerabilityScanWorkflow` :
+- creates a dedicated workspace,
+- runs Nuclei,
+- parses JSON results,
+- correlates findings by severity,
+- returns a structured summary.
 
-- crée un workspace dédié,
-- lance Nuclei,
-- parse les résultats JSON,
-- corrèle par sévérité,
-- retourne un résumé structuré.
+> [!IMPORTANT]
+> This is not just a tool call. It is **complete operational logic**.
 
-👉 Ce n’est pas juste un appel outil.
-👉 C’est une **logique complète**.
+## 6. Called by an Agent
 
----
+An agent can call:
 
-## 6. Appel par un agent
-
-Un agent peut appeler :
-
-```text
+```
 run_workflow("vulnerability_scan", "scan_vulnerabilities", {...})
-````
+```
 
-L’agent :
+The agent:
 
-* choisit le bon workflow,
-* décide quand l’exécuter,
-* interprète les résultats.
+- chooses the appropriate workflow,
+- decides when to execute it,
+- interprets the results.
 
----
+## 7. Advantages of Workflows
 
-## 7. Avantages des workflows
+- reusable
+- testable
+- auditable
+- safer than raw command execution
 
-* réutilisables,
-* testables,
-* auditables,
-* plus sûrs que des commandes brutes.
+## 8. Creating a New Workflow
 
----
+1.  Copy `TEMPLATE.py`
+2.  Implement the logic
+3.  Respect the structure
+4.  Test locally
+5.  Restart the MCP
 
-## 8. Créer un nouveau workflow
+> [!TIP]
+> For detailed guide, see [WORKFLOW_GUIDE.md](/mcp/WORKFLOW_GUIDE.md)
 
-1. Copier `TEMPLATE.py`
-2. Implémenter la logique
-3. Respecter la structure
-4. Tester localement
-5. Relancer le MCP
+## 9. Best Practices
 
-📄 Guide détaillé :
-`mcp/WORKFLOW_GUIDE.md`
+- One workflow = one mission
+- Avoid mixing too many responsibilities
+- Always structure outputs
+- Handle timeouts properly
 
----
+## 10. Summary
 
-## 9. Bonnes pratiques
+Workflows:
 
-* Un workflow = une mission
-* Ne pas mélanger trop de responsabilités
-* Toujours structurer les outputs
-* Gérer les timeouts proprement
+- are the operational backbone of Darkmoon,
+- encapsulate offensive logic,
+- secure the execution of tools.
 
----
-
-## 10. Résumé
-
-Les workflows :
-
-* sont le bras armé de Darkmoon,
-* encapsulent la logique offensive,
-* sécurisent l’exécution des outils.
-
----
-
-➡️ Pour comprendre le MCP lui-même :
-voir `docs/mcp.md`
+> [!NOTE]
+> To understand the MCP itself, see [mcp.md](/docs/mcp.md)
