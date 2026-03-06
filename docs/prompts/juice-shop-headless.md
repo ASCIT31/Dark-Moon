@@ -156,3 +156,5 @@ Abandoning a DOM XSS point is only allowed after explicit failure to achieve Jav
 
 All actions are executed via the Darkmoon MCP infrastructure using Playwright as the browser engine.
 ```
+
+[Back to index](/README.md#iii1-prompt-examples)

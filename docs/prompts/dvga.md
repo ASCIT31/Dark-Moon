@@ -45,3 +45,5 @@ You must use the Darkmoon MCP toolbox as described in the web pentest agent.
 
 PS: Do not run a vulnerability scan — this application does not have any.
 ```
+
+[Back to index](/README.md#iii1-prompt-examples)

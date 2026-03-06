@@ -331,6 +331,10 @@ This allows :
 
 Here's a list of prompt you can do with Darkmoon GPT
 
+- [DVGA](docs/prompts/dvga.md)
+- [Juice Shop Headless](docs/prompts/juice-shop-headless.md)
+- [Juice Shop](docs/prompts/juice-shop.md)
+
 [Back to Summary](#summary)
 
 # IV. Architecture
