@@ -6,9 +6,8 @@ A platform that allows you to conduct a complete penetration testing campaign
 
 </center>
 
-## Summary
+# Summary
 
-- [Summary](#summary)
 - [I. Preview](#i-preview)
 - [II. Installation](#ii-installation)
   - [II.1. Prerequisites](#ii1-prerequisites)
@@ -47,7 +46,7 @@ A platform that allows you to conduct a complete penetration testing campaign
     - [IV.3.c Activity diagram — End-to-end penetration testing](#iv3c-activity-diagram--end-to-end-penetration-testing)
   - [IV.4. Security by Design](#iv4-security-by-design)
   - [IV.5. Why This Architecture Is Robust](#iv5-why-this-architecture-is-robust)
-- [V. 🤖 AI Agents](#v--ai-agents)
+- [V. AI Agents](#v-ai-agents)
   - [V.1. What is a Darkmoon Agent?](#v1-what-is-a-darkmoon-agent)
   - [V.2. Agent Philosophy](#v2-agent-philosophy)
   - [V.3. Structure of a Darkmoon Agent](#v3-structure-of-a-darkmoon-agent)
@@ -71,7 +70,7 @@ A platform that allows you to conduct a complete penetration testing campaign
 - [VI. Contributing](#vi-contributing)
 - [VII. License](#vii-license)
 
-## I. Preview
+# I. Preview
 
 ![darkmoon-preview.gif](docs/pics/darkmoon-preview.gif)
 
@@ -79,9 +78,9 @@ Here's an example of penetration testing of a [GOAD Active Directory Lab](https:
 
 [Back to Summary](#summary)
 
-## II. Installation
+# II. Installation
 
-### II.1. Prerequisites
+## II.1. Prerequisites
 
 Before starting, you must have:
 
@@ -89,7 +88,9 @@ Before starting, you must have:
 - Docker Compose
 - Access to an LLM provider (OpenRouter, Anthropic, OpenAI…)
 
-### II.2. General project structure
+[Back to Summary](#summary)
+
+## II.2. General project structure
 
 Darkmoon relies on **Docker** and **Docker Compose**.
 
@@ -99,11 +100,15 @@ The important components are :
 - a **Darkmoon Toolbox** container (pentest tools),
 - **shared volumes** for configuration.
 
-### II.3. Configuration of environment variables in docker compose
+[Back to Summary](#summary)
+
+## II.3. Configuration of environment variables in docker compose
 
 Docker Compose is **the entry point for the entire AI configuration**.
 
-#### II.3.a Example environment variable
+[Back to Summary](#summary)
+
+### II.3.a Example environment variable
 
 ```env
 environment:
@@ -113,7 +118,9 @@ environment:
    - OPENROUTER_API_KEY=sk-svcacct-xxx
 ```
 
-#### II.3.b Role of the variables
+[Back to Summary](#summary)
+
+### II.3.b Role of the variables
 
 | Variable              | Role               |
 | --------------------- | ------------------ |
@@ -123,7 +130,9 @@ environment:
 
 👉 No secret is stored in the Docker image.
 
-### II.4. Automatic generation of OpenCode files
+[Back to Summary](#summary)
+
+## II.4. Automatic generation of OpenCode files
 
 On first launch, Darkmoon :
 
@@ -145,11 +154,15 @@ conf/apply-settings.sh
 
 You can choose not to fill in the variables, in which case the default opencode model `opencode/big-pickle` will be executed
 
-### II.5. Volumes and persistence
+[Back to Summary](#summary)
+
+## II.5. Volumes and persistence
 
 Configuration files are persisted via Docker volumes.
 
-#### II.5.a Important volumes
+[Back to Summary](#summary)
+
+### II.5.a Important volumes
 
 ```yaml
 - ./darkmoon-settings:/root/.config/opencode/:rw
@@ -157,21 +170,25 @@ Configuration files are persisted via Docker volumes.
 - ./darkmoon-settings/agents:/root/.opencode/agents/:rw
 ```
 
-#### II.5.b What this allows
+[Back to Summary](#summary)
+
+### II.5.b What this allows
 
 - Modify the configuration **without rebuild**
 - Add or modify AI agents
 - Keep logs and OpenCode state
 
-### II.6. Build and launch Darkmoon
+## II.6. Build and launch Darkmoon
 
-#### II.6.a Building the images
+### II.6.a Building the images
 
 ```bash
 docker compose build
 ```
 
-#### II.6.b Launching the stack
+[Back to Summary](#summary)
+
+### II.6.b Launching the stack
 
 ```bash
 docker compose up -d
@@ -179,23 +196,31 @@ docker compose up -d
 
 👉 The first launch may take some time (image build).
 
-### II.7. Launch Darkmoon (User CLI)
+[Back to Summary](#summary)
+
+## II.7. Launch Darkmoon (User CLI)
 
 A wrapper is provided : `darkmoon.sh`.
 
-#### II.7.a Make the wrapper executable
+[Back to Summary](#summary)
+
+### II.7.a Make the wrapper executable
 
 ```bash
 chmod +x darkmoon.sh
 ```
 
-#### II.7.b Install globally (optional)
+[Back to Summary](#summary)
+
+### II.7.b Install globally (optional)
 
 ```bash
 sudo cp darkmoon.sh /usr/local/bin/darkmoon
 ```
 
-#### II.7.c Launch Darkmoon with TUI Console
+[Back to Summary](#summary)
+
+### II.7.c Launch Darkmoon with TUI Console
 
 ```bash
 darkmoon
@@ -207,7 +232,9 @@ Or with a direct command :
 darkmoon "TARGET: mondomaine.com"
 ```
 
-#### II.7.d View logs
+[Back to Summary](#summary)
+
+### II.7.d View logs
 
 When executing the darkmoon TUI, the session initializes, to view the logs in real time, you must open a new additional bash console and type the command described in the chat of Darkmmon `./darkmoon.sh --log {{session_id}}`.
 
@@ -259,7 +286,9 @@ darkmoon(live)> streaming MCP output…
 darkmoon(live)> stopped.
 ```
 
-### II.8. Direct access to the container (debug)
+[Back to Summary](#summary)
+
+## II.8. Direct access to the container (debug)
 
 It is possible to enter the OpenCode container directly :
 
@@ -273,7 +302,9 @@ This allows :
 - to modify agents,
 - to test OpenCode directly.
 
-### II.9. Where to modify what (summary)
+[Back to Summary](#summary)
+
+## II.9. Where to modify what (summary)
 
 | Action                    | Where                             |
 | ------------------------- | --------------------------------- |
@@ -283,22 +314,26 @@ This allows :
 | Add an agent              | `darkmoon-settings/agents/`       |
 | Add an agent before build | `conf/agents/`                    |
 
-### II.10. Quick summary
+[Back to Summary](#summary)
+
+## II.10. Quick summary
 
 - `.env` → AI configuration
 - `docker compose up -d` → launch
 - `darkmoon` → usage
 - Volumes → persistence & live modification
 
-## III. Uses
+[Back to Summary](#summary)
 
-### III.1. Prompt Examples
+# III. Uses
+
+## III.1. Prompt Examples
 
 Here's a list of prompt you can do with Darkmoon GPT
 
 [Back to Summary](#summary)
 
-## IV. Architecture
+# IV. Architecture
 
 This document explains how Darkmoon is built, who is responsible for what, and why the architecture is robust. It avoids unnecessary low-level details while remaining technically clear.
 
@@ -306,7 +341,7 @@ This document explains how Darkmoon is built, who is responsible for what, and w
 
 [Back to Summary](#summary)
 
-### IV.1. Core Idea
+## IV.1. Core Idea
 
 Darkmoon is built around a strict and deliberate principle:
 
@@ -316,15 +351,15 @@ The AI is responsible for reasoning, planning, and decision-making, but it does 
 
 [Back to Summary](#summary)
 
-### IV.2. Main Components (Who Does What)
+## IV.2. Main Components (Who Does What)
 
-#### IV.2.a. OpenCode — The Brain
+### IV.2.a. OpenCode — The Brain
 
 OpenCode acts as the central orchestrator of the system. It communicates with the LLM, manages AI agents, determines the next actions to perform, and calls the MCP whenever a real-world action is required. Importantly, OpenCode never executes any pentesting tool directly. It strictly remains at the orchestration and reasoning level.
 
 [Back to Summary](#summary)
 
-#### IV.2.b. AI Agents — The Strategy Layer
+### IV.2.b. AI Agents — The Strategy Layer
 
 AI agents are defined in Markdown files. Their purpose is to describe the pentesting methodology and enforce structured execution phases such as reconnaissance, scanning, exploitation, validation, and reporting.
 
@@ -332,7 +367,7 @@ Because they are written in Markdown, agents are readable, auditable, and versio
 
 [Back to Summary](#summary)
 
-#### IV.2.c. MCP Darkmoon — The Security Gatekeeper
+### IV.2.c. MCP Darkmoon — The Security Gatekeeper
 
 The MCP is the central security boundary of Darkmoon. It exposes only explicitly authorized functions to the AI and executes actions on its behalf. All inputs and outputs are strictly controlled and structured.
 
@@ -340,7 +375,7 @@ This means the AI can only perform operations that the MCP explicitly allows. Th
 
 [Back to Summary](#summary)
 
-#### IV.2.d. Darkmoon Toolbox — The Real Tools
+### IV.2.d. Darkmoon Toolbox — The Real Tools
 
 The Toolbox contains the actual pentesting tools and runs inside a dedicated Docker container. Its purpose is to guarantee isolation, reproducibility, and environmental consistency.
 
@@ -348,19 +383,19 @@ Tools are compiled once and executed within a minimal runtime environment. This 
 
 [Back to Summary](#summary)
 
-#### IV.2.e. Docker & Volumes — Isolation and Persistence
+### IV.2.e. Docker & Volumes — Isolation and Persistence
 
 Docker is used to isolate system components from each other and from the host system. This reduces risk exposure and enforces strict runtime boundaries. Volumes allow configuration and data to persist while still enabling dynamic modifications without requiring full redeployment.
 
 [Back to Summary](#summary)
 
-### IV.3. Execution Flow (Simple Overview)
+## IV.3. Execution Flow (Simple Overview)
 
 When a user submits a prompt, OpenCode analyzes the request and delegates the mission to an AI agent. The agent determines the appropriate strategy and, when an action is needed, calls a function exposed by the MCP. The MCP then executes the corresponding tool inside the Docker-based Toolbox. Results are returned to the MCP, passed back to the agent in structured form, and used to determine the next step or produce a final report. The entire flow remains controlled and traceable.
 
 [Back to Summary](#summary)
 
-#### IV.3.a Deployment diagram
+### IV.3.a Deployment diagram
 
 This diagram illustrates the overall architecture and data flow of the system. The User interacts with the platform through a command-line interface or prompt sent to DarkmoonCLI. This interface forwards the request to OpenCode, which acts as the orchestration layer responsible for managing AI-driven tasks.
 
@@ -378,7 +413,7 @@ flowchart LR
 
 [Back to Summary](#summary)
 
-#### IV.3.b Network flow diagram
+### IV.3.b Network flow diagram
 
 This sequence diagram describes the step-by-step interaction between the user, the AI system, and the execution environment. The process begins when the User submits a prompt to OpenCode. OpenCode delegates the task to an AI Agent, which determines the appropriate actions to perform. The agent calls a function exposed through MCP Darkmoon, which serves as a standardized interface to external tools.
 
@@ -406,7 +441,7 @@ sequenceDiagram
 
 [Back to Summary](#summary)
 
-#### IV.3.c Activity diagram — End-to-end penetration testing
+### IV.3.c Activity diagram — End-to-end penetration testing
 
 This diagram represents the logical workflow followed by the AI agent during an automated security testing process. The workflow starts when a user prompt triggers the AI Agent, which initiates a reconnaissance phase to gather information about the target system. The process then moves to automated scanning, where vulnerabilities are searched using automated tools.
 
@@ -437,7 +472,7 @@ flowchart TD
 
 [Back to Summary](#summary)
 
-### IV.4. Security by Design
+## IV.4. Security by Design
 
 Darkmoon enforces clear boundaries:
 
@@ -455,7 +490,7 @@ The AI does:
 
 [Back to Summary](#summary)
 
-### IV.5. Why This Architecture Is Robust
+## IV.5. Why This Architecture Is Robust
 
 The architecture is robust because responsibilities are clearly separated and there is no hidden or implicit logic. Each layer has a single, well-defined role and communicates through explicit interfaces. Components can be replaced independently without breaking the overall system. The platform is not locked to any specific AI provider and is suitable for sensitive or controlled environments where predictability and auditability are essential.
 
@@ -464,7 +499,7 @@ The architecture is robust because responsibilities are clearly separated and th
 
 [Back to Summary](#summary)
 
-## V. 🤖 AI Agents
+# V. AI Agents
 
 This document describes **how AI agents work in Darkmoon**:
 
@@ -482,7 +517,7 @@ Target audience:
 
 [Back to Summary](#summary)
 
-### V.1. What is a Darkmoon Agent?
+## V.1. What is a Darkmoon Agent?
 
 A Darkmoon agent is:
 
@@ -496,7 +531,7 @@ A Darkmoon agent is:
 
 [Back to Summary](#summary)
 
-### V.2. Agent Philosophy
+## V.2. Agent Philosophy
 
 Darkmoon agents are designed to:
 
@@ -515,11 +550,11 @@ An agent **does not ask**:
 
 [Back to Summary](#summary)
 
-### V.3. Structure of a Darkmoon Agent
+## V.3. Structure of a Darkmoon Agent
 
 An agent is a structured Markdown file.
 
-#### V.3.a Simplified Example
+### V.3.a Simplified Example
 
 ```markdown
 ---
@@ -531,7 +566,7 @@ description: Fully autonomous pentest agent
 You are an autonomous AI cybersecurity agent.
 ```
 
-#### V.3.b List of Agents
+### V.3.b List of Agents
 
 Currently, there are 4 agents:
 
@@ -540,7 +575,7 @@ Currently, there are 4 agents:
 - `pentest-kubernetes` — the agent for surface attack pentesting of a Kubernetes cluster.
 - `pentest-network` — the agent for network infrastructure attacks (FTP, FTPS, SFTP, SSH, TELNET, SMTP, SNMP, etc.).
 
-#### V.3.c Common Sections
+### V.3.c Common Sections
 
 - metadata (`id`, `name`, `description`)
 - execution rules
@@ -551,7 +586,7 @@ Currently, there are 4 agents:
 
 [Back to Summary](#summary)
 
-### V.4. Real Example: pentest-web
+## V.4. Real Example: pentest-web
 
 The `pentest-web` agent is:
 
@@ -571,9 +606,9 @@ It:
 
 [Back to Summary](#summary)
 
-### V.5. Critical Rules for Agents
+## V.5. Critical Rules for Agents
 
-#### V.5.a Autonomy
+### V.5.a Autonomy
 
 An agent:
 
@@ -581,7 +616,7 @@ An agent:
 - never asks for user input,
 - acts immediately.
 
-#### V.5.b MCP-only
+### V.5.b MCP-only
 
 An agent:
 
@@ -595,7 +630,7 @@ This ensures:
 - control,
 - security.
 
-#### V.5.c Communication
+### V.5.c Communication
 
 Agents:
 
@@ -605,9 +640,9 @@ Agents:
 
 [Back to Summary](#summary)
 
-### V.6. Where Agents Live
+## V.6. Where Agents Live
 
-#### V.6.a Before Build
+### V.6.a Before Build
 
 ```
 conf/agents/
@@ -618,7 +653,7 @@ These agents are:
 - integrated into the image,
 - automatically copied at first launch.
 
-#### V.6.b After Build (Recommended)
+### V.6.b After Build (Recommended)
 
 ```
 darkmoon-settings/agents/
@@ -632,7 +667,7 @@ Advantages:
 
 [Back to Summary](#summary)
 
-### V.7. Agent Lifecycle
+## V.7. Agent Lifecycle
 
 1. OpenCode starts
 2. Checks if agents already exist
@@ -644,9 +679,9 @@ Advantages:
 
 [Back to Summary](#summary)
 
-### V.8. Adding a New Agent
+## V.8. Adding a New Agent
 
-#### V.8.a. Method 1 — After Build (Recommended)
+### V.8.a. Method 1 — After Build (Recommended)
 
 1. Create a `.md` file in:
 
@@ -657,7 +692,7 @@ darkmoon-settings/agents/
 2. Restart Darkmoon
 3. The agent is immediately available
 
-#### V.8.b. Method 2 — Before Build
+### V.8.b. Method 2 — Before Build
 
 1. Add the agent in:
 
@@ -670,7 +705,7 @@ conf/agents/
 
 [Back to Summary](#summary)
 
-### V.9. Best Practices
+## V.9. Best Practices
 
 - One agent = one clear role
 - Do not mix scanning, reporting, and remediation
@@ -680,7 +715,7 @@ conf/agents/
 
 [Back to Summary](#summary)
 
-### V.10. Summary
+## V.10. Summary
 
 Darkmoon agents:
 
@@ -696,13 +731,13 @@ see `docs/workflows.md`
 
 [Back to Summary](#summary)
 
-## VI. Contributing
+# VI. Contributing
 
 If you to contribute to the project, you access to the coding guideline at [CONTRIBUTING.md](CONTRIBUTING.md)
 
 [Back to Summary](#summary)
 
-## VII. License
+# VII. License
 
 Code licensed under [GNU GPL v3](LICENSE)
 
