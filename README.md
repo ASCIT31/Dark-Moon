@@ -67,8 +67,45 @@ A platform that allows you to conduct a complete penetration testing campaign
     - [V.8.b. Method 2 — Before Build](#v8b-method-2--before-build)
   - [V.9. Best Practices](#v9-best-practices)
   - [V.10. Summary](#v10-summary)
-- [VI. Contributing](#vi-contributing)
-- [VII. License](#vii-license)
+- [VI. Toolbox](#vi-toolbox)
+  - [VI.1. What is this project for?](#vi1-what-is-this-project-for)
+  - [VI.2. General principle (simple idea)](#vi2-general-principle-simple-idea)
+    - [VI.2.a Step 1: Builder](#vi2a-step-1-builder)
+    - [VI.2.b Step 2: Runtime](#vi2b-step-2-runtime)
+  - [VI.3. Why this architecture is smart](#vi3-why-this-architecture-is-smart)
+    - [VI.3.a Clear separation of roles](#vi3a-clear-separation-of-roles)
+    - [VI.3.b Standardized output](#vi3b-standardized-output)
+    - [VI.3.c Important optimizations](#vi3c-important-optimizations)
+  - [VI.4. What does the image contain?](#vi4-what-does-the-image-contain)
+    - [VI.4.a Base system](#vi4a-base-system)
+    - [VI.4.b Included languages](#vi4b-included-languages)
+    - [VI.4.c Wordlists](#vi4c-wordlists)
+    - [VI.4.d Installed tools (examples)](#vi4d-installed-tools-examples)
+  - [VI.5. How to use the image](#vi5-how-to-use-the-image)
+    - [VI.5.a Build the image](#vi5a-build-the-image)
+    - [VI.5.b Start a shell](#vi5b-start-a-shell)
+    - [VI.5.c Use a tool](#vi5c-use-a-tool)
+  - [VI.6. How to add a new tool (for the community)](#vi6-how-to-add-a-new-tool-for-the-community)
+    - [VI.6.a Choose the right place](#vi6a-choose-the-right-place)
+    - [VI.6.b Rules to follow](#vi6b-rules-to-follow)
+    - [VI.6.c Simple example (Go tool)](#vi6c-simple-example-go-tool)
+  - [VI.7. How to maintain the project](#vi7-how-to-maintain-the-project)
+    - [VI.7.a In case of an error:](#vi7a-in-case-of-an-error)
+    - [VI.7.b Best practices:](#vi7b-best-practices)
+  - [VI.8. For the Open Source community](#vi8-for-the-open-source-community)
+  - [VI.9. Very short summary](#vi9-very-short-summary)
+  - [VI.10. Toolbox list:](#vi10-toolbox-list)
+    - [VI.10.a Tools installed in the `darkmoon` runtime image](#vi10a-tools-installed-in-the-darkmoon-runtime-image)
+    - [VI.10.b “tools” installed by `pip install impacket==0.12.0` (scripts provided by Impacket)](#vi10b-tools-installed-by-pip-install-impacket0120-scripts-provided-by-impacket)
+  - [VI.11 BONUS: Pentester lab to train DarkMoon](#vi11-bonus-pentester-lab-to-train-darkmoon)
+    - [VI.11.a WEB / API / GRAPHQL / FRONTEND](#vi11a-web--api--graphql--frontend)
+    - [VI.11.b ACTIVE DIRECTORY / WINDOWS](#vi11b-active-directory--windows)
+    - [VI.11.c NETWORK / INFRASTRUCTURE](#vi11c-network--infrastructure)
+    - [VI.11.d CLOUD (AWS / AZURE / GCP / OVH)](#vi11d-cloud-aws--azure--gcp--ovh)
+    - [VI.11.e IOT / EMBEDDED / SCADA / ICS](#vi11e-iot--embedded--scada--ics)
+    - [VI.11.f MULTI-INFRA ORCHESTRATION (RARE \& CRITICAL)](#vi11f-multi-infra-orchestration-rare--critical)
+- [VII. Contributing](#vii-contributing)
+- [VIII. License](#viii-license)
 
 # I. Preview
 
@@ -558,6 +595,8 @@ An agent **does not ask**:
 
 An agent is a structured Markdown file.
 
+[Back to Summary](#summary)
+
 ### V.3.a Simplified Example
 
 ```markdown
@@ -570,6 +609,8 @@ description: Fully autonomous pentest agent
 You are an autonomous AI cybersecurity agent.
 ```
 
+[Back to Summary](#summary)
+
 ### V.3.b List of Agents
 
 Currently, there are 4 agents:
@@ -578,6 +619,8 @@ Currently, there are 4 agents:
 - `pentest-ad` — the agent for Windows infrastructure and Active Directory pentesting (ADDS, SMB, Windows, etc.).
 - `pentest-kubernetes` — the agent for surface attack pentesting of a Kubernetes cluster.
 - `pentest-network` — the agent for network infrastructure attacks (FTP, FTPS, SFTP, SSH, TELNET, SMTP, SNMP, etc.).
+
+[Back to Summary](#summary)
 
 ### V.3.c Common Sections
 
@@ -620,6 +663,8 @@ An agent:
 - never asks for user input,
 - acts immediately.
 
+[Back to Summary](#summary)
+
 ### V.5.b MCP-only
 
 An agent:
@@ -633,6 +678,8 @@ This ensures:
 - auditability,
 - control,
 - security.
+
+[Back to Summary](#summary)
 
 ### V.5.c Communication
 
@@ -656,6 +703,8 @@ These agents are:
 
 - integrated into the image,
 - automatically copied at first launch.
+
+[Back to Summary](#summary)
 
 ### V.6.b After Build (Recommended)
 
@@ -696,6 +745,8 @@ darkmoon-settings/agents/
 2. Restart Darkmoon
 3. The agent is immediately available
 
+[Back to Summary](#summary)
+
 ### V.8.b. Method 2 — Before Build
 
 1. Add the agent in:
@@ -735,13 +786,511 @@ see `docs/workflows.md`
 
 [Back to Summary](#summary)
 
-# VI. Contributing
+# VI. Toolbox
+
+## VI.1. What is this project for?
+
+This project is used to:
+
+- Build a **cybersecurity toolbox**.
+- Put many tools into **a single Docker image**.
+- Have an image that is:
+  - reliable,
+  - reproducible,
+  - easy to maintain,
+  - easy to extend.
+
+This image is intended for:
+
+- **pentesters**,
+- **security engineers**,
+- **researchers**,
+- the **Open Source community**.
+
+[Back to Summary](#summary)
+
+## VI.2. General principle (simple idea)
+
+This project uses **Docker** with **two stages**:
+
+[Back to Summary](#summary)
+
+### VI.2.a Step 1: Builder
+
+- We **compile**.
+- We **install**.
+- We **prepare** all the tools.
+- Nothing is intended for the final user yet.
+
+[Back to Summary](#summary)
+
+### VI.2.b Step 2: Runtime
+
+- We **copy only the useful result**.
+- We remove everything that is not necessary.
+- The final image is **smaller** and **cleaner**.
+
+👉 This separation is intentional.
+👉 It avoids errors and reduces risks.
+
+[Back to Summary](#summary)
+
+## VI.3. Why this architecture is smart
+
+### VI.3.a Clear separation of roles
+
+Each file has **a single role**:
+
+- `Dockerfile`
+  - Manages the system.
+  - Installs the languages.
+  - Copies the results.
+
+- `setup.sh`
+  - Installs **binary tools** (Go, GitHub releases, C compilation).
+
+- `setup_ruby.sh`
+  - Installs **Ruby tools**.
+
+- `setup_py.sh`
+  - Installs **Python tools**.
+  - Creates simple commands (`netexec`, `sqlmap`, etc.).
+
+👉 This avoids “magic scripts”.
+👉 Everything is readable and verifiable.
+
+[Back to Summary](#summary)
+
+### VI.3.b Standardized output
+
+All compiled tools are placed **in the same location**:
+
+```
+/out/bin
+```
+
+Then they are exposed in:
+
+```
+/usr/local/bin
+```
+
+👉 A simple rule:
+
+- **if a tool is in `/out/bin`, it will be usable**.
+
+[Back to Summary](#summary)
+
+### VI.3.c Important optimizations
+
+- Removal of APT caches.
+- Removal of `apt` and `dpkg` in runtime.
+- No compiler in the final image.
+- Languages compiled only once.
+
+👉 Result:
+
+- smaller image,
+- reduced attack surface,
+- stable behavior.
+
+[Back to Summary](#summary)
+
+## VI.4. What does the image contain?
+
+### VI.4.a Base system
+
+- OS: Debian Bookworm (slim version)
+- Essential system tools:
+  - `bash`
+  - `curl`
+  - `jq`
+  - `dnsutils`
+  - `openssh-client`
+  - `hydra`
+  - `snmp`
+
+[Back to Summary](#summary)
+
+### VI.4.b Included languages
+
+- **Go**
+  - used to compile many network and security tools
+
+- **Python** (compiled version)
+  - installed in `/opt/darkmoon/python`
+
+- **Ruby** (compiled version)
+  - installed in `/opt/darkmoon/ruby`
+
+👉 The versions are **pinned** to avoid surprises.
+
+[Back to Summary](#summary)
+
+### VI.4.c Wordlists
+
+- **SecLists**
+  - accessible via:
+    - `/usr/share/seclists`
+    - `/usr/share/wordlists/seclists`
+
+- **DIRB** wordlists
+  - accessible via `/usr/share/dirb/wordlists`
+
+[Back to Summary](#summary)
+
+### VI.4.d Installed tools (examples)
+
+The tools are installed via the scripts:
+
+- Network scanning
+- Web scanning
+- Kubernetes
+- Active Directory
+- HTTP / DNS / RPC
+
+Examples (non-exhaustive):
+
+- `nuclei`
+- `naabu`
+- `httpx`
+- `ffuf`
+- `dirb`
+- `kubectl`
+- `kubeletctl`
+- `kubescape`
+- `netexec`
+- `sqlmap`
+- `wafw00f`
+
+👉 All are directly accessible in the terminal.
+
+[Back to Summary](#summary)
+
+## VI.5. How to use the image
+
+### VI.5.a Build the image
+
+```bash
+docker build -t darkmoon .
+```
+
+[Back to Summary](#summary)
+
+### VI.5.b Start a shell
+
+```bash
+docker run -it darkmoon bash
+```
+
+[Back to Summary](#summary)
+
+### VI.5.c Use a tool
+
+```bash
+nuclei -h
+naabu -h
+netexec -h
+```
+
+👉 No complicated path is required.
+
+[Back to Summary](#summary)
+
+## VI.6. How to add a new tool (for the community)
+
+### VI.6.a Choose the right place
+
+| Tool type              | Where to add it      |
+| ---------------------- | -------------------- |
+| Go / binary tool       | `setup.sh`           |
+| Python tool            | `setup_py.sh`        |
+| Runtime system library | Dockerfile (runtime) |
+| Build library          | Dockerfile (builder) |
+
+[Back to Summary](#summary)
+
+### VI.6.b Rules to follow
+
+- One tool = one clear block.
+- Always display a message:
+  - `msg "tool …"`
+
+- Always verify the installation:
+  - `tool -h` or `tool --version`
+
+- Always install to:
+  - `/out/bin` (for binaries)
+
+- Do not mix responsibilities.
+
+[Back to Summary](#summary)
+
+### VI.6.c Simple example (Go tool)
+
+```bash
+msg "exampletool …"
+go install github.com/example/exampletool@latest
+install -m 755 "$(go env GOPATH)/bin/exampletool" "$BIN_OUT/exampletool"
+```
+
+[Back to Summary](#summary)
+
+## VI.7. How to maintain the project
+
+### VI.7.a In case of an error:
+
+- Read the log.
+- Identify whether the problem comes from:
+  - Go,
+  - Python,
+  - APT,
+  - a C compilation.
+
+[Back to Summary](#summary)
+
+### VI.7.b Best practices:
+
+- Do not add unnecessary dependencies.
+- Do not break the existing structure.
+- Test before proposing a contribution.
+
+[Back to Summary](#summary)
+
+## VI.8. For the Open Source community
+
+This project is made to:
+
+- be **read**,
+- be **understood**,
+- be **improved**.
+
+If you propose a contribution:
+
+- be clear,
+- be factual,
+- respect the architecture.
+
+[Back to Summary](#summary)
+
+## VI.9. Very short summary
+
+- Two stages: **builder → runtime**
+- Clear and separated scripts
+- Tools centralized in `/out/bin`
+- Simple execution via `/usr/local/bin`
+- Clean, stable, and maintainable image
+
+[Back to Summary](#summary)
+
+## VI.10. Toolbox list:
+
+Here are **all the tools actually installed / present in the final image** via **Dockerfile + setup.sh + setup_py.sh** (and the symlinks/wrappers), in a table.
+
+> ⚠️ I **do not include** the _libs_ (libssl, zlib, etc.) nor the _build tools_ from the `builder` stage (gcc, make…), because they are not in the final runtime image.
+> ⚠️ `docker-compose` also installs/includes **ZAP** in another container (`ghcr.io/zaproxy/zaproxy:weekly`) → **not included here** because it is **not** “installed via the darkmoon Dockerfile”.
+
+[Back to Summary](#summary)
+
+### VI.10.a Tools installed in the `darkmoon` runtime image
+
+| Tool (command)                   | Source / installation method                | Location (binary)                                                       | Notes                                                         |
+| -------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `bash`                           | `apt-get install`                           | `/bin/bash`                                                             | Runtime shell                                                 |
+| `ca-certificates`                | `apt-get install`                           | (system)                                                                | TLS certificates                                              |
+| `tzdata`                         | `apt-get install`                           | (system)                                                                | Timezone                                                      |
+| `dig` / `nslookup`… (`dnsutils`) | `apt-get install dnsutils`                  | `/usr/bin/dig`                                                          | DNS tooling                                                   |
+| `curl` (Debian)                  | `apt-get install curl`                      | `/usr/bin/curl`                                                         | System curl                                                   |
+| `curl` (custom 8.15.0)           | build + `COPY /out/curl` + `PATH`           | `/opt/darkmoon/curl/bin/curl`                                           | **Priority** in the `PATH`                                    |
+| `jq`                             | `apt-get install jq`                        | `/usr/bin/jq`                                                           | JSON CLI                                                      |
+| `hydra`                          | `apt-get install hydra`                     | `/usr/bin/hydra`                                                        | Brute force                                                   |
+| `snmp*` (`snmp`)                 | `apt-get install snmp`                      | `/usr/bin/snmpwalk` etc.                                                | SNMP suite                                                    |
+| `ssh` (client)                   | `apt-get install openssh-client`            | `/usr/bin/ssh`                                                          | SSH client                                                    |
+| `dirb`                           | build from sources + copy                   | `/usr/local/bin/dirb`                                                   | Wordlists also copied                                         |
+| DIRB wordlists                   | copy                                        | `/usr/share/wordlists/dirb/`                                            | + compatibility symlink `/usr/share/dirb/wordlists`           |
+| `waybackurls`                    | Go build (`setup.sh`) + copy                | `/usr/local/bin/waybackurls`                                            | archive.org URL recon                                         |
+| `kubectl`                        | official binary download (dl.k8s.io) + copy | `/usr/local/bin/kubectl`                                                | v1.34.2 (ARG)                                                 |
+| `kube-bench`                     | `go install` + copy                         | `/usr/local/bin/kube-bench`                                             | v0.14.0                                                       |
+| `grpcurl`                        | build from sources + copy                   | `/usr/local/bin/grpcurl`                                                | patched Go deps                                               |
+| `ruby`                           | build Ruby 3.3.5 + copy                     | `/opt/darkmoon/ruby/bin/ruby`                                           | Embedded Ruby                                                 |
+| `gem`                            | Ruby install                                | `/opt/darkmoon/ruby/bin/gem`                                            | RubyGems                                                      |
+| `bundler`                        | `gem install bundler:2.7.2`                 | `/opt/darkmoon/ruby/bin/bundle`                                         | Used for WhatWeb                                              |
+| `whatweb`                        | git clone + bundler gems + wrapper          | `/usr/local/bin/whatweb`                                                | Wrapper launches `/opt/darkmoon/whatweb/whatweb` with bundler |
+| `python3`                        | build Python 3.12.6 + copy                  | `/opt/darkmoon/python/bin/python3`                                      | Embedded Python                                               |
+| `pip3`                           | `--with-ensurepip`                          | `/opt/darkmoon/python/bin/pip3`                                         | Embedded Pip                                                  |
+| `impacket`                       | `pip install impacket==0.12.0`              | (site-packages)                                                         | Library + impacket entrypoints                                |
+| `impacket-smbclient`             | custom wrapper                              | `/usr/local/bin/impacket-smbclient`                                     | `python -m impacket.smbclient`                                |
+| `rpcdump.py`                     | custom wrapper                              | `/usr/local/bin/rpcdump.py`                                             | `python -m impacket.examples.rpcdump`                         |
+| `NetExec` (`nxc` / `netexec`)    | `pip install git+...NetExec@v1.4.0`         | `/opt/darkmoon/python/bin/nxc` (or `netexec`)                           | Installed from GitHub                                         |
+| `netexec`                        | custom wrapper                              | `/usr/local/bin/netexec`                                                | Calls `nxc` or `netexec`                                      |
+| `crackmapexec`                   | custom wrapper                              | `/usr/local/bin/crackmapexec`                                           | Compatibility alias → `netexec`                               |
+| `bloodhound` (python ingestor)   | `pip install bloodhound==1.7.2`             | `/opt/darkmoon/python/bin/bloodhound`                                   | Python ingestor                                               |
+| `bloodhound-python`              | custom wrapper                              | `/usr/local/bin/bloodhound-python`                                      | Explicit alias                                                |
+| `wafw00f`                        | `pip install wafw00f`                       | `/opt/darkmoon/python/bin/wafw00f` + wrapper                            | Wrapper `/usr/local/bin/wafw00f`                              |
+| `sqlmap`                         | `pip install sqlmap`                        | `/opt/darkmoon/python/bin/sqlmap` + wrapper                             | Wrapper `/usr/local/bin/sqlmap`                               |
+| `arjun`                          | `pip install arjun`                         | `/opt/darkmoon/python/bin/arjun` + wrapper                              | Wrapper `/usr/local/bin/arjun`                                |
+| `aws` (AWS CLI)                  | `pip install awscli`                        | `/opt/darkmoon/python/bin/aws` + wrapper                                | Wrapper `/usr/local/bin/aws`                                  |
+| `naabu`                          | Go build (`setup.sh`) + copy                | `/opt/darkmoon/kube/naabu` + `/usr/local/bin/naabu`                     | Port scanner                                                  |
+| `httpx`                          | Go build (`setup.sh`) + copy                | `/opt/darkmoon/kube/httpx` + `/usr/local/bin/httpx`                     | HTTP probing                                                  |
+| `nuclei`                         | `go install` (`setup.sh`) + copy            | `/opt/darkmoon/kube/nuclei` + `/usr/local/bin/nuclei`                   | Template scanner                                              |
+| `nuclei-templates`               | `nuclei -update-templates` + copy           | `/opt/darkmoon/nuclei-templates`                                        | + initial copy `/root/nuclei-templates`                       |
+| `zgrab2`                         | `go install` (`setup.sh`) + copy            | `/opt/darkmoon/kube/zgrab2` + `/usr/local/bin/zgrab2`                   | Banner grabber                                                |
+| `katana`                         | `go install` (`setup.sh`) + copy            | `/opt/darkmoon/kube/katana` + `/usr/local/bin/katana`                   | Crawler                                                       |
+| `kubescape`                      | Go build (`setup.sh`, v3.0.9) + copy        | `/opt/darkmoon/kube/kubescape` + `/usr/local/bin/kubescape`             | K8s security scanner                                          |
+| `kubectl-who-can`                | Go build (`setup.sh`) + copy                | `/opt/darkmoon/kube/kubectl-who-can` + `/usr/local/bin/kubectl-who-can` | K8s RBAC                                                      |
+| `kubeletctl`                     | Go build (`setup.sh`) + copy                | `/opt/darkmoon/kube/kubeletctl` + `/usr/local/bin/kubeletctl`           | Kubelet tooling                                               |
+| `rbac-police`                    | Go build (`setup.sh`) + copy                | `/opt/darkmoon/kube/rbac-police` + `/usr/local/bin/rbac-police`         | May be a **stub** if the build fails                          |
+| `ffuf`                           | Go build (`setup.sh`)                       | `/out/bin/ffuf` (builder)                                               | /usr/local/bin/                                               |
+| `acl` (`setfacl`)                | `apt-get install acl`                       | `/usr/bin/setfacl`                                                      | For default permissions on `/opt/darkmoon/scripts`            |
+| Subfinder                        | go install                                  | subdomain enumeration                                                   |
+| vulnx                            | go install                                  | Modern CLI for exploring vulnerability                                  |
+| lightpanda                       | downloaded via latest release               | Lightpanda: the headless browser designed for AI and automation         |
+
+[Back to Summary](#summary)
+
+### VI.10.b “tools” installed by `pip install impacket==0.12.0` (scripts provided by Impacket)
+
+These scripts are installed as commands in `/opt/darkmoon/python/bin/` (so in the `PATH`).
+
+| Tool (command)       | Source / method | Location                                      | Notes                                    |
+| -------------------- | --------------- | --------------------------------------------- | ---------------------------------------- |
+| `secretsdump.py`     | pip (impacket)  | `/opt/darkmoon/python/bin/secretsdump.py`     | Dump AD secrets                          |
+| `wmiexec.py`         | pip (impacket)  | `/opt/darkmoon/python/bin/wmiexec.py`         | WMI exec                                 |
+| `psexec.py`          | pip (impacket)  | `/opt/darkmoon/python/bin/psexec.py`          | Exec via SMB service                     |
+| `smbexec.py`         | pip (impacket)  | `/opt/darkmoon/python/bin/smbexec.py`         | SMB exec                                 |
+| `atexec.py`          | pip (impacket)  | `/opt/darkmoon/python/bin/atexec.py`          | Exec via AT scheduler                    |
+| `dcomexec.py`        | pip (impacket)  | `/opt/darkmoon/python/bin/dcomexec.py`        | DCOM exec                                |
+| `mssqlclient.py`     | pip (impacket)  | `/opt/darkmoon/python/bin/mssqlclient.py`     | MSSQL client                             |
+| `smbclient.py`       | pip (impacket)  | `/opt/darkmoon/python/bin/smbclient.py`       | SMB client (in addition to your wrapper) |
+| `lookupsid.py`       | pip (impacket)  | `/opt/darkmoon/python/bin/lookupsid.py`       | RID/SID enum                             |
+| `GetADUsers.py`      | pip (impacket)  | `/opt/darkmoon/python/bin/GetADUsers.py`      | Enumerate AD users                       |
+| `GetNPUsers.py`      | pip (impacket)  | `/opt/darkmoon/python/bin/GetNPUsers.py`      | AS-REP roast                             |
+| `GetUserSPNs.py`     | pip (impacket)  | `/opt/darkmoon/python/bin/GetUserSPNs.py`     | Kerberoast                               |
+| `ticketer.py`        | pip (impacket)  | `/opt/darkmoon/python/bin/ticketer.py`        | Golden/Silver tickets                    |
+| `raiseChild.py`      | pip (impacket)  | `/opt/darkmoon/python/bin/raiseChild.py`      | Trust abuse                              |
+| `addcomputer.py`     | pip (impacket)  | `/opt/darkmoon/python/bin/addcomputer.py`     | Add machine account                      |
+| `changepasswd.py`    | pip (impacket)  | `/opt/darkmoon/python/bin/changepasswd.py`    | Change password                          |
+| `getPac.py`          | pip (impacket)  | `/opt/darkmoon/python/bin/getPac.py`          | Kerberos PAC                             |
+| `getTGT.py`          | pip (impacket)  | `/opt/darkmoon/python/bin/getTGT.py`          | Kerberos TGT                             |
+| `getST.py`           | pip (impacket)  | `/opt/darkmoon/python/bin/getST.py`           | Kerberos ST                              |
+| `klistattack.py`     | pip (impacket)  | `/opt/darkmoon/python/bin/klistattack.py`     | Kerberos attack helper                   |
+| `samrdump.py`        | pip (impacket)  | `/opt/darkmoon/python/bin/samrdump.py`        | SAMR enum                                |
+| `reg.py`             | pip (impacket)  | `/opt/darkmoon/python/bin/reg.py`             | Remote registry ops                      |
+| `netview.py`         | pip (impacket)  | `/opt/darkmoon/python/bin/netview.py`         | Network view                             |
+| `services.py`        | pip (impacket)  | `/opt/darkmoon/python/bin/services.py`        | Service control                          |
+| `eventquery.py`      | pip (impacket)  | `/opt/darkmoon/python/bin/eventquery.py`      | Event logs                               |
+| `dpapi.py`           | pip (impacket)  | `/opt/darkmoon/python/bin/dpapi.py`           | DPAPI ops                                |
+| `ntlmrelayx.py`      | pip (impacket)  | `/opt/darkmoon/python/bin/ntlmrelayx.py`      | NTLM relay                               |
+| `smbserver.py`       | pip (impacket)  | `/opt/darkmoon/python/bin/smbserver.py`       | SMB server                               |
+| `rbcd.py`            | pip (impacket)  | `/opt/darkmoon/python/bin/rbcd.py`            | RBCD abuse                               |
+| `findDelegation.py`  | pip (impacket)  | `/opt/darkmoon/python/bin/findDelegation.py`  | Delegation enum                          |
+| `GetLAPSPassword.py` | pip (impacket)  | `/opt/darkmoon/python/bin/GetLAPSPassword.py` | LAPS retrieval                           |
+| `keylistattack.py`   | pip (impacket)  | `/opt/darkmoon/python/bin/keylistattack.py`   | Keylist attack                           |
+| `ping.py`            | pip (impacket)  | `/opt/darkmoon/python/bin/ping.py`            | Ping PoC (impacket)                      |
+| `sniffer.py`         | pip (impacket)  | `/opt/darkmoon/python/bin/sniffer.py`         | Sniffer helper                           |
+
+[Back to Summary](#summary)
+
+## VI.11 BONUS: Pentester lab to train DarkMoon
+
+### VI.11.a WEB / API / GRAPHQL / FRONTEND
+
+| Infrastructure | Protocols      | Services / Tech        | Darkmoon Engine        | Equivalent labs                        |
+| -------------- | -------------- | ---------------------- | ---------------------- | -------------------------------------- |
+| Classic web    | HTTP / HTTPS   | Apache, Nginx, IIS     | engine_infra_web       | **OWASP Juice Shop**                   |
+| REST API       | HTTP / JSON    | Express, Spring, Flask | engine_web_api         | **OWASP crAPI**, **VAPI**              |
+| GraphQL        | HTTP / GraphQL | Apollo, Graphene       | engine_web_graphql     | **DVGA**, **GraphQL-Goat**             |
+| Web auth       | HTTP / JWT     | OAuth2, SSO            | engine_web_auth        | **AuthLab**, **JWT-Goat**              |
+| CMS            | HTTP           | WordPress, Joomla      | engine_web_cms         | **WPScan VulnLab**, **HackTheBox CMS** |
+| JS frontend    | HTTP           | React, Angular         | engine_web_frontend_js | **DOM XSS Labs**, **PortSwigger**      |
+| File upload    | HTTP multipart | PHP, Node              | engine_web_upload      | **Upload Vulnerable Labs**             |
+| WAF / Proxy    | HTTP           | Cloudflare, Akamai     | engine_web_waf_bypass  | **WAF Evasion Labs**                   |
+| Web CI/CD      | HTTP / Git     | GitLab CI              | engine_web_ci_cd       | **GitHub Actions Labs**                |
+
+[Back to Summary](#summary)
+
+### VI.11.b ACTIVE DIRECTORY / WINDOWS
+
+| Infrastructure   | Protocols    | Services    | Darkmoon Engine    | Equivalent labs                       |
+| ---------------- | ------------ | ----------- | ------------------ | ------------------------------------- |
+| AD domain        | Kerberos     | KDC         | engine_ad_kerberos | **AttackDefense AD**, **HTB AD Labs** |
+| SMB              | SMBv1/v2     | File Shares | engine_ad_smb      | **VulnAD**, **GOAD**                  |
+| LDAP             | LDAP / LDAPS | Directory   | engine_ad_ldap     | **LDAP Injection Labs**               |
+| AD DNS           | DNS          | SRV records | engine_ad_dns_srv  | **AD DNS Labs**                       |
+| ADCS             | RPC / HTTP   | PKI         | engine_ad_adcs     | **ADCS Abuse Labs**                   |
+| GPO              | SMB          | SYSVOL      | engine_ad_gpo      | **BloodHound Labs**                   |
+| Lateral movement | RPC          | WinRM / WMI | engine_ad_privesc  | **Proving Grounds AD**                |
+
+[Back to Summary](#summary)
+
+### VI.11.c NETWORK / INFRASTRUCTURE
+
+| Infrastructure | Protocols     | Services    | Darkmoon Engine            | Equivalent labs                  |
+| -------------- | ------------- | ----------- | -------------------------- | -------------------------------- |
+| DNS            | UDP/TCP 53    | Bind        | engine_proto_dns           | **DNSGoat**, **PortSwigger DNS** |
+| FTP            | TCP 21        | vsftpd      | engine_proto_ftp           | **VulnFTP**, **HTB FTP**         |
+| SSH            | TCP 22        | OpenSSH     | engine_proto_ssh_telnet    | **SSH Weak Labs**                |
+| SNMP           | UDP 161       | SNMPv2      | engine_proto_snmp          | **SNMP Labs**                    |
+| Mail           | SMTP/IMAP     | Postfix     | engine_proto_mail_services | **MailGoat**                     |
+| VPN            | IPsec/OpenVPN | VPN Gateway | engine_proto_vpn_access    | **VPN Labs**                     |
+| Wi-Fi          | 802.11        | WPA2        | engine_proto_wifi          | **WiFi Pineapple Labs**          |
+| RDP/VNC        | TCP 3389      | RDP         | engine_proto_rdp_vnc       | **BlueKeep Labs**                |
+| ICMP           | ICMP          | Tunnel      | engine_proto_icmp_tunnel   | **ICMP Tunnel Labs**             |
+| BGP/OSPF       | TCP/UDP       | Routing     | engine_proto_bgp_ospf      | **Routing Attack Labs**          |
+
+[Back to Summary](#summary)
+
+### VI.11.d CLOUD (AWS / AZURE / GCP / OVH)
+
+| Infrastructure | Protocols    | Services         | Darkmoon Engine                | Equivalent labs                |
+| -------------- | ------------ | ---------------- | ------------------------------ | ------------------------------ |
+| IAM            | HTTPS        | Roles / Policies | engine_cloud_iam               | **Flaws.cloud**, **CloudGoat** |
+| Compute        | HTTPS        | EC2 / VM         | engine_cloud_compute           | **AWSGoat**                    |
+| Storage        | HTTPS        | S3 / Blob        | engine_cloud_storage           | **S3Goat**                     |
+| Metadata       | HTTP 169.254 | IMDS             | engine_cloud_metadata_exposure | **IMDS Labs**                  |
+| Containers     | HTTPS        | EKS / GKE        | engine_cloud_containers        | **KubeGoat**                   |
+| CI/CD          | HTTPS        | Pipelines        | engine_cloud_ci_cd             | **CI/CD Goat**                 |
+| Serverless     | HTTPS        | Lambda           | engine_cloud_serverless        | **LambdaGoat**                 |
+| Secrets        | HTTPS        | Vault            | engine_cloud_secret_management | **Secrets Goat**               |
+| Billing abuse  | HTTPS        | Billing API      | engine_cloud_billing_abuse     | **Cloud Abuse Labs**           |
+
+[Back to Summary](#summary)
+
+### VI.11.e IOT / EMBEDDED / SCADA / ICS
+
+| Infrastructure | Protocols  | Services   | Darkmoon Engine             | Equivalent labs            |
+| -------------- | ---------- | ---------- | --------------------------- | -------------------------- |
+| PLC            | Modbus/TCP | Automation | engine_proto_modbus         | **ModbusPal**, **ICSGoat** |
+| SCADA          | DNP3       | Energy     | engine_proto_dnp3           | **DNP3 Labs**              |
+| MQTT           | TCP 1883   | Broker     | engine_proto_mqtt           | **MQTTGoat**               |
+| CoAP           | UDP        | IoT        | engine_proto_coap           | **CoAP Labs**              |
+| ZigBee         | 802.15.4   | Mesh       | engine_proto_zigbee         | **ZigBee Labs**            |
+| BLE            | BLE        | GATT       | engine_proto_ble            | **BLEGoat**                |
+| Firmware       | Raw        | Binwalk    | engine_firmware_binwalk     | **OWASP IoT Goat**         |
+| Hardware       | UART/JTAG  | Debug      | engine_hw_jtag_uart         | **Hardware Hacking Labs**  |
+| ICS Auth       | Custom     | HMI        | engine_scada_authentication | **ICS Auth Labs**          |
+
+[Back to Summary](#summary)
+
+### VI.11.f MULTI-INFRA ORCHESTRATION (RARE & CRITICAL)
+
+| Mixed infrastructure | Trigger        | Engine                           | Labs                  |
+| -------------------- | -------------- | -------------------------------- | --------------------- |
+| Web + AD             | LDAP leak      | engine_infra_global_orchestrator | **HTB Hybrid Labs**   |
+| Web + Cloud          | SSRF → IMDS    | engine_infra_global_orchestrator | **SSRF → AWS Labs**   |
+| VPN + AD             | Split tunnel   | engine_infra_network + AD        | **Corp Network Labs** |
+| IoT + Cloud          | MQTT bridge    | engine_infra_embedded + cloud    | **IoT Cloud Labs**    |
+| CI/CD + Cloud        | Pipeline abuse | engine_global                    | **Supply Chain Labs** |
+
+[Back to Summary](#summary)
+
+# VII. Contributing
 
 If you to contribute to the project, you access to the coding guideline at [CONTRIBUTING.md](CONTRIBUTING.md)
 
 [Back to Summary](#summary)
 
-# VII. License
+# VIII. License
 
 Code licensed under [GNU GPL v3](LICENSE)
 
