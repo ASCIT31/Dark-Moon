@@ -280,64 +280,378 @@ darkmoon
 Or with a direct command :
 
 ```bash
-darkmoon "TARGET: mondomaine.com"
+darkmoon "TARGET: mydomain.com"
+```
+### II.7.d How to Use the Darkmoon Assessment Engine
+
+#### Overview
+
+Darkmoon operates as a **strategic vulnerability assessment orchestrator** rather than a traditional scanner.
+
+Instead of executing a fixed sequence of tools, the system behaves like an **audit conductor** that:
+
+1. Discovers the target environment
+2. Models the attack surface
+3. Classifies technology domains
+4. Dispatches specialized assessment agents
+5. Continuously adapts based on discovered signals
+6. Produces a structured security report
+
+This approach mirrors professional methodologies such as:
+
+* ISO 27001
+* NIST SP 800-115
+* MITRE ATT&CK modeling
+* Industrial audit practices
+
+The orchestrator coordinates specialized sub-agents such as:
+
+* PHP
+* NodeJS
+* Flask / Python
+* ASP.NET
+* GraphQL
+* Kubernetes
+* Active Directory
+* Ruby on Rails
+* Spring Boot
+* Headless Browser
+* CMS engines (WordPress, Drupal, Joomla, Magento, PrestaShop, Moodle)
+
+Each agent focuses on **a specific technology stack**.
+
+---
+
+### Step-by-Step Workflow
+
+The Darkmoon assessment process follows a structured lifecycle.
+
+### II.7.e Step 1 — Start an Assessment
+
+The user begins by providing a **target host, domain, or IP address**.
+
+Example:
+
+```
+TARGET: 172.20.0.4
 ```
 
-[Back to Summary](#summary)
+<img src="docs/pics/start-assesment.png" height="400">
 
-### II.7.d View logs
+This launches the assessment campaign.
 
-When executing the darkmoon TUI, the session initializes, to view the logs in real time, you must open a new additional bash console and type the command described in the chat of Darkmmon `./darkmoon.sh --log {{session_id}}`.
+The orchestrator immediately initializes a **session context**.
 
-```bash
-Let me start with that.
-I'll begin by initializing the session as required by the protocol.
-⚙ darkmoon_get_session
-Thinking: Good, I have the session ID: c0d67d10. Now I need to display the monitoring command to the user as required.
-Session Initialized
-Monitoring Command:
-./darkmoon.sh --log c0d67d10
-Now I'll proceed with the vulnerability assessment. Let me first identify the target's technological landscape.
+From the session logs we can see this initialization stage: 
+
+```
+darkmoon_get_session
+→ session_id returned
 ```
 
-you will be able to view the logs in bash session in real time:
+The user receives a **monitoring command** to observe the assessment in real time:
 
-```bash
-└─$ ./darkmoon.sh --log c0d67d10
-
-darkmoon(live)> streaming MCP output…
-[11:37:59] darkmoon> httpx -mc 200,302 -u https://dark-moon.org
-
-
-    __    __  __       _  __
-   / /_  / /_/ /_____ | |/ /
-  / __ \/ __/ __/ __ \|   /
- / / / / /_/ /_/ /_/ /   |
-/_/ /_/\__/\__/ .___/_/|_|
-             /_/
-
-                projectdiscovery.io
-
-
-[11:37:59] darkmoon> katana -aff -fx -jc -jsl -xhr -kf all -depth 5 -u https://dark-moon.org
-
-
-   __        __
-  / /_____ _/ /____ ____  ___ _
- /  '_/ _  / __/ _  / _ \/ _  /
-/_/\_\\_,_/\__/\_,_/_//_/\_,_/
-
-                projectdiscovery.io
-
-[INF] Current httpx version v1.8.1 (latest)
-[WRN] UI Dashboard is disabled, Use -dashboard option to enable
-[INF] Current katana version v1.4.0 (latest)
-
-^C
-darkmoon(live)> stopped.
+```
+./darkmoon.sh --log <session_id>
 ```
 
-[Back to Summary](#summary)
+<img src="docs/pics/log-command.png" height="200">
+
+This allows the user to track the progress of the audit while it runs.
+
+<img src="docs/pics/log.png" height="500">
+
+---
+
+### II.7.f Step 2 — Environmental Discovery
+
+Once the session begins, the system performs **controlled reconnaissance**.
+
+The goal is not exploitation but **environment understanding**.
+
+Activities include:
+
+* Port scanning
+* Protocol detection
+* HTTP service discovery
+* Banner analysis
+* Basic service fingerprinting
+
+Example from the session log: 
+
+```
+workflow: port_scan
+target: 172.20.0.4
+ports discovered: 80
+```
+
+At this stage the system answers questions such as:
+
+* Which ports are exposed?
+* Which protocols are running?
+* Is the target a web application, network service, or identity service?
+
+This phase builds the **initial attack surface model**.
+
+<img src="docs/pics/enumeration.png" height="400">
+
+---
+
+### II.7.g Step 3 — Technology Fingerprinting
+
+Once exposed services are identified, Darkmoon determines the **technology stack**.
+
+Typical signals collected include:
+
+* HTTP headers
+* Server banners
+* Framework fingerprints
+* CMS signatures
+* API endpoints
+* JavaScript frameworks
+
+Example signals observed in the session: 
+
+```
+Server: Apache/2.4.38
+X-Powered-By: PHP/7.1.33
+WordPress detected
+plugins detected
+```
+
+At this stage the orchestrator builds a **technology profile** such as:
+
+```
+Web Application
+ ├── Apache
+ ├── PHP
+ └── WordPress CMS
+```
+
+This classification is critical because it determines **which specialized agents must be executed**.
+
+<img src="docs/pics/matrix.png" height="400">
+
+---
+
+### II.7.h Step 4 — Attack Surface Modeling
+
+The system then constructs an internal representation of the target environment.
+
+The model includes:
+
+* exposed endpoints
+* authentication surfaces
+* APIs
+* frameworks
+* infrastructure components
+
+Example elements discovered in the session: 
+
+```
+/wp-json/  → REST API
+/xmlrpc.php → remote publishing interface
+/wp-login.php → authentication endpoint
+```
+
+This information defines the **attack surface map** used by the orchestrator.
+
+---
+
+### II.7.i Step 5 — Sub-Agent Selection
+
+Once the environment is understood, the orchestrator dynamically selects **specialized agents**.
+
+The selection is based on detected technology signals.
+
+Examples:
+
+| Signal detected    | Agent triggered |
+| ------------------ | --------------- |
+| WordPress          | wordpress       |
+| GraphQL endpoint   | graphql         |
+| NodeJS / Express   | nodejs          |
+| Flask / Django     | flask           |
+| ASP.NET            | aspnet          |
+| Java Spring        | springboot      |
+| Ruby               | ruby            |
+| Active Directory   | ad              |
+| Kubernetes cluster | kubernetes      |
+
+Multiple agents may run **in parallel** if several technologies are detected.
+
+This prevents the tool from missing vulnerabilities across **hybrid architectures**.
+
+---
+
+### II.7.j Step 6 — Reactive Multi-Agent Execution
+
+The orchestrator uses a **reactive feedback loop**.
+
+After each agent finishes:
+
+1. The results are analyzed.
+2. Newly discovered technologies are evaluated.
+3. Additional agents may be dispatched.
+
+Example logic:
+
+```
+Initial scan
+   ↓
+WordPress detected
+   ↓
+WordPress agent executed
+   ↓
+Plugin exposes GraphQL API
+   ↓
+GraphQL agent triggered
+```
+
+This allows the system to **adapt dynamically** to the architecture discovered during the audit.
+
+<img src="docs/pics/sub-agent.png" height="150">
+
+---
+
+### II.7.k Step 7 — Evidence-Based Findings
+
+The system follows strict validation rules.
+
+A vulnerability is reported only when **evidence exists**, such as:
+
+* HTTP request used
+* payload sent
+* raw response received
+* extracted data or proof of execution
+
+If proof is incomplete, the finding is labeled:
+
+```
+UNCONFIRMED SIGNAL
+```
+
+This ensures the report remains **audit-grade** and defensible.
+
+<img src="docs/pics/report.png" height="400">
+
+---
+
+### II.7.l Step 8 — Campaign Completion
+
+The assessment ends when:
+
+* no new technology signals appear
+* all relevant agents have executed
+* attack surface coverage is sufficient
+
+The orchestrator then triggers the **reporting phase**.
+
+The final report summarizes:
+
+* discovered technologies
+* attack surfaces
+* validated vulnerabilities
+* supporting evidence
+* risk classification
+
+---
+
+### II.7.m High-Level Workflow Diagram
+
+```
+                +--------------------+
+                |   User provides    |
+                |   target address   |
+                +----------+---------+
+                           |
+                           v
+               +----------------------+
+               | Session Initialization|
+               | darkmoon_get_session |
+               +----------+-----------+
+                          |
+                          v
+               +----------------------+
+               | Environmental        |
+               | Discovery            |
+               | (ports, services)    |
+               +----------+-----------+
+                          |
+                          v
+               +----------------------+
+               | Technology           |
+               | Fingerprinting       |
+               +----------+-----------+
+                          |
+                          v
+               +----------------------+
+               | Attack Surface       |
+               | Modeling             |
+               +----------+-----------+
+                          |
+                          v
+               +----------------------+
+               | Sub-Agent Selection  |
+               +----------+-----------+
+                          |
+                          v
+              +-----------------------+
+              | Multi-Agent Execution |
+              | Reactive Loop         |
+              +----------+------------+
+                         |
+                         v
+              +-----------------------+
+              | Evidence Validation   |
+              +----------+------------+
+                         |
+                         v
+              +-----------------------+
+              | Final Security Report |
+              +-----------------------+
+```
+
+### II.7.n What the User Needs to Do
+
+From the user's perspective the workflow is extremely simple.
+
+#### 1️⃣ Provide a target
+
+```
+TARGET: <ip or domain>
+```
+
+#### 2️⃣ Monitor the session
+
+```
+./darkmoon.sh --log <session_id>
+```
+
+#### 3️⃣ Wait for the assessment to complete
+
+The orchestrator automatically:
+
+* discovers technologies
+* dispatches agents
+* collects evidence
+* generates the report
+
+No manual tool selection is required.
+
+---
+
+### II.7.o Key Advantages of the Workflow
+
+Compared to traditional scanners, Darkmoon:
+
+✔ models the system before testing
+✔ adapts to discovered technologies
+✔ coordinates multiple specialized engines
+✔ avoids noisy scanning
+✔ produces evidence-driven findings
+
+This makes it suitable for **industrial-grade security assessments**.
 
 ## II.8. Direct access to the container (debug)
 
@@ -1161,6 +1475,8 @@ Here are **all the tools actually installed / present in the final image** via *
 | Subfinder                        | go install                                  | subdomain enumeration                                                   |
 | vulnx                            | go install                                  | Modern CLI for exploring vulnerability                                  |
 | lightpanda                       | downloaded via latest release               | Lightpanda: the headless browser designed for AI and automation         |
+| wp-scan                       | downloaded via latest release               | WPScan WordPress security scanner. Written for security professionals and blog maintainers to test the security of their WordPress websites         |
+| cmseek                       | downloaded via latest release               | CMS Detection and Exploitation suite - Scan WordPress, Joomla, Drupal and over 180 other CMSs         |
 
 [Back to Summary](#summary)
 
