@@ -232,6 +232,122 @@ Configuration files are persisted via Docker volumes.
 
 ### II.6.a Building the images
 
+
+#### Using install.sh
+
+#### 🧹 Clean Install & Stack Reset: `install.sh`
+
+Darkmoon provides a dedicated installation and recovery script:
+
+```bash
+./install.sh
+```
+
+This script is designed to **fully reset and recreate the Darkmoon Docker stack** in a clean and deterministic way.
+
+It is useful both for **initial setup** and for **recovering from Docker-related issues**.
+
+---
+
+##### What the script does
+
+When executed, `install.sh` performs the following operations:
+
+1. **Checks prerequisites**
+
+   * verifies that **Docker** is installed,
+   * verifies that the **Docker daemon is running**,
+   * verifies that **Docker Compose v2** is available.
+
+   If any requirement is missing, the script stops and displays installation instructions.
+
+2. **Stops the running stack**
+
+   ```bash
+   docker compose down --remove-orphans --volumes --rmi all
+   ```
+
+   This stops all containers and removes:
+
+   * containers,
+   * networks,
+   * volumes,
+   * images associated with the compose stack.
+
+3. **Removes local bind mounts**
+
+   The following directories are deleted to ensure a clean environment:
+
+   * `./data`
+   * `./darkmoon-settings`
+   * `./workflows`
+
+4. **Cleans Docker build cache**
+
+   ```bash
+   docker builder prune -f
+   ```
+
+   This removes cached build layers that could cause inconsistent builds.
+
+5. **Rebuilds all images from scratch**
+
+   ```bash
+   docker compose build --no-cache
+   ```
+
+   This guarantees that all images are rebuilt without using previous layers.
+
+6. **Recreates the Darkmoon stack**
+
+   ```bash
+   docker compose up -d --force-recreate
+   ```
+
+   Containers are recreated and started in detached mode.
+
+---
+
+##### When to use `install.sh`
+
+This script should be used when:
+
+* performing the **initial installation** of Darkmoon,
+* Docker builds fail unexpectedly,
+* volumes or bind mounts become inconsistent,
+* configuration files were modified,
+* switching **LLM providers or models**,
+* troubleshooting Docker-related issues.
+
+It guarantees that the stack is rebuilt from a **clean state**.
+
+---
+
+##### What it ensures
+
+Running `install.sh` guarantees:
+
+* a **clean Docker environment**
+* **fresh image builds**
+* **no leftover volumes or caches**
+* a fully recreated **Darkmoon stack**
+
+This prevents issues caused by stale caches or corrupted Docker layers.
+
+---
+
+##### When you do NOT need to run it
+
+You typically **do not need to run `install.sh`** when modifying:
+
+* agent Markdown files
+* prompts
+* workflows mounted through volumes
+
+These changes are usually applied **live without rebuilding the stack**.
+
+#### Using Docker compose
+
 ```bash
 docker compose build
 ```
@@ -248,6 +364,8 @@ docker compose up -d
 > The first launch may take some time (image build).
 
 [Back to Summary](#summary)
+
+
 
 ## II.7. Launch Darkmoon (User CLI)
 

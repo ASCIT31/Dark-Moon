@@ -6,19 +6,15 @@ volumes:
 services:
 
   darkmoon:
-    image: ascit/darkmoon:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: darkmoon
     user: "0:0"
     network_mode: "host"
 
-    # GPU support
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    # GPU support (Compose v2 compatible)
+    gpus: all
 
     environment:
       - DM_MODE=default
@@ -38,11 +34,12 @@ services:
 
     restart: unless-stopped
 
-
   opencode:
-    image: ascit/opencode-darkmoon:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.opencode
     container_name: opencode
-    stdin_open: true
+    stdin_open: true     # équivalent -it
     tty: true
     restart: unless-stopped
 
@@ -59,6 +56,7 @@ services:
     environment:
       - TERM=xterm-256color
       - LANG=C.UTF-8
+      # 🔽 TEST runtime variables LLM conf
       - OPENROUTER_PROVIDER=anthropic
       - OPENCODE_MODEL=claude-opus-4-6
       - OPENROUTER_API_KEY=***REMOVED***
