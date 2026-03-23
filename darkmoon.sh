@@ -2,25 +2,28 @@
 set -euo pipefail
 
 SERVICE="opencode"
+APP_BIN="opencode"
 
+# ------------------------------------------------------------
 # Détection docker compose (plugin vs legacy)
+# ------------------------------------------------------------
 if command -v docker-compose >/dev/null 2>&1; then
-  DC="docker-compose"
+  DC=(docker-compose)
 else
-  DC="docker compose"
+  DC=(docker compose)
 fi
 
 # ------------------------------------------------------------
 # TTY detection (pipe-safe)
 # ------------------------------------------------------------
 if [[ -t 0 ]]; then
-  TTY_FLAGS="-it"
+  TTY_FLAGS=(-it)
 else
-  TTY_FLAGS="-T"
+  TTY_FLAGS=(-T)
 fi
 
 # ------------------------------------------------------------
-# --log mode (darkmoon-cli)
+# --log mode
 # ------------------------------------------------------------
 if [[ "${1:-}" == "--log" ]]; then
   if [[ $# -lt 2 ]]; then
@@ -30,17 +33,19 @@ if [[ "${1:-}" == "--log" ]]; then
 
   SESSION_ID="$2"
 
-  exec $DC exec $TTY_FLAGS "$SERVICE" bash -lc "darkmoon-cli \"$SESSION_ID\""
+  exec "${DC[@]}" exec "${TTY_FLAGS[@]}" "$SERVICE" \
+    bash -lc 'exec "$1" "$2"' bash "$APP_BIN" "$SESSION_ID"
 fi
 
 # ------------------------------------------------------------
 # Default behaviour
 # ------------------------------------------------------------
-
 if [[ $# -eq 0 ]]; then
-  # Mode TUI pur
-  exec $DC exec $TTY_FLAGS "$SERVICE" bash -lc "darkmoon"
+  # Mode interactif
+  exec "${DC[@]}" exec "${TTY_FLAGS[@]}" "$SERVICE" \
+    bash -lc 'exec "$1"' bash "$APP_BIN"
 else
-  # Mode CLI / agents / scripts
-  exec $DC exec $TTY_FLAGS "$SERVICE" bash -lc "darkmoon \"$@\""
+  # Forward propre de tous les arguments
+  exec "${DC[@]}" exec "${TTY_FLAGS[@]}" "$SERVICE" \
+    bash -lc 'app="$1"; shift; exec "$app" "$@"' bash "$APP_BIN" "$@"
 fi

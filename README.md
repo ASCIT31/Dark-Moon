@@ -136,6 +136,203 @@ Before starting, you must have:
 - Docker Compose
 - Access to an LLM provider (OpenRouter, Anthropic, OpenAI…)
 
+Parfait 👍 — on garde ton `install.sh` **simple, clean, product-oriented**, et on externalise toute la complexité GPU dans la **doc officielle**.
+
+👉 C’est exactement l’approche la plus pro.
+
+---
+
+## II.2. 📘 Darkmoon – GPU Troubleshooting Guide (Official)
+
+### 🔧 GPU Troubleshooting (NVIDIA / Docker / WSL)
+
+### Overview
+
+Darkmoon supports GPU acceleration when available, but **GPU configuration depends entirely on your host environment**.
+
+There are two major supported setups:
+
+| Environment | GPU Setup Method |
+|------------|----------------|
+| Native Linux (Debian/Ubuntu) | NVIDIA driver + NVIDIA Container Toolkit |
+| Windows + Docker Desktop + WSL2 | Windows driver + Docker Desktop GPU integration |
+
+Darkmoon **does not install GPU dependencies automatically** to avoid breaking system configurations.
+
+
+### 🚨 Common Error
+
+```bash
+Error: could not select device driver "nvidia" with capabilities: [[gpu]]
+````
+
+or
+
+```bash
+Failed to initialize NVML: GPU access blocked by the operating system
+```
+
+
+### 🧠 Step 1 — Identify Your Environment
+
+Run:
+
+```bash
+uname -a
+```
+
+#### If you see:
+
+* `microsoft` → you are in **WSL**
+* otherwise → **native Linux**
+
+### 🖥️ Case 1 — Windows + Docker Desktop + WSL2
+
+#### ✅ Important
+
+In this setup:
+
+* ❌ DO NOT install `nvidia-container-toolkit` inside WSL
+* ❌ DO NOT configure `nvidia-ctk`
+* ✔ Docker Desktop handles GPU automatically
+
+#### 🔍 Check GPU availability
+
+##### 1. On Windows (PowerShell)
+
+```powershell
+nvidia-smi
+```
+
+##### 2. Inside WSL
+
+```bash
+/usr/lib/wsl/lib/nvidia-smi
+```
+
+---
+
+#### 🧪 Test Docker GPU
+
+```bash
+docker run --rm --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi
+```
+
+##### 🔥 If GPU is blocked
+
+If you see:
+
+```text
+GPU access blocked by the operating system
+```
+
+##### Fix:
+
+```powershell
+wsl --update
+wsl --shutdown
+```
+
+👉 Then **restart Windows completely**
+
+#### ⚙️ Docker Desktop settings
+
+Check:
+
+* Settings → General → ✅ *Use WSL2 backend*
+* Settings → Resources → WSL Integration → ✅ your distro enabled
+
+
+#### 🐧 Case 2 — Native Linux (Debian / Ubuntu)
+
+##### 🔍 Check GPU
+
+```bash
+nvidia-smi
+```
+
+#### 🧪 Test Docker GPU
+
+```bash
+docker run --rm --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi
+```
+
+#### ❌ If it fails → install NVIDIA Container Toolkit
+
+##### ⚠️ Known issue (IMPORTANT)
+
+You may encounter:
+
+```text
+E: Type '<!doctype' is not known on line 1 in source list
+```
+
+👉 This means your NVIDIA repo file is **corrupted with HTML instead of APT entries**
+
+This is a known issue:
+[https://forums.developer.nvidia.com/t/corrupted-nvidia-container-toolkit-list/350645/2](https://forums.developer.nvidia.com/t/corrupted-nvidia-container-toolkit-list/350645/2)
+
+
+#### ✅ Fix corrupted NVIDIA repo
+
+```bash
+sudo rm -f /etc/apt/sources.list.d/nvidia-container-toolkit.list
+```
+
+#### ✅ Correct installation (official method)
+
+```bash
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+| sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+| sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+| sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+sudo apt update
+sudo apt install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+#### 🧪 Validate installation
+
+```bash
+docker run --rm --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi
+```
+
+### 🧠 Final Notes
+
+* Darkmoon runs perfectly **without GPU** (CPU fallback)
+* GPU is **optional acceleration**, not required
+* WSL GPU issues are often **OS-level, not Docker-level**
+* Native Linux GPU issues are usually **driver or toolkit misconfiguration**
+
+
+### 🚀 Quick Debug Checklist
+
+| Check       | Command                       |
+| ----------- | ----------------------------- |
+| Windows GPU | `nvidia-smi`                  |
+| WSL GPU     | `/usr/lib/wsl/lib/nvidia-smi` |
+| Docker GPU  | `docker run --gpus all ...`   |
+| WSL reset   | `wsl --shutdown`              |
+| Repo fix    | remove corrupted `.list`      |
+
+# 💬 Summary
+
+Darkmoon does not modify your system GPU stack automatically.
+
+Instead, it:
+
+* detects Docker
+* builds and runs the stack
+* lets you configure GPU safely according to your environment
+
+This ensures **maximum stability across Linux, WSL, and Docker Desktop environments**.
+
+```
+
 [Back to Summary](#summary)
 
 ## II.2. General project structure
