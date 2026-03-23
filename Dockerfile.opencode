@@ -30,6 +30,9 @@ COPY conf/tui/ui.ts \
 COPY conf/tui/app.tsx \
      /app/packages/opencode/src/cli/cmd/tui/app.tsx
 
+COPY conf/tui/index.tsx \
+     /app/packages/opencode/src/cli/cmd/tui/routes/session/index.tsx
+
 ENV BUN_INSTALL_CACHE_DIR=/tmp/bun-cache
 RUN rm -rf ~/.bun /tmp/bun-cache
 # Build OpenCode
