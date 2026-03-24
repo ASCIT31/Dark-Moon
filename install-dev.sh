@@ -77,6 +77,6 @@ echo -e "${BLUE}📥 Pulling latest images from Docker Hub...${RESET}"
 docker compose -f $COMPOSE_FILE pull
 
 echo -e "${BLUE}🚀 Recreating containers...${RESET}"
-docker compose -f $COMPOSE_FILE up -d --force-recreate
+docker compose -f $COMPOSE_FILE up -d --build --force-recreate
 
 echo -e "${GREEN}✅ Darkmoon stack recreated CLEAN${RESET}"

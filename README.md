@@ -597,6 +597,89 @@ Or with a direct command :
 ```bash
 darkmoon "TARGET: mydomain.com"
 ```
+
+#### Pentest Agent — Scope definition
+
+##### Quick Pentest (zero config)
+
+```
+TARGET: http://172.19.0.3:3000
+```
+
+That's it. Blackbox, all planes, no config needed.
+
+##### Bug Bounty (flags activate it)
+
+```
+TARGET: http://172.19.0.3:3000 PROGRAM="Juice Shop" FOCUS=sqli,xss,idor,auth-bypass EXCLUDE=dom-xss,self-xss,clickjacking CREDS=user:user@juice-sh.op:user123,admin:admin@juice-sh.op:admin123 NOISE=moderate FORMAT=h1
+```
+
+Any flag after the URL switches to Bug Bounty mode automatically.
+
+##### Flags Reference
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `PROGRAM="name"` | Program name (report header) | `PROGRAM="Acme BB 2026"` |
+| `TARGETS=a,b,...` | Additional in-scope assets | `TARGETS=*.acme.com,API:https://api.acme.com` |
+| `OUT=a,b,...` | Out-of-scope (never touched) | `OUT=payments.acme.com,10.0.0.0/8` |
+| `EXCLUDE=a,b,...` | Attacks to skip (free-text, LLM interprets) | `EXCLUDE=dom-xss,clickjacking,CWE-352` |
+| `FOCUS=a,b,...` | Attacks to prioritize (free-text, LLM interprets) | `FOCUS=sqli,rce,ssrf,idor` |
+| `CREDS=r:u:p,...` | Test credentials (role:user:pass[@url]) | `CREDS=admin:admin@test.com:Pass1@http://t/login` |
+| `TOKEN=t:v,...` | Pre-auth tokens (bearer, cookie, apikey) | `TOKEN=bearer:eyJhbG...@api.acme.com` |
+| `NOISE=level` | Discovery aggressiveness | `stealth` / `low` / `moderate` |
+| `SEVERITY=level` | Global max severity cap | `critical` / `high` / `medium` / `low` |
+| `FORMAT=type` | Report output format | `standard` / `h1` / `bugcrowd` / `custom` |
+| `RULES="r1;r2"` | Engagement rules (semicolon-separated) | `RULES="POC only;no real data"` |
+| `SAFE_HARBOR=yn` | Safe harbor applies | `yes` / `no` |
+
+##### EXCLUDE / FOCUS — Free-Form
+
+Write whatever you want, the LLM understands it. No enum, no fixed list.
+
+```
+EXCLUDE=dom-xss,self-xss,clickjacking
+EXCLUDE=H1
+EXCLUDE=brute-force,rate-limiting,CWE-352
+EXCLUDE=csrf on logout,info disclosure
+```
+
+```
+FOCUS=sqli,rce,ssrf,idor
+FOCUS=auth-bypass,jwt,deserialization
+```
+
+Only shortcut: `H1` = HackerOne Core Ineligible Findings.
+
+##### Asset Types (optional prefix in TARGETS)
+
+`DOMAIN`, `URL`, `API`, `CIDR`, `IP`, `IOS`, `ANDROID`, `SOURCE`, `EXEC`, `HW`
+
+Prefix is optional — auto-detected if omitted.
+Wildcards supported: `*.example.com`
+
+##### Examples
+
+**Minimal bounty:**
+```
+TARGET: http://172.19.0.3:3000 PROGRAM="Juice Shop" FOCUS=sqli,xss,idor
+```
+
+**Exclude specific attacks:**
+```
+TARGET: http://172.19.0.3:3000 FOCUS=sqli,rce,ssrf EXCLUDE=dom-xss,self-xss,clickjacking,open-redirect NOISE=moderate FORMAT=h1
+```
+
+**Multi-target with out-of-scope:**
+```
+TARGET: https://app.acme.com PROGRAM="Acme" TARGETS=*.acme.com,API:https://api.acme.com/v2 OUT=payments.acme.com,10.0.0.0/8 FOCUS=sqli,rce,ssrf EXCLUDE=H1 FORMAT=h1
+```
+
+**Full scope:**
+```
+TARGET: https://app.acme.com PROGRAM="Acme BB 2026" TARGETS=*.acme.com,API:https://api.acme.com/v2 OUT=payments.acme.com,10.0.0.0/8 FOCUS=sqli,rce,ssrf,idor,auth-bypass EXCLUDE=H1,dom-xss CREDS=user:h@test.com:Bug1!,admin:a@test.com:Adm1! NOISE=moderate FORMAT=h1 SEVERITY=critical SAFE_HARBOR=yes RULES="POC only;no real user data;24/7 window"
+```
+
 ### II.7.d How to Use the Darkmoon Assessment Engine
 
 #### Overview
