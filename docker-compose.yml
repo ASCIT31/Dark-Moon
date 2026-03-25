@@ -60,5 +60,5 @@ services:
       - TERM=xterm-256color
       - LANG=C.UTF-8
       - OPENROUTER_PROVIDER=anthropic
-      - OPENCODE_MODEL=claude-opus-4-6
-      - OPENROUTER_API_KEY=sk-ant-xxx
+      - OPENCODE_MODEL=claude-sonnet-4-6
+      - OPENROUTER_API_KEY=
