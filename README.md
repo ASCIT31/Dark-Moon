@@ -86,7 +86,7 @@ That's it! DarkMoon will:
 <div align="center">
 
 <video width="1024" height="640" controls>
-  <source src="assets/darkmoon_demo_fast.mp4" type="video/mp4">
+  <source src="docs/pics/darkmoon_demo_fast.mp4" type="video/mp4">
 </video>
 
 **Real penetration test of a Juice Shop**
