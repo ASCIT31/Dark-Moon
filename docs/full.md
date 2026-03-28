@@ -1,6 +1,6 @@
 <center>
 
-![DarkMoon Logo](docs/pics/DARKMOON%20LOGOTYPE%20PRINCIPAL%20CHRYSLER%20RVB%20900PX%20W%2072PPI.png)
+![DarkMoon Logo](pics/logo_blue.png)
 
 A platform that allows you to conduct a complete penetration testing campaign
 
@@ -120,7 +120,14 @@ A platform that allows you to conduct a complete penetration testing campaign
 
 # I. Preview
 
-![darkmoon-preview.gif](docs/pics/darkmoon-preview.gif)
+<div>
+  <a href="https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO">
+    <img src="pics/darkmoon-youtube.png" height="500" />
+  </a>
+
+  <p><strong>Watch DarkMoon in action — Full autonomous penetration test demo</strong></p>
+</div>
+
 
 Here's an example of penetration testing of a [GOAD Active Directory Lab](https://github.com/Orange-Cyberdefense/GOAD)
 
@@ -734,7 +741,7 @@ Example:
 TARGET: 172.20.0.4
 ```
 
-<img src="docs/pics/start-assesment.png" height="400">
+<img src="pics/start-assesment.png" height="400">
 
 This launches the assessment campaign.
 
@@ -753,11 +760,11 @@ The user receives a **monitoring command** to observe the assessment in real tim
 ./darkmoon.sh --log <session_id>
 ```
 
-<img src="docs/pics/log-command.png" height="200">
+<img src="pics/log-command.png" height="200">
 
 This allows the user to track the progress of the audit while it runs.
 
-<img src="docs/pics/log.png" height="500">
+<img src="pics/log.png" height="500">
 
 ---
 
@@ -791,7 +798,7 @@ At this stage the system answers questions such as:
 
 This phase builds the **initial attack surface model**.
 
-<img src="docs/pics/enumeration.png" height="400">
+<img src="pics/enumeration.png" height="400">
 
 ---
 
@@ -828,7 +835,7 @@ Web Application
 
 This classification is critical because it determines **which specialized agents must be executed**.
 
-<img src="docs/pics/matrix.png" height="400">
+<img src="pics/matrix.png" height="400">
 
 ---
 
@@ -908,7 +915,7 @@ GraphQL agent triggered
 
 This allows the system to **adapt dynamically** to the architecture discovered during the audit.
 
-<img src="docs/pics/sub-agent.png" height="150">
+<img src="pics/sub-agent.png" height="150">
 
 ---
 
@@ -931,7 +938,7 @@ UNCONFIRMED SIGNAL
 
 This ensures the report remains **audit-grade** and defensible.
 
-<img src="docs/pics/report.png" height="400">
+<img src="pics/report.png" height="400">
 
 ---
 
@@ -1094,9 +1101,9 @@ This allows :
 
 Here's a list of prompt you can do with Darkmoon GPT
 
-- [DVGA](docs/prompts/dvga.md)
-- [Juice Shop Headless](docs/prompts/juice-shop-headless.md)
-- [Juice Shop](docs/prompts/juice-shop.md)
+- [DVGA](prompts/dvga.md)
+- [Juice Shop Headless](prompts/juice-shop-headless.md)
+- [Juice Shop](prompts/juice-shop.md)
 
 [Back to Summary](#summary)
 
@@ -2152,7 +2159,7 @@ Workflows:
 - secure the execution of tools.
 
 > [!NOTE]
-> To understand the MCP itself, see [mcp.md](/docs/mcp.md)
+> To understand the MCP itself, see [mcp.md](/mcp.md)
 
 [Back to Summary](#summary)
 
