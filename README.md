@@ -5,7 +5,7 @@
 **The Open-Source AI-Powered Autonomous Penetration Testing Platform**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![GitHub stars](https://img.shields.io/github/stars/ASCIT31/darkmoon.svg?style=social&label=Star)](https://github.com/ASCIT31/darkmoon)
+[![GitHub stars](https://img.shields.io/github/stars/ASCIT31/darkmoon.svg?style=social&label=Star)](https://github.com/ASCIT31/Dark-Moon)
 
 [Full Documentation](docs/full.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
 
