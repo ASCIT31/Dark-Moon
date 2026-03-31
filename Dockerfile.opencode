@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone OpenCode
-RUN git clone https://github.com/anomalyco/opencode.git .
+RUN git clone https://github.com/ASCIT31/opencode.git .
 
 # Install deps
 RUN bun install
@@ -27,8 +27,8 @@ COPY conf/tui/logo.tsx \
 COPY conf/tui/ui.ts \
      /app/packages/opencode/src/cli/ui.ts
 
-COPY conf/tui/app.tsx \
-     /app/packages/opencode/src/cli/cmd/tui/app.tsx
+#COPY conf/tui/app.tsx \
+#     /app/packages/opencode/src/cli/cmd/tui/app.tsx
 
 COPY conf/tui/index.tsx \
      /app/packages/opencode/src/cli/cmd/tui/routes/session/index.tsx
