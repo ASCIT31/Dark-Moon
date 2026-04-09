@@ -11,19 +11,8 @@ services:
     user: "0:0"
     network_mode: "host"
 
-    # GPU support
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
     environment:
       - DM_MODE=default
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
     ports:
       - "9222:9222"
@@ -48,7 +37,6 @@ services:
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./data:/app/data
       - ./darkmoon-settings:/root/.config/opencode/:rw
       - ./darkmoon-settings:/root/.local/share/opencode/:rw
       - ./darkmoon-settings/agents:/root/.opencode/agents/:rw

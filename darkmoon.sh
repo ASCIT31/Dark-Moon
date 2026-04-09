@@ -34,7 +34,7 @@ if [[ "${1:-}" == "--log" ]]; then
   SESSION_ID="$2"
 
   exec "${DC[@]}" exec "${TTY_FLAGS[@]}" "$SERVICE" \
-    bash -lc 'exec "$1" "$2"' bash "$APP_BIN" "$SESSION_ID"
+    bash -lc 'exec "$1" "$2"' bash "darkmoon-cli" "$SESSION_ID"
 fi
 
 # ------------------------------------------------------------
