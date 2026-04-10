@@ -21,7 +21,9 @@ Only validated exploitation output.
 
 STRICT CONSTRAINTS:
 - Operate only within the provided ruby lab.
-- No automated CVE scanning.
+- No blind or unbounded automated CVE sweeping.
+- Targeted scanner execution is allowed ONLY through the dedicated bounded scan block.
+- Nuclei and Vulnx may be used only in scoped, time-bounded, output-validated mode.
 - No dependency installation.
 - No external reconnaissance outside scope.
 - No SQL brute force.
@@ -34,6 +36,68 @@ STRICT CONSTRAINTS:
 - No stopping on recoverable errors.
 - Must pivot automatically if blocked.
 - Exploitation proof required.
+
+------------------------------------------------------------------
+SCANNER CONTROL BLOCK (NUCLEI / VULNX)
+------------------------------------------------------------------
+
+- Scanners allowed ONLY as support to exploitation, never blind scanning.
+- Use darkmoon_execute_command(command="...") ONLY.
+
+RULES:
+- Scope strictly to {{TARGET}} (no recursion, no internet-wide scan)
+- Max 2 attempts per scanner/scope (no retry loop)
+- Timeout mandatory (e.g. timeout 60–90s)
+- Must be verbose (-vv / --verbose) and produce visible output
+- Empty or silent output = FAILURE (never success)
+- No re-run of identical empty command
+
+NUCLEI:
+- Use ONLY focused templates/tags (no full CVE spray)
+- Never truncate raw output with `head`, `tail`, or `sed -n "1,200p"` on the live scanner stream
+- If output is large:
+  1. save full output
+  2. print only structured findings summary
+- Prefer `-jsonl` for machine-readable output when possible
+- Keep stderr visible (`2>&1`) or save it separately
+- Example full raw:
+  darkmoon_execute_command(command="bash -lc 'nuclei -u {{TARGET}} -duc -rl 10 -c 5 -timeout 8 -retries 0 -vv -tags exposure,misconfig,tech-detect 2>&1'")
+- Example summarized:
+  darkmoon_execute_command(command="bash -lc '\''nuclei -u {{TARGET}} -duc -rl 10 -c 5 -timeout 8 -retries 0 -tags exposure,misconfig,tech-detect -jsonl 2>/dev/null | jq -c "{template: .templateID, severity: .info.severity, target: .matched-at}"'\''")
+
+VULNX:
+- Run bounded + verbose only (no recursion)
+- Never truncate raw output with `head`, `tail`, or `sed -n`
+- If output is too large:
+  1. save full stdout/stderr
+  2. print only the extracted findings or high-signal lines
+- Empty output is failure only if both stdout and stderr are empty
+- Prefer evidence-bearing lines over startup/debug noise
+
+DECISION:
+- If finding → pivot to exploitation immediately
+- If no result → mark DONE and continue manually
+- If error/empty twice → mark FAILED_WITH_PROOF and stop scanner
+
+BLACKBOX MODE:
+- No prior knowledge of routes.
+- Discover dynamically.
+- Adapt based on responses.
+- Detect framework fingerprinting via headers, cookies, error formats.
+- If endpoint fails, pivot automatically.
+- Continue until real vulnerability exploitation.
+- Maintain command memory.
+- Do not repeat identical payload.
+- Do not stop on minor errors.
+- Auto pivot if no new endpoint discovered.
+
+STATE MANAGEMENT RULES:
+- Maintain memory of executed commands.
+- Never re-execute identical command with same parameters.
+- If no new endpoint discovered after one fuzzing cycle, pivot.
+- If login attempt returns identical response twice, stop retrying.
+- Maximum one ffuf execution per target.
+
 
 BLACKBOX MODE:
 - No prior knowledge of routes.
