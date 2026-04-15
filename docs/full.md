@@ -257,9 +257,9 @@ Check:
 * Settings → Resources → WSL Integration → ✅ your distro enabled
 
 
-#### 🐧 Case 2 — Native Linux (Debian / Ubuntu)
+### 🐧 Case 2 — Native Linux (Debian / Ubuntu)
 
-##### 🔍 Check GPU
+#### 🔍 Check GPU
 
 ```bash
 nvidia-smi
@@ -333,7 +333,7 @@ docker run --rm --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi
 | WSL reset   | `wsl --shutdown`              |
 | Repo fix    | remove corrupted `.list`      |
 
-# 💬 Summary
+### 💬 Summary
 
 Darkmoon does not modify your system GPU stack automatically.
 
