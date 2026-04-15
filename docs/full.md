@@ -143,10 +143,6 @@ Before starting, you must have:
 - Docker Compose
 - Access to an LLM provider (OpenRouter, Anthropic, OpenAI…)
 
-Parfait 👍 — on garde ton `install.sh` **simple, clean, product-oriented**, et on externalise toute la complexité GPU dans la **doc officielle**.
-
-👉 C’est exactement l’approche la plus pro.
-
 ---
 
 ## II.2. 📘 Darkmoon – GPU Troubleshooting Guide (Official)
