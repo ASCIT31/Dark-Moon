@@ -143,7 +143,18 @@ Before starting, you must have:
 - Docker Compose
 - Access to an LLM provider (OpenRouter, Anthropic, OpenAI…)
 
+## II.1.a General project structure
+
+Darkmoon relies on **Docker** and **Docker Compose**.
+
+The important components are :
+
+- an **OpenCode** container (AI + agents),
+- a **Darkmoon Toolbox** container (pentest tools),
+- **shared volumes** for configuration.
+
 ---
+
 
 ## II.2. 📘 Darkmoon – GPU Troubleshooting Guide (Official)
 
@@ -333,20 +344,6 @@ Instead, it:
 * lets you configure GPU safely according to your environment
 
 This ensures **maximum stability across Linux, WSL, and Docker Desktop environments**.
-
-```
-
-[Back to Summary](#summary)
-
-## II.2. General project structure
-
-Darkmoon relies on **Docker** and **Docker Compose**.
-
-The important components are :
-
-- an **OpenCode** container (AI + agents),
-- a **Darkmoon Toolbox** container (pentest tools),
-- **shared volumes** for configuration.
 
 [Back to Summary](#summary)
 
