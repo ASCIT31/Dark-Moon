@@ -143,11 +143,18 @@ Before starting, you must have:
 - Docker Compose
 - Access to an LLM provider (OpenRouter, Anthropic, OpenAI…)
 
-Parfait 👍 — on garde ton `install.sh` **simple, clean, product-oriented**, et on externalise toute la complexité GPU dans la **doc officielle**.
+## II.1.a General project structure
 
-👉 C’est exactement l’approche la plus pro.
+Darkmoon relies on **Docker** and **Docker Compose**.
+
+The important components are :
+
+- an **OpenCode** container (AI + agents),
+- a **Darkmoon Toolbox** container (pentest tools),
+- **shared volumes** for configuration.
 
 ---
+
 
 ## II.2. 📘 Darkmoon – GPU Troubleshooting Guide (Official)
 
@@ -250,9 +257,9 @@ Check:
 * Settings → Resources → WSL Integration → ✅ your distro enabled
 
 
-#### 🐧 Case 2 — Native Linux (Debian / Ubuntu)
+### 🐧 Case 2 — Native Linux (Debian / Ubuntu)
 
-##### 🔍 Check GPU
+#### 🔍 Check GPU
 
 ```bash
 nvidia-smi
@@ -326,7 +333,7 @@ docker run --rm --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi
 | WSL reset   | `wsl --shutdown`              |
 | Repo fix    | remove corrupted `.list`      |
 
-# 💬 Summary
+### 💬 Summary
 
 Darkmoon does not modify your system GPU stack automatically.
 
@@ -337,20 +344,6 @@ Instead, it:
 * lets you configure GPU safely according to your environment
 
 This ensures **maximum stability across Linux, WSL, and Docker Desktop environments**.
-
-```
-
-[Back to Summary](#summary)
-
-## II.2. General project structure
-
-Darkmoon relies on **Docker** and **Docker Compose**.
-
-The important components are :
-
-- an **OpenCode** container (AI + agents),
-- a **Darkmoon Toolbox** container (pentest tools),
-- **shared volumes** for configuration.
 
 [Back to Summary](#summary)
 
