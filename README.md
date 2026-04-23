@@ -65,8 +65,8 @@ Perfect for **security teams**, **DevSecOps engineers**, **ethical hacking** pro
 **1. Clone the repository**
 
 ```bash
-git clone https://github.com/ASCIT31/darkmoon.git
-cd darkmoon
+git clone https://github.com/ASCIT31/Dark-Moon.git
+cd Dark-Moon
 ```
 
 **2. Configure your LLM provider**
