@@ -1,7 +1,7 @@
 # ============================================================
 # STAGE 1 — BUILDER
 # ============================================================
-FROM golang:1.25.7-bookworm AS builder
+FROM golang:1.26-bookworm AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive \
     GOTOOLCHAIN=local \
@@ -98,12 +98,43 @@ COPY setup_py.sh /setup_py.sh
 RUN chmod +x /setup_py.sh && /setup_py.sh
 
 # ------------------------------------------------------------
-# SecLists
+# SecLists — sparse: only the files actually used by agents
 # ------------------------------------------------------------
-ARG SECLISTS_REF=master
-RUN git -c http.version=HTTP/1.1 clone --depth=1 --branch ${SECLISTS_REF} \
-      https://github.com/danielmiessler/SecLists.git ${OUT}/seclists \
- && rm -rf ${OUT}/seclists/.git
+RUN install -d \
+      ${OUT}/seclists/Discovery/Web-Content \
+      ${OUT}/seclists/Passwords \
+      ${OUT}/seclists/Fuzzing \
+      ${OUT}/seclists/Discovery/DNS \
+ && BASE="https://raw.githubusercontent.com/danielmiessler/SecLists/master" \
+ && curl -fsSL --retry 3 "${BASE}/Discovery/Web-Content/common.txt" \
+      -o ${OUT}/seclists/Discovery/Web-Content/common.txt \
+ && curl -fsSL --retry 3 "${BASE}/Discovery/Web-Content/big.txt" \
+      -o ${OUT}/seclists/Discovery/Web-Content/big.txt \
+ && curl -fsSL --retry 3 "${BASE}/Discovery/Web-Content/raft-medium-words.txt" \
+      -o ${OUT}/seclists/Discovery/Web-Content/raft-medium-words.txt \
+ && curl -fsSL --retry 3 "${BASE}/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-medium.txt" \
+      -o ${OUT}/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt \
+ && curl -fsSL --retry 3 "${BASE}/Discovery/DNS/subdomains-top1million-5000.txt" \
+      -o ${OUT}/seclists/Discovery/DNS/subdomains-top1million-5000.txt \
+ && curl -fsSL --retry 3 "${BASE}/Fuzzing/fuzz-Bo0oM.txt" \
+      -o ${OUT}/seclists/Fuzzing/fuzz-Bo0oM.txt
+
+# ------------------------------------------------------------
+# Darkmoon license checker (Cryptolens)
+# ------------------------------------------------------------
+COPY conf/licensing /build/conf/licensing
+
+RUN set -eu; \
+    cd /build/conf/licensing; \
+    test -f cryptolens-build.env; \
+    set -a; . ./cryptolens-build.env; set +a; \
+    go get github.com/Cryptolens/cryptolens-golang/cryptolens; \
+    CGO_ENABLED=0 go build -trimpath \
+      -ldflags="-s -w \
+        -X main.defaultToken=${CRYPTOLENS_TOKEN} \
+        -X main.defaultProductID=${CRYPTOLENS_PRODUCT_ID} \
+        -X main.defaultPublicKeyB64=${CRYPTOLENS_PUBLIC_KEY_B64}" \
+      -o /out/dm-license-check .
 
 # ============================================================
 # STAGE 2 — CUDA DEVEL (GPU + CPU fallback)
@@ -116,7 +147,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # ------------------------------------------------------------
 # Runtime OS dependencies
 # ------------------------------------------------------------
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sed -i 's|http://archive.ubuntu.com|http://fr.archive.ubuntu.com|g' /etc/apt/sources.list \
+ && sed -i 's|http://security.ubuntu.com|http://fr.archive.ubuntu.com|g' /etc/apt/sources.list \
+ && apt-get update -o Acquire::Retries=3 \
+ && apt-get install -y --no-install-recommends \
     # base runtime
     ca-certificates tzdata bash dnsutils jq curl git \
     \
@@ -201,6 +235,19 @@ RUN mkdir -p /usr/share/wordlists /usr/share/dirb \
  && ln -sfn /out/wordlists/dirb /usr/share/dirb/wordlists \
  && ln -sfn /usr/share/seclists ${DM_HOME}/seclists
 
+# ------------------------------------------------------------
+# Full rockyou.txt (134 MB) — required for hash cracking
+# SecLists only ships fragments; download the real one from
+# the canonical GitHub release mirror and place it where
+# tools (hashcat, john, hydra) expect it.
+# ------------------------------------------------------------
+RUN curl -fsSL --max-redirs 5 \
+      "https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt" \
+      -o /usr/share/wordlists/rockyou.txt \
+ && ln -sf /usr/share/wordlists/rockyou.txt \
+          /usr/share/seclists/Passwords/rockyou.txt \
+ && echo "[OK] rockyou.txt $(wc -l < /usr/share/wordlists/rockyou.txt) lines"
+
 ENV SECLISTS=/usr/share/seclists \
     NUCLEI_TEMPLATES=${DM_HOME}/nuclei-templates
 
@@ -244,5 +291,8 @@ COPY conf/entrypoint-darkmoon.sh /entrypoint-darkmoon.sh
 RUN sed -i 's/\r$//' /entrypoint-darkmoon.sh \
  && chmod +x /entrypoint-darkmoon.sh
 
-ENTRYPOINT ["/entrypoint-darkmoon.sh"]
+COPY --from=builder /out/dm-license-check /usr/local/bin/dm-license-check
+RUN chmod +x /usr/local/bin/dm-license-check
+
+ENTRYPOINT ["/usr/local/bin/dm-license-check", "/entrypoint-darkmoon.sh"]
 CMD ["bash","-lc", "sleep infinity"]

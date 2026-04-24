@@ -158,18 +158,21 @@ The important components are :
 
 ## II.2. 📘 Darkmoon – GPU Troubleshooting Guide (Official)
 
-### 🔧 GPU Troubleshooting (NVIDIA / Docker / WSL)
+### 🔧 GPU Troubleshooting (NVIDIA / AMD / Docker / WSL)
 
 ### Overview
 
 Darkmoon supports GPU acceleration when available, but **GPU configuration depends entirely on your host environment**.
 
-There are two major supported setups:
+There are three major supported setups:
 
-| Environment | GPU Setup Method |
-|------------|----------------|
-| Native Linux (Debian/Ubuntu) | NVIDIA driver + NVIDIA Container Toolkit |
-| Windows + Docker Desktop + WSL2 | Windows driver + Docker Desktop GPU integration |
+| Environment | GPU Vendor | Setup Method |
+|------------|-----------|----------------|
+| Native Linux (Debian/Ubuntu) | NVIDIA | NVIDIA driver + NVIDIA Container Toolkit |
+| Native Linux (Debian/Ubuntu) | AMD / ATI | ROCm + `amdgpu` driver |
+| Windows + Docker Desktop + WSL2 | NVIDIA | Windows driver + Docker Desktop GPU integration |
+
+> **No GPU?** Darkmoon falls back to CPU via `pocl-opencl-icd` automatically — no configuration needed.
 
 Darkmoon **does not install GPU dependencies automatically** to avoid breaking system configurations.
 
@@ -315,23 +318,92 @@ sudo systemctl restart docker
 docker run --rm --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi
 ```
 
+### 🔴 Case 3 — AMD / ATI GPU (Native Linux)
+
+AMD GPUs are supported via **ROCm** (Radeon Open Compute). This is an alternative to NVIDIA's CUDA stack.
+
+> Darkmoon's container image is built on `nvidia/cuda` but includes `ocl-icd-libopencl1` and `pocl-opencl-icd` for CPU fallback. AMD GPU passthrough requires ROCm on the **host**.
+
+#### 🔍 Check AMD GPU availability
+
+```bash
+lspci | grep -i amd
+rocm-smi   # if ROCm is installed
+```
+
+#### ✅ Install ROCm (Ubuntu 22.04)
+
+```bash
+# Add ROCm repo
+wget -q -O - https://repo.radeon.com/rocm/rocm.gpg.key | sudo apt-key add -
+echo 'deb [arch=amd64] https://repo.radeon.com/rocm/apt/5.7 jammy main' \
+  | sudo tee /etc/apt/sources.list.d/rocm.list
+
+sudo apt update
+sudo apt install -y rocm-hip-sdk rocm-opencl-runtime
+
+# Add your user to the render & video groups
+sudo usermod -aG render,video $USER
+```
+
+#### ✅ Docker GPU passthrough (AMD)
+
+AMD GPUs use the `/dev/kfd` and `/dev/dri` devices instead of NVIDIA's driver interface.
+
+Add to your `docker-compose.yml` under the `darkmoon` service:
+
+```yaml
+devices:
+  - /dev/kfd:/dev/kfd
+  - /dev/dri:/dev/dri
+group_add:
+  - video
+  - render
+```
+
+#### 🧪 Test AMD GPU in Docker
+
+```bash
+docker run --rm \
+  --device=/dev/kfd --device=/dev/dri \
+  --group-add video --group-add render \
+  rocm/rocm-terminal rocm-smi
+```
+
+#### ❌ Common AMD issues
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `/dev/kfd: Permission denied` | User not in `render` group | `sudo usermod -aG render,video $USER` + logout |
+| `No OpenCL platforms found` | ROCm not installed | Install `rocm-opencl-runtime` |
+| Container can't see GPU | Missing device mounts | Add `--device=/dev/kfd --device=/dev/dri` |
+
+> **WSL2 + AMD**: AMD GPU passthrough in WSL2 is **not officially supported** by Microsoft at this time. Use native Linux or a VM for AMD GPU workloads.
+
+---
+
 ### 🧠 Final Notes
 
-* Darkmoon runs perfectly **without GPU** (CPU fallback)
+* Darkmoon runs perfectly **without GPU** (CPU fallback via `pocl-opencl-icd`)
 * GPU is **optional acceleration**, not required
+* NVIDIA: use CUDA stack + `nvidia-container-toolkit`
+* AMD: use ROCm + device mounts (`/dev/kfd`, `/dev/dri`)
 * WSL GPU issues are often **OS-level, not Docker-level**
 * Native Linux GPU issues are usually **driver or toolkit misconfiguration**
 
 
 ### 🚀 Quick Debug Checklist
 
-| Check       | Command                       |
-| ----------- | ----------------------------- |
-| Windows GPU | `nvidia-smi`                  |
-| WSL GPU     | `/usr/lib/wsl/lib/nvidia-smi` |
-| Docker GPU  | `docker run --gpus all ...`   |
-| WSL reset   | `wsl --shutdown`              |
-| Repo fix    | remove corrupted `.list`      |
+| Check            | Command                            |
+| ---------------- | ---------------------------------- |
+| NVIDIA (Windows) | `nvidia-smi`                       |
+| NVIDIA (WSL)     | `/usr/lib/wsl/lib/nvidia-smi`      |
+| NVIDIA (Docker)  | `docker run --gpus all ...`        |
+| AMD (Linux)      | `rocm-smi`                         |
+| AMD (Docker)     | `docker run --device=/dev/kfd ...` |
+| CPU fallback     | `clinfo` (shows pocl platform)     |
+| WSL reset        | `wsl --shutdown`                   |
+| NVIDIA repo fix  | remove corrupted `.list`           |
 
 ### 💬 Summary
 
@@ -341,7 +413,7 @@ Instead, it:
 
 * detects Docker
 * builds and runs the stack
-* lets you configure GPU safely according to your environment
+* lets you configure GPU safely according to your environment (NVIDIA, AMD, or CPU)
 
 This ensures **maximum stability across Linux, WSL, and Docker Desktop environments**.
 
@@ -1092,11 +1164,25 @@ This allows :
 
 ## III.1. Prompt Examples
 
-Here's a list of prompt you can do with Darkmoon GPT
+Here's a list of example prompts you can use with Darkmoon:
 
-- [DVGA](prompts/dvga.md)
-- [Juice Shop Headless](prompts/juice-shop-headless.md)
-- [Juice Shop](prompts/juice-shop.md)
+### DVGA (Damn Vulnerable GraphQL Application)
+
+```
+TARGET:  http://localhost:5013
+```
+
+### Juice Shop (with browser / headless)
+
+```
+TARGET:  http://localhost:3000
+```
+
+### Juice Shop (API only / headless-free)
+
+```
+TARGET:  http://localhost:3000
+```
 
 [Back to Summary](#summary)
 
