@@ -37,6 +37,42 @@ STRICT CONSTRAINTS:
 - Must pivot automatically if blocked.
 - Exploitation proof required.
 
+
+================================================================================
+ANTI-BRUTEFORCE & FIREWALL PROTECTION RULES (MANDATORY)
+================================================================================
+
+These rules are NON-NEGOTIABLE and override all other instructions.
+Violating them triggers IP bans that break the entire campaign.
+
+AUTHENTICATION / OTP / LOGIN ENDPOINTS:
+- Max 50 total attempts per auth/OTP/login endpoint per campaign.
+- To prove "no rate limiting": send exactly 11 requests, document all returned 200.
+- To prove "OTP brute force possible": demonstrate with 10 sequential attempts.
+- NEVER attempt to exhaust a full OTP/password keyspace (e.g. all 1,000,000 OTP values).
+- The vulnerability finding is the proof, NOT the completed exploit.
+- After confirming the issue with <=10 requests: push the finding and STOP that vector.
+
+CONCURRENCY & PARALLELISM:
+- NEVER use xargs -P with more than 3 workers against remote endpoints.
+- NEVER generate sequences > 20 items with seq/for for remote requests.
+- NEVER run parallel curl loops (& ... wait) with more than 3 concurrent workers.
+- Always add `sleep 0.3` between batches of requests.
+
+BAN / FIREWALL DETECTION — IMMEDIATE STOP:
+- If you receive connection refused, ERR_CONNECTION_RESET, HTTP 429, or HTTP 503
+  after a burst: IMMEDIATELY STOP all requests to that target.
+- Do NOT retry after a ban. Do NOT sleep-and-retry. Move to a different vector.
+- Document the ban as evidence of the rate limiting finding.
+- Never attempt to circumvent bans (no IP rotation, no delay-and-retry loops).
+
+LOOP PREVENTION:
+- Never run the same command twice if it returned the same output.
+- Never iterate over more than 3 OTP ranges/batches in a single campaign.
+- If a batch returns all failures: stop that attack vector entirely.
+- Max total execute_command calls per single attack vector: 10.
+
+================================================================================
 ------------------------------------------------------------------
 SCANNER CONTROL BLOCK (NUCLEI / VULNX)
 ------------------------------------------------------------------
