@@ -9,6 +9,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host
     container_name: darkmoon
     user: "0:0"
     network_mode: "host"
@@ -38,6 +39,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.opencode
+      network: host
     container_name: opencode
     stdin_open: true     # équivalent -it
     tty: true
