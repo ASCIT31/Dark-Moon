@@ -219,13 +219,22 @@ fi
 # 14) ---- DIRB (autotools + libcurl custom) ----
 msg "dirb …"
 
-DIRB_REPO="https://github.com/v0re/dirb"
 DIRB_SRC="/tmp/dirb"
 OUT="/out"
 CURL_PREFIX="/out/curl"
 
 rm -rf "$DIRB_SRC"
-git clone --depth=1 "$DIRB_REPO" "$DIRB_SRC"
+# Official dirb 2.22 source from SourceForge (GitHub mirror no longer available)
+# -L follows SourceForge redirects to mirror
+curl -fsSL -L --max-redirs 5 \
+     "https://downloads.sourceforge.net/project/dirb/dirb/2.22/dirb222.tar.gz" \
+     -o /tmp/dirb.tar.gz
+mkdir -p "$DIRB_SRC"
+tar -xzf /tmp/dirb.tar.gz -C "$DIRB_SRC" --strip-components=1
+rm -f /tmp/dirb.tar.gz
+# Restore execute bits stripped by SourceForge tarball
+chmod +x "$DIRB_SRC/configure" "$DIRB_SRC/install-sh" "$DIRB_SRC/missing" 2>/dev/null || true
+find "$DIRB_SRC" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
 cd "$DIRB_SRC"
 
 # rendre visible la libcurl custom
