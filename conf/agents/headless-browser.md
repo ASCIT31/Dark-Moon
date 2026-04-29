@@ -171,13 +171,50 @@ EXECUTION STRUCTURE:
 darkmoon_execute_command(command="bash -c 'node -e \"<FULL PLAYWRIGHT SCRIPT>\"'")
 
 MANDATORY PLAYWRIGHT INSTRUMENTATION:
-- chromium.launch({ headless: true })
+- chromium.launch({ headless: true, args: ['--no-sandbox','--ignore-certificate-errors'] })
 - page.on('dialog')
 - page.on('console')
 - network interception
 - page.evaluate
 - persistent navigation within the same context
 - proper browser closure
+- ALWAYS wrap the entire script in try/catch with browser.close() in finally
+
+MANDATORY TIMEOUT RULES — NEVER OMIT:
+Every Playwright operation MUST have an explicit timeout. No exceptions.
+A missing timeout = the script blocks forever = the campaign hangs.
+
+REQUIRED timeouts:
+  page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 })   // 10s max
+  page.waitForLoadState('networkidle', { timeout: 8000 })              // 8s max
+  page.waitForSelector(sel, { timeout: 5000 })                         // 5s max
+  page.waitForRequest(fn, { timeout: 5000 })                           // 5s max - ALWAYS add timeout
+  page.fill(sel, val, { timeout: 5000 })
+  page.click(sel, { timeout: 5000 })
+  page.evaluate(fn, { timeout: 8000 })
+
+FORBIDDEN Playwright patterns (block forever):
+  ❌ page.waitForRequest(fn)                     — no timeout = blocks forever
+  ❌ page.waitForResponse(fn)                    — no timeout = blocks forever
+  ❌ page.waitForLoadState('networkidle')        — no timeout = blocks forever
+  ❌ page.waitForNavigation()                    — no timeout = blocks forever
+  ❌ Any await without timeout on network calls
+
+MANDATORY script structure — always use this pattern:
+  const browser = await chromium.launch({headless:true, args:['--no-sandbox']});
+  try {
+    const page = await browser.newPage();
+    page.setDefaultTimeout(8000);          // global fallback timeout 8s
+    page.setDefaultNavigationTimeout(10000); // navigation timeout 10s
+    // ... your test code ...
+  } catch(e) {
+    console.error('ERROR:', e.message);
+  } finally {
+    await browser.close();                 // ALWAYS close browser
+  }
+
+DARKMOON CONTAINER TIMEOUT: Always set darkmoon_execute_command timeout to 60000ms max.
+If a script takes more than 60s, something is blocked — abort and use a simpler approach.
 
 ------------------------------------------------------------------
 FORBIDDEN:
