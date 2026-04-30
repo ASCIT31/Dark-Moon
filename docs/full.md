@@ -419,34 +419,94 @@ This ensures **maximum stability across Linux, WSL, and Docker Desktop environme
 
 [Back to Summary](#summary)
 
-## II.3. Configuration of environment variables in docker compose
+## II.3. Configuration of environment variables
 
-Docker Compose is **the entry point for the entire AI configuration**.
+LLM provider configuration is no longer done in `docker-compose.yml`. It is now handled interactively by `install.sh`, which generates a `.opencode.env` file at the root of the project. This file is automatically loaded by Docker Compose at startup.
 
 [Back to Summary](#summary)
 
-### II.3.a Example environment variable
+### II.3.a Interactive configuration via install.sh
 
-```env
-environment:
-   # 🔽 TEST runtime variables LLM conf
-   - OPENROUTER_PROVIDER=openai
-   - OPENCODE_MODEL=gpt-4o
-   - OPENROUTER_API_KEY=sk-svcacct-xxx
+On first run (or with `--init`), `install.sh` prompts you to choose between a **cloud provider** or a **local model**:
+
+```bash
+./install.sh           # skip form if .opencode.env already configured
+./install.sh --init    # force reconfiguration
+./install.sh --help    # show usage
+```
+
+**Cloud provider example:**
+
+```
+[1] Cloud provider  (Anthropic, OpenRouter, OpenAI, etc.)
+[2] Local model     (Ollama, llama.cpp / llama-server)
+
+Your choice [1/2]: 1
+Provider name (e.g. anthropic): anthropic
+Model name    (e.g. claude-opus-4-6): claude-opus-4-6
+API key: ****
+```
+
+**Local model example (llama.cpp):**
+
+```
+Your choice [1/2]: 2
+Local engine [1/2/3]: 2
+Base URL [http://localhost:8080/v1]: http://localhost:8001/v1
+Model name (e.g. qwen2.5-coder:7b): qwen2.5-coder-7b-instruct-q4_k_m.gguf
 ```
 
 [Back to Summary](#summary)
 
-### II.3.b Role of the variables
+### II.3.b Generated .opencode.env file
 
-| Variable              | Role               |
-| --------------------- | ------------------ |
-| `OPENROUTER_PROVIDER` | LLM model provider |
-| `OPENCODE_MODEL`      | Exact model used   |
-| `OPENROUTER_API_KEY`  | Provider API key   |
+**Cloud provider:**
+
+```env
+# Darkmoon — LLM cloud provider config
+OPENROUTER_PROVIDER=anthropic
+OPENCODE_MODEL=claude-opus-4-6
+OPENROUTER_API_KEY=***REMOVED***
+```
+
+**Local model:**
+
+```env
+# Darkmoon — LLM local provider config
+OPENCODE_LOCAL_MODE=true
+OPENCODE_LOCAL_PROVIDER_ID=llama.cpp
+OPENCODE_LOCAL_PROVIDER_NAME=llama-server (local)
+OPENCODE_LOCAL_BASE_URL=http://localhost:8001/v1
+OPENCODE_LOCAL_MODEL=qwen2.5-coder-7b-instruct-q4_k_m.gguf
+```
+
+[Back to Summary](#summary)
+
+### II.3.c Role of the variables
+
+**Cloud provider variables:**
+
+| Variable              | Role                        |
+| --------------------- | --------------------------- |
+| `OPENROUTER_PROVIDER` | LLM provider name           |
+| `OPENCODE_MODEL`      | Exact model used            |
+| `OPENROUTER_API_KEY`  | Provider API key            |
+
+**Local model variables:**
+
+| Variable                      | Role                                      |
+| ----------------------------- | ----------------------------------------- |
+| `OPENCODE_LOCAL_MODE`         | Set to `true` to enable local mode        |
+| `OPENCODE_LOCAL_PROVIDER_ID`  | Provider ID (`ollama`, `llama.cpp`, etc.) |
+| `OPENCODE_LOCAL_PROVIDER_NAME`| Display name                              |
+| `OPENCODE_LOCAL_BASE_URL`     | OpenAI-compatible endpoint URL            |
+| `OPENCODE_LOCAL_MODEL`        | Model name served by the local server     |
 
 > [!IMPORTANT]
-> No secret is stored in the Docker image.
+> No secret is stored in the Docker image or in `docker-compose.yml`. All credentials are isolated in `.opencode.env` which is excluded from version control.
+
+> [!NOTE]
+> For local models, the local server (Ollama or llama.cpp) must be running and accessible **before** starting the Darkmoon stack. The local server must be on the same Docker network as the `opencode` container. See [network configuration](#) for details.
 
 [Back to Summary](#summary)
 

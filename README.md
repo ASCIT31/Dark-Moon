@@ -71,13 +71,17 @@ cd Dark-Moon
 
 **2. Configure your LLM provider**
 
+`install.sh` handles provider configuration interactively — no need to edit `docker-compose.yml`:
+
 ```bash
-# Edit docker-compose.yml with your API credentials
-OPENROUTER_API_KEY=your-api-key-here
-OPENCODE_MODEL=gpt-4o
+./install.sh           # skip form if .opencode.env already configured
+./install.sh --init    # force reconfiguration (cloud or local model)
+./install.sh --help    # show usage
 ```
 
-> **Note:** For detailed environment variable configuration and the role of each variable, see the [Full Documentation — Environment Variables](docs/full.md#ii3-configuration-of-environment-variables-in-docker-compose).
+Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local models** (Ollama, llama.cpp).
+
+> **Note:** For full details on environment variables and local model setup, see the [Full Documentation — Environment Variables](docs/full.md#ii3-configuration-of-environment-variables).
 
 **3. Build and launch**
 
