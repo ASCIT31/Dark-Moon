@@ -227,7 +227,7 @@ EOF
   fi # end PROVIDER_TYPE
 fi # end SKIP_PROVIDER_FORM
 
-chmod 600 "${SCRIPT_DIR}/${OPENCODE_ENV_FILE}"
+chmod 644 "${SCRIPT_DIR}/${OPENCODE_ENV_FILE}"
 echo -e "${GREEN}✔ ${OPENCODE_ENV_FILE} written${RESET}"
 
 # ─────────────────────────────────────────────────────────────────
