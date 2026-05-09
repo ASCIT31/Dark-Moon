@@ -3,3 +3,5 @@ data/
 sessions/
 reports/
 workflows/
+.opencode.env
+*.env
