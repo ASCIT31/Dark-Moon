@@ -45,6 +45,9 @@ services:
     tty: true
     restart: unless-stopped
 
+    env_file:
+      - ./.opencode.env
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./darkmoon-settings:/root/.config/opencode/:rw
@@ -57,7 +60,3 @@ services:
     environment:
       - TERM=xterm-256color
       - LANG=C.UTF-8
-      # 🔽 TEST runtime variables LLM conf
-      - OPENROUTER_PROVIDER=anthropic
-      - OPENCODE_MODEL=claude-opus-4-6
-      - OPENROUTER_API_KEY=***REMOVED***

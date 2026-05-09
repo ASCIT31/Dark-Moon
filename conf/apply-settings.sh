@@ -11,30 +11,50 @@ fail() { echo "❌ $*" >&2; exit 1; }
 log()  { echo "[INIT] $*" >&2; }
 
 #######################################
-# Environment (injected by runtime)
+# Environment (injected by runtime via .opencode.env)
 #######################################
+
+# Cloud provider vars
 OPENROUTER_PROVIDER="${OPENROUTER_PROVIDER:-}"
 OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 OPENCODE_MODEL="${OPENCODE_MODEL:-}"
 
+# Local provider vars
+OPENCODE_LOCAL_MODE="${OPENCODE_LOCAL_MODE:-false}"
+OPENCODE_LOCAL_PROVIDER_ID="${OPENCODE_LOCAL_PROVIDER_ID:-}"
+OPENCODE_LOCAL_PROVIDER_NAME="${OPENCODE_LOCAL_PROVIDER_NAME:-Local model}"
+OPENCODE_LOCAL_BASE_URL="${OPENCODE_LOCAL_BASE_URL:-}"
+OPENCODE_LOCAL_MODEL="${OPENCODE_LOCAL_MODEL:-}"
 
 #######################################
-# Decide model strategy (OpenRouter vs fallback)
+# Decide model strategy
+# Priority: local > cloud > fallback
 #######################################
-USE_OPENROUTER=true
+USE_LOCAL=false
+USE_OPENROUTER=false
 
-if [ -z "${OPENROUTER_PROVIDER:-}" ] || \
-   [ -z "${OPENROUTER_API_KEY:-}" ] || \
-   [ -z "${OPENCODE_MODEL:-}" ]; then
-  USE_OPENROUTER=false
+if [ "${OPENCODE_LOCAL_MODE}" = "true" ] && \
+   [ -n "${OPENCODE_LOCAL_PROVIDER_ID:-}" ] && \
+   [ -n "${OPENCODE_LOCAL_BASE_URL:-}" ] && \
+   [ -n "${OPENCODE_LOCAL_MODEL:-}" ]; then
+  USE_LOCAL=true
+elif [ -n "${OPENROUTER_PROVIDER:-}" ] && \
+     [ -n "${OPENROUTER_API_KEY:-}" ] && \
+     [ -n "${OPENCODE_MODEL:-}" ]; then
+  USE_OPENROUTER=true
 fi
 
-if [ "$USE_OPENROUTER" = true ]; then
+if [ "$USE_LOCAL" = true ]; then
+  # Local provider: model string is just the model name (no provider/ prefix)
+  FINAL_MODEL="${OPENCODE_LOCAL_PROVIDER_ID}/${OPENCODE_LOCAL_MODEL}"
+  log "Using local provider: ${OPENCODE_LOCAL_PROVIDER_NAME} → model: ${FINAL_MODEL}"
+  log "Base URL: ${OPENCODE_LOCAL_BASE_URL}"
+elif [ "$USE_OPENROUTER" = true ]; then
   FINAL_MODEL="$OPENROUTER_PROVIDER/$OPENCODE_MODEL"
-  log "Using OpenRouter model: $FINAL_MODEL"
+  log "Using cloud provider: $FINAL_MODEL"
 else
   FINAL_MODEL="opencode/big-pickle"
-  log "OpenRouter vars missing → fallback to $FINAL_MODEL"
+  log "No provider configured → fallback to $FINAL_MODEL"
 fi
 
 #######################################
@@ -45,9 +65,34 @@ mkdir -p "$OPENCODE_CONFIG_DIR" "$OPENCODE_AUTH_DIR"
 #######################################
 # Write opencode.json (ALWAYS)
 #######################################
+
+# Build optional provider block for local mode
+LOCAL_PROVIDER_BLOCK=""
+if [ "$USE_LOCAL" = true ]; then
+  LOCAL_PROVIDER_BLOCK=$(cat <<PROVEOF
+,
+
+  "provider": {
+    "${OPENCODE_LOCAL_PROVIDER_ID}": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "${OPENCODE_LOCAL_PROVIDER_NAME}",
+      "options": {
+        "baseURL": "${OPENCODE_LOCAL_BASE_URL}"
+      },
+      "models": {
+        "${OPENCODE_LOCAL_MODEL}": {
+          "name": "${OPENCODE_LOCAL_MODEL}"
+        }
+      }
+    }
+  }
+PROVEOF
+)
+fi
+
 cat > "$OPENCODE_CONFIG_FILE" <<EOF
 {
-  "\$schema": "https://opencode.ai/config.json",
+  "\$schema": "https://opencode.ai/config.json"${LOCAL_PROVIDER_BLOCK},
 
   "mcp": {
     "darkmoon": {
@@ -185,7 +230,7 @@ cat > "$OPENCODE_CONFIG_FILE" <<EOF
       "mcp": ["darkmoon"],
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/drupal.md"
-    },
+    }
   }
 }
 EOF
@@ -193,7 +238,7 @@ EOF
 echo "✅ OpenCode config written to $OPENCODE_CONFIG_FILE"
 
 #######################################
-# Write auth.json ONLY if OpenRouter is used
+# Write auth.json ONLY for cloud providers
 #######################################
 if [ "$USE_OPENROUTER" = true ]; then
   cat > "$OPENCODE_AUTH_FILE" <<EOF
@@ -205,6 +250,9 @@ if [ "$USE_OPENROUTER" = true ]; then
 }
 EOF
   echo "✅ OpenCode auth written to $OPENCODE_AUTH_FILE"
+elif [ "$USE_LOCAL" = true ]; then
+  rm -f "$OPENCODE_AUTH_FILE"
+  log "Local provider — no auth.json needed"
 else
   rm -f "$OPENCODE_AUTH_FILE"
   log "No auth.json written (fallback model does not require API key)"
