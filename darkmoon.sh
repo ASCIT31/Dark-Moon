@@ -41,11 +41,17 @@ fi
 # Default behaviour
 # ------------------------------------------------------------
 if [[ $# -eq 0 ]]; then
-  # Mode interactif
+  # Mode interactif → TUI
   exec "${DC[@]}" exec "${TTY_FLAGS[@]}" "$SERVICE" \
     bash -lc 'exec "$1"' bash "$APP_BIN"
-else
-  # Forward propre de tous les arguments
+elif [[ "${1:0:2}" == "--" ]]; then
+  # Pass-through flags opencode (--help, --version, etc.)
   exec "${DC[@]}" exec "${TTY_FLAGS[@]}" "$SERVICE" \
     bash -lc 'app="$1"; shift; exec "$app" "$@"' bash "$APP_BIN" "$@"
+else
+  # Arguments positionnels = prompt one-shot. opencode exige la
+  # sous-commande `run`, sinon il interprète la chaîne comme un cwd
+  # et échoue avec "Failed to change directory to /<prompt>".
+  exec "${DC[@]}" exec "${TTY_FLAGS[@]}" "$SERVICE" \
+    bash -lc 'app="$1"; shift; exec "$app" run "$@"' bash "$APP_BIN" "$@"
 fi
