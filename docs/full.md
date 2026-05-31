@@ -15,6 +15,7 @@ A platform that allows you to conduct a complete penetration testing campaign
   - [II.3. Configuration of environment variables in docker compose](#ii3-configuration-of-environment-variables-in-docker-compose)
     - [II.3.a Example environment variable](#ii3a-example-environment-variable)
     - [II.3.b Role of the variables](#ii3b-role-of-the-variables)
+    - [II.3.d Compatible Models & Hardware](#ii3d-compatible-models--hardware)
   - [II.4. Automatic generation of OpenCode files](#ii4-automatic-generation-of-opencode-files)
   - [II.5. Volumes and persistence](#ii5-volumes-and-persistence)
     - [II.5.a Important volumes](#ii5a-important-volumes)
@@ -443,7 +444,7 @@ On first run (or with `--init`), `install.sh` prompts you to choose between a **
 
 Your choice [1/2]: 1
 Provider name (e.g. anthropic): anthropic
-Model name    (e.g. claude-opus-4-6): claude-opus-4-6
+Model name    (e.g. claude-opus-4-7): claude-opus-4-7
 API key: ****
 ```
 
@@ -453,7 +454,7 @@ API key: ****
 Your choice [1/2]: 2
 Local engine [1/2/3]: 2
 Base URL [http://localhost:8080/v1]: http://localhost:8001/v1
-Model name (e.g. qwen2.5-coder:7b): qwen2.5-coder-7b-instruct-q4_k_m.gguf
+Model name (e.g. glm-4.6:32b): Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf
 ```
 
 [Back to Summary](#summary)
@@ -465,7 +466,7 @@ Model name (e.g. qwen2.5-coder:7b): qwen2.5-coder-7b-instruct-q4_k_m.gguf
 ```env
 # Darkmoon — LLM cloud provider config
 OPENROUTER_PROVIDER=anthropic
-OPENCODE_MODEL=claude-opus-4-6
+OPENCODE_MODEL=claude-opus-4-7
 OPENROUTER_API_KEY=***REMOVED***
 ```
 
@@ -477,7 +478,7 @@ OPENCODE_LOCAL_MODE=true
 OPENCODE_LOCAL_PROVIDER_ID=llama.cpp
 OPENCODE_LOCAL_PROVIDER_NAME=llama-server (local)
 OPENCODE_LOCAL_BASE_URL=http://localhost:8001/v1
-OPENCODE_LOCAL_MODEL=qwen2.5-coder-7b-instruct-q4_k_m.gguf
+OPENCODE_LOCAL_MODEL=Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf
 ```
 
 [Back to Summary](#summary)
@@ -507,6 +508,86 @@ OPENCODE_LOCAL_MODEL=qwen2.5-coder-7b-instruct-q4_k_m.gguf
 
 > [!NOTE]
 > For local models, the local server (Ollama or llama.cpp) must be running and accessible **before** starting the Darkmoon stack. The local server must be on the same Docker network as the `opencode` container. See [network configuration](#) for details.
+
+[Back to Summary](#summary)
+
+### II.3.d Compatible Models & Hardware
+
+Darkmoon is a **fully autonomous** pentest agent: a single campaign chains hundreds to thousands of tool calls, spawns sub-agents, and must drive the whole methodology (Discovery → Validation → Reporting → Finalization) to completion on its own. This places a hard requirement on the underlying LLM — it must be excellent at long-horizon reasoning and strict, repeated tool-calling.
+
+> [!IMPORTANT]
+> **Ideal conditions — Claude Opus 4.6 / 4.7.** Darkmoon is built and tuned around frontier models. **Claude Opus 4.7** (or 4.6) is the reference configuration and delivers the most complete scans, the deepest exploitation chains, and the most reliable reports. If you want Darkmoon to perform as designed, use Opus 4.6 / 4.7.
+
+#### Why small models do not work
+
+A 7B or 13B model (e.g. a generic `llama3`, a 7B coder, `gpt-oss-20b`) cannot hold the autonomous loop: it emits malformed tool calls, loses track over long sessions, and never reaches the final `finish_scan` / campaign-finalization step. The visible symptom is a campaign that stays in **`Unknown`** forever and a scan that never reaches *Finished*. **This is a model-capability limit, not a Darkmoon bug.**
+
+#### Cloud models (recommended)
+
+| Model               | Provider  | Status                                        |
+| ------------------- | --------- | --------------------------------------------- |
+| `claude-opus-4-7`   | Anthropic | **Reference — optimal**                       |
+| `claude-opus-4-6`   | Anthropic | Recommended                                   |
+| `claude-sonnet-4-6` | Anthropic | Good (faster / cheaper, slightly less depth)  |
+
+#### ★ Local Opus-class equivalents (highlighted)
+
+If you need an on-premise / air-gapped deployment but want results as close as possible to Claude Opus 4.6 / 4.7, use one of these **frontier-grade open-weight** models. They are large Mixture-of-Experts models that top the agentic and function-calling leaderboards (Berkeley Function Calling Leaderboard, SWE-Bench) in 2026 — the only open models that reliably drive Darkmoon's autonomous loop end-to-end.
+
+| Model                                          | Size (total / active) | Why it qualifies                                                       | HuggingFace                                |
+| ---------------------------------------------- | --------------------- | ---------------------------------------------------------------------- | ------------------------------------------ |
+| **`DeepSeek-V3.2`** / `V4-Pro`                 | 671B MoE / 37B active | Near-frontier reasoning, native “thinking with tools” tool-calling     | `deepseek-ai/DeepSeek-V3.2`                |
+| **`Kimi-K2-Thinking`** (K2.6)                  | 1T MoE / 32B active   | Best-in-class agentic intelligence, 256K context                       | `moonshotai/Kimi-K2-Thinking`              |
+| **`GLM-4.6`** (GLM-4.7 / GLM-5 family)         | 357B MoE / 32B active | Strongest all-round open coding/agentic model, 200K context            | `zai-org/GLM-4.6`                          |
+| **`Qwen3-Coder-480B-A35B-Instruct`**           | 480B MoE / 35B active | SOTA open agentic tool-use, comparable to Claude Sonnet 4, 256K–1M ctx | `Qwen/Qwen3-Coder-480B-A35B-Instruct`      |
+
+> These flagship models are the **recommended local target if you want Opus-class behaviour**. At full precision they need a multi-GPU server, but quantized GGUF builds (2–4 bit) run on a high-end workstation with MoE offloading — see hardware below.
+
+#### Local models — efficient single-workstation options
+
+When a multi-GPU server is not available, these run on a single high-end GPU while still completing real campaigns (MoE designs keep only a few billion parameters active per token):
+
+| Model                          | Size (total / active) | Notes                                                                   | HuggingFace                              |
+| ------------------------------ | --------------------- | ----------------------------------------------------------------------- | ---------------------------------------- |
+| `Qwen3-Coder-30B-A3B-Instruct` | 30B MoE / 3B active   | Best efficiency — fits a single 24 GB GPU, strong agentic tool-use      | `Qwen/Qwen3-Coder-30B-A3B-Instruct`      |
+| `Qwen3-Coder-Next`             | MoE                   | Highest capability-per-active-parameter                                 | `Qwen/Qwen3-Coder-Next`                  |
+| `Qwen2.5-Coder-32B-Instruct`   | 32B dense             | Dense fallback, excellent tool-calling                                  | `Qwen/Qwen2.5-Coder-32B-Instruct`        |
+
+#### Security / pentest-specialised models
+
+Models fine-tuned for offensive security write deeper exploit code and reason about CVEs more directly. They are best used *in addition* to a strong agentic driver — on their own the smaller ones still won't sustain a full autonomous campaign.
+
+| Model                       | Focus                                                          | HuggingFace / source        |
+| --------------------------- | -------------------------------------------------------------- | --------------------------- |
+| `WhiteRabbitNeo` (Deep Hat) | Uncensored red/blue-team, exploit generation, CVE reasoning    | `WhiteRabbitNeo/*` · deephat.ai |
+
+> [!WARNING]
+> **Not supported for autonomous campaigns:** any small model (7B / 13B coders, `gpt-oss-20b`, generic `llama3`, Phi, Gemma 9B, the older WhiteRabbitNeo-13B, etc.). Fine for quick experiments, but they will not finish a real campaign — the scan stays in `Unknown`.
+
+#### Recommended hardware (local inference)
+
+The Opus-class models above are 355B–1T-parameter MoE. Figures assume the listed quantization and a single concurrent campaign; more VRAM / additional GPUs shorten run time and raise precision.
+
+| Target                                                                                                  | VRAM                                          | System RAM   | Example hardware                                  |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------ | ------------------------------------------------- |
+| Opus-class MoE — **full precision** (DeepSeek-V3.2, Kimi K2, GLM-4.6, Qwen3-Coder-480B)                 | multi-GPU, ≥ 8× 80 GB (up to 16–32× H100)     | 512 GB – 1 TB+ | H100 / H200 NVLink server                        |
+| Opus-class MoE — **4-bit GGUF** (workstation, MoE offload)                                              | 1× 40–48 GB                                   | ~256 GB      | A6000 / RTX 6000 Ada + 256 GB RAM                 |
+| Opus-class MoE — **2-bit GGUF** (slow, workstation)                                                     | 1× 24 GB                                      | 128 GB       | RTX 4090 + 128 GB RAM (~few tok/s)                |
+| Efficient MoE 30B-A3B (Qwen3-Coder-30B-A3B)                                                             | ~16–24 GB                                     | 32–64 GB     | RTX 4090 / 3090 — fast, single GPU                |
+| Dense 32B (Qwen2.5-Coder-32B, Q4)                                                                       | ~22–24 GB                                     | 32–64 GB     | RTX 4090 / 3090, A5000                            |
+
+> VRAM / RAM figures for GLM-4.6 quantization are from Unsloth & apxml; MoE “active parameters” explain why a 30B-A3B model runs far lighter than a 32B dense model.
+
+#### Ideal on-premise workstation (single-GPU)
+
+- **GPU:** NVIDIA RTX 4090 24 GB minimum — RTX 6000 Ada / A6000 48 GB to run Opus-class MoE in 4-bit
+- **CPU:** 16+ cores (Ryzen 9 / Threadripper / Core i9)
+- **RAM:** 128 GB (256 GB for 4-bit Opus-class MoE offload)
+- **Disk:** NVMe SSD, 200 GB+ free (Docker images + quantized weights — a 4-bit 355B model is ~135–200 GB)
+- **OS:** Linux x86_64 (native preferred; WSL2 supported)
+
+> [!NOTE]
+> **No server-grade GPU?** Use the cloud path with `claude-opus-4-7` — zero local hardware, best results. Local Opus-class models are for fully air-gapped / on-premise constraints; for a single 24 GB GPU, `Qwen3-Coder-30B-A3B` is the most practical starting point.
 
 [Back to Summary](#summary)
 
