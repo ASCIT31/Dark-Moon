@@ -8,9 +8,9 @@ A platform that allows you to conduct a complete penetration testing campaign
 
 > [!WARNING]
 > **Reading your results — analyst validation recommended.**
-> DarkMoon is an **autonomous, AI-driven** penetration-testing engine built for **maximum coverage**: it surfaces every potential weakness so nothing slips through. As with any security scanner, a subset of findings is meant to be **confirmed by an analyst**, and occasional false positives are expected by design — for example, a raw `HTTP 200` on a probe such as `/etc/passwd` may be reported as a *candidate* finding even when the response is not a genuine file disclosure.
+> DarkMoon runs **autonomous, AI-driven** assessments tuned for **maximum coverage**, so nothing slips through. As with any security scanner, this wide net means a share of findings are **candidates that deserve a human check** before action — severity and exploitability are best confirmed by an analyst.
 >
-> Every finding ships with its **full evidence** — raw requests & responses, payloads and logs — in the **report, the dashboard and the PDF export**. Triage findings against that evidence before remediation: the **`EXPLOITED`** status marks findings backed by a reproducible proof of exploitation, while **`Confirmed`** findings benefit from a quick analyst review. This validation step is standard practice for any professional assessment — it is exactly what turns broad automated coverage into **reliable, defensible conclusions**.
+> Every finding carries its **full evidence** — raw requests & responses, payloads and logs — across the **report, the dashboard and the PDF export**. Triage findings against that evidence before remediation: the **`EXPLOITED`** status marks findings backed by a reproducible proof of exploitation, while **`Confirmed`** findings benefit from a quick analyst review. That step turns broad automated coverage into **reliable, defensible conclusions**.
 
 # Summary
 
