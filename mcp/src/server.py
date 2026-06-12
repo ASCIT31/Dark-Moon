@@ -325,6 +325,324 @@ def run_workflow(
     return workflow_registry.run_workflow(workflow, method, params)
 
 # ============================================================================
+# DASHBOARD EXPORT TOOLS (4 tools)
+# ============================================================================
+
+
+@mcp.tool()
+def dashboard_init_campaign(
+    session_id: str,
+    target_host: str,
+    target_ip: str,
+    project_name: str = "Darkmoon Assessment",
+    methodology: str = "ISO 27001 / NIST SP 800-115 / MITRE ATT&CK",
+) -> Dict[str, Any]:
+    """
+    Initialize a live campaign for the Darkmoon Dashboard.
+
+    Call this ONCE at the beginning of a pentest campaign, right after get_session().
+    It creates the project, target, and campaign skeleton in the dashboard data store.
+    The returned campaign_id must be used in all subsequent push calls.
+
+    Args:
+        session_id: The MCP session ID (from get_session())
+        target_host: Target hostname or IP
+        target_ip: Target IP address
+        project_name: Name for the assessment project
+        methodology: Methodology string
+
+    Returns:
+        Dictionary with project_id, target_id, campaign_id.
+
+    Example:
+        dashboard_init_campaign(
+            session_id="d7c20dbe",
+            target_host="172.20.0.4",
+            target_ip="172.20.0.4",
+        )
+        → {"project_id": "proj_...", "target_id": "tgt_...", "campaign_id": "camp_..."}
+    """
+    from api.live_push import init_live_campaign
+    return init_live_campaign(
+        session_id=session_id,
+        target_host=target_host,
+        target_ip=target_ip,
+        project_name=project_name,
+        methodology=methodology,
+    )
+
+
+@mcp.tool()
+def dashboard_push_finding(
+    campaign_id: str,
+    title: str,
+    severity: str,
+    cvss_score: float,
+    category: str,
+    status: str,
+    description: str,
+    endpoint: str,
+    discovered_by_agent: str,
+    remediation: str = "",
+    evidence_commands: Optional[str] = None,
+    evidence_logs: Optional[str] = None,
+    evidence_explanation: str = "",
+    cve: Optional[str] = None,
+    cvss_vector: Optional[str] = None,
+    mitre_attack_id: Optional[str] = None,
+    mitre_attack_name: Optional[str] = None,
+    iso27001_control: Optional[str] = None,
+    node_id: Optional[str] = None,
+    plugin_or_component: Optional[str] = None,
+    raw_request: Optional[str] = None,
+    raw_response: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Push a single vulnerability finding to the Darkmoon Dashboard in real-time.
+
+    Call this each time a vulnerability is discovered during the pentest.
+    The finding is immediately written to disk and visible in the API.
+
+    Args:
+        campaign_id: Campaign ID returned by dashboard_init_campaign()
+        title: Short title of the vulnerability
+        severity: critical, high, medium, low, info
+        cvss_score: CVSS 3.1 score (0.0 to 10.0)
+        category: Vulnerability category (remote_code_execution, xss_stored, sql_injection, ssrf, etc.)
+        status: exploited, confirmed, unconfirmed
+        description: Technical description
+        endpoint: Affected endpoint/URL
+        discovered_by_agent: Agent ID that found this (wordpress, nodejs, php, etc.)
+        remediation: Remediation recommendation
+        evidence_commands: Commands used to reproduce (one per line, newline-separated)
+        evidence_logs: Chronological exploit logs (one per line, newline-separated)
+        evidence_explanation: Human-readable explanation of the vulnerability
+        cve: CVE identifier if applicable
+        cvss_vector: Full CVSS vector string
+        mitre_attack_id: MITRE ATT&CK technique ID (e.g., T1190)
+        mitre_attack_name: MITRE ATT&CK technique name
+        iso27001_control: ISO 27001 Annex A control
+        node_id: Infrastructure node ID this vuln is attached to
+        plugin_or_component: Vulnerable component name
+        raw_request: Raw HTTP request (evidence)
+        raw_response: Raw HTTP response (evidence)
+
+    Returns:
+        Dictionary with vuln_id, total findings count.
+
+    Example:
+        dashboard_push_finding(
+            campaign_id="camp_20260323_abcd1234",
+            title="SQL Injection in login form",
+            severity="critical",
+            cvss_score=9.8,
+            category="sql_injection",
+            status="exploited",
+            description="The login endpoint is vulnerable to SQL injection...",
+            endpoint="/api/login",
+            discovered_by_agent="php",
+            evidence_commands="sqlmap -u http://target/api/login --data='user=test'",
+            evidence_logs="[12:30:01] SQLi confirmed: extracted 3 tables",
+            evidence_explanation="The login form passes unsanitized input to SQL query...",
+        )
+    """
+    from api.live_push import push_finding
+
+    finding = {
+        "campaign_id": campaign_id,
+        "node_id": node_id or "",
+        "title": title,
+        "severity": severity,
+        "cvss_score": cvss_score,
+        "cvss_vector": cvss_vector,
+        "cve": cve,
+        "category": category,
+        "mitre_attack_id": mitre_attack_id,
+        "mitre_attack_name": mitre_attack_name,
+        "iso27001_control": iso27001_control,
+        "status": status,
+        "description": description,
+        "evidence": {
+            "commands": evidence_commands.split("\n") if evidence_commands else [],
+            "payloads": [],
+            "raw_request": raw_request or "",
+            "raw_response": raw_response or "",
+            "extracted_data": None,
+            "screenshots": [],
+            "logs": evidence_logs.split("\n") if evidence_logs else [],
+            "explanation": evidence_explanation,
+        },
+        "remediation": remediation,
+        "plugin_or_component": plugin_or_component,
+        "endpoint": endpoint,
+        "discovered_by_agent": discovered_by_agent,
+        "discovered_at": __import__("datetime").datetime.now(
+            __import__("datetime").timezone.utc
+        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+    return push_finding(campaign_id=campaign_id, finding=finding)
+
+
+@mcp.tool()
+def dashboard_push_infra_node(
+    campaign_id: str,
+    node_type: str,
+    label: str,
+    host: str,
+    technology: str,
+    risk_level: str = "none",
+    port: Optional[int] = None,
+    version: Optional[str] = None,
+    parent_node_id: Optional[str] = None,
+    node_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Push an infrastructure node to the Darkmoon Dashboard in real-time.
+
+    Call this as you discover infrastructure components during the pentest.
+    Nodes form a tree via parent_node_id for the infrastructure graph.
+
+    Args:
+        campaign_id: Campaign ID returned by dashboard_init_campaign()
+        node_type: host, service, application, plugin, theme, endpoint, tool_exposed, file_exposed, service_internal
+        label: Display label for the graph (e.g., "Apache 2.4.38")
+        host: Hostname or IP
+        technology: Technology name (e.g., "Apache HTTP Server")
+        risk_level: critical, high, medium, low, info, none
+        port: Port number (null for hosts)
+        version: Detected version
+        parent_node_id: ID of the parent node (null for root)
+        node_id: Custom node ID (auto-generated if not provided)
+
+    Returns:
+        Dictionary with node_id, total nodes count.
+
+    Example:
+        dashboard_push_infra_node(
+            campaign_id="camp_20260323_abcd1234",
+            node_type="host",
+            label="172.20.0.4",
+            host="172.20.0.4",
+            technology="Linux (Docker)",
+        )
+    """
+    from api.live_push import push_infra_node
+
+    node = {
+        "node_type": node_type,
+        "label": label,
+        "host": host,
+        "port": port,
+        "technology": technology,
+        "version": version,
+        "risk_level": risk_level,
+        "parent_node_id": parent_node_id,
+        "vulnerability_ids": [],
+    }
+    if node_id:
+        node["id"] = node_id
+
+    return push_infra_node(campaign_id=campaign_id, node=node)
+
+
+@mcp.tool()
+def dashboard_finalize_campaign(
+    campaign_id: str,
+    duration_seconds: int = 0,
+    executive_summary: str = "",
+    report_markdown: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Finalize a campaign on the Darkmoon Dashboard.
+
+    Call this ONCE after the pentest is complete and the report has been generated.
+    Sets the campaign status to "completed" and saves the markdown report.
+
+    Args:
+        campaign_id: Campaign ID returned by dashboard_init_campaign()
+        duration_seconds: Total campaign duration in seconds
+        executive_summary: 1-3 sentence executive summary
+        report_markdown: Full markdown report content
+
+    Returns:
+        Dictionary with final status, findings count, risk level.
+
+    Example:
+        dashboard_finalize_campaign(
+            campaign_id="camp_20260323_abcd1234",
+            duration_seconds=900,
+            executive_summary="Critical RCE achieved via SQL injection...",
+            report_markdown="# Vulnerability Assessment Report\\n..."
+        )
+    """
+    from api.live_push import finalize_campaign, _generate_report_from_db
+    from api.json_storage import load_campaign, load_report_content
+
+    def _is_reference(content) -> bool:
+        if not content:
+            return True
+        s = str(content).strip()
+        return (
+            len(s) < 2000
+            or s.startswith("See full report")
+            or s.startswith("Report available")
+            or s.startswith("/output/")
+            or s.startswith("/tmp/")
+            or s.startswith("pentest_report_")
+            or (len(s) < 500 and ("report" in s.lower() or "path" in s.lower()))
+        )
+
+    # Check if a good report already exists — never overwrite with a worse one
+    existing_camp = load_campaign(campaign_id)
+    existing_path = existing_camp.get("report_path", "") if existing_camp else ""
+    existing_content = load_report_content(existing_path) if existing_path else ""
+    existing_is_good = (
+        existing_content
+        and len(existing_content) > 10000
+        and not _is_reference(existing_content)
+    )
+
+    resolved_markdown = report_markdown
+
+    if existing_is_good and (
+        not report_markdown
+        or len(str(report_markdown).strip()) < len(existing_content)
+    ):
+        # Keep the existing good report — agent passed a shorter/worse version
+        resolved_markdown = existing_content
+
+    elif _is_reference(report_markdown):
+        # Agent passed a file path or reference — check disk first, then auto-generate
+        from pathlib import Path
+        reports_dir = Path("/root/.local/share/opencode/reports")
+        if reports_dir.exists():
+            suffix = campaign_id[-8:]
+            disk_reports = sorted(
+                [p for p in reports_dir.glob("pentest_report_*.md")
+                 if suffix in p.name or p.stat().st_size > 10000],
+                key=lambda p: p.stat().st_size,
+                reverse=True,
+            )
+            if disk_reports and disk_reports[0].stat().st_size > 10000:
+                resolved_markdown = disk_reports[0].read_text(encoding="utf-8")
+
+        if not resolved_markdown or _is_reference(resolved_markdown):
+            camp = load_campaign(campaign_id)
+            if camp:
+                resolved_markdown = _generate_report_from_db(
+                    campaign_id, camp, executive_summary
+                )
+
+    return finalize_campaign(
+        campaign_id=campaign_id,
+        duration_seconds=duration_seconds,
+        executive_summary=executive_summary,
+        report_markdown=resolved_markdown,
+    )
+
+
+# ============================================================================
 # SERVER STARTUP
 # ============================================================================
 
@@ -350,7 +668,7 @@ def main():
         print("[WARNING] Some tools are not available. Check health status.")
         print()
 
-    print("Available MCP Tools (7 total):")
+    print("Available MCP Tools (11 total):")
     print()
     print("  Health & Diagnostics (3):")
     print("    - health_check()      : Full system health check")
@@ -364,6 +682,12 @@ def main():
     print("  Workflow Discovery (2):")
     print("    - list_workflows()    : List all available workflows")
     print("    - run_workflow()      : Execute a workflow by name")
+    print()
+    print("  Dashboard Export (4):")
+    print("    - dashboard_init_campaign()    : Init live campaign")
+    print("    - dashboard_push_finding()     : Push vuln in real-time")
+    print("    - dashboard_push_infra_node()  : Push infra node in real-time")
+    print("    - dashboard_finalize_campaign(): Finalize + write report")
     print()
     print(f"  Discovered Workflows ({len(workflow_registry.workflows)}):")
     for wf_name in sorted(workflow_registry.workflows.keys()):
