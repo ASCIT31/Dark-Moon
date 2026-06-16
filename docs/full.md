@@ -37,6 +37,7 @@ A platform that allows you to conduct a complete penetration testing campaign
   - [II.8. Direct access to the container (debug)](#ii8-direct-access-to-the-container-debug)
   - [II.9. Where to modify what (summary)](#ii9-where-to-modify-what-summary)
   - [II.10. Quick summary](#ii10-quick-summary)
+  - [II.11. Clipboard & Terminal (OSC 52)](#ii11-clipboard--terminal-osc-52)
 - [III. Uses](#iii-uses)
   - [III.1. Prompt Examples](#iii1-prompt-examples)
 - [IV. Architecture](#iv-architecture)
@@ -1304,6 +1305,40 @@ This allows :
 - `docker compose up -d` → launch
 - `darkmoon` → usage
 - Volumes → persistence & live modification
+
+[Back to Summary](#summary)
+
+## II.11. Clipboard & Terminal (OSC 52)
+
+Darkmoon's interactive console (the **TUI**) runs **inside a container**, so it cannot reach your host clipboard directly. Every copy action — text selection, and **Ctrl+P → "Copy session transcript"** / **"Copy last assistant message"** — sends the data to your machine through the **OSC 52** terminal escape sequence. Your **terminal emulator must support (and allow) OSC 52 clipboard writes**, otherwise the copy silently goes nowhere.
+
+> ⚠️ The **"Copied to clipboard"** message is shown as soon as the sequence is emitted — it does **not** guarantee your terminal accepted it. If pasting yields nothing, the cause is almost always terminal-side, not Darkmoon.
+
+### Symptom
+
+- "Copied to clipboard" appears, but `Ctrl+V` (or `Ctrl+Shift+V`) pastes nothing — neither inside the TUI nor in any other application.
+- Most common on **GNOME Terminal / VTE** (the Ubuntu default), which does not honor OSC 52 clipboard writes by default.
+
+### Confirm it is your terminal
+
+Run this **outside** Darkmoon, then try to paste somewhere:
+
+```bash
+printf '\033]52;c;%s\007' "$(printf 'osc52-test' | base64)"
+```
+
+If pasting does **not** give you `osc52-test`, your terminal is dropping OSC 52.
+
+### Fixes
+
+| Situation | Fix |
+|-----------|-----|
+| Terminal without OSC 52 (GNOME Terminal, older Konsole/PuTTY) | Use an OSC 52‑capable terminal: **kitty**, **WezTerm**, **Alacritty**, **foot**, **xterm** (`allowWindowOps` / `52` not blocked), **Windows Terminal**, or **iTerm2** (enable *Allow clipboard access*) |
+| Inside **tmux / screen** | tmux: add `set -g set-clipboard on` (Darkmoon already wraps the sequence for tmux passthrough). screen: enable clipboard or use a compatible terminal |
+| Over **SSH** | Works as long as the **local** terminal supports OSC 52 — nothing to install on the server |
+| Very large **session transcript** | OSC 52 has per‑terminal size limits and may be truncated even on a supported terminal. For full output, use the report files in **`./reports`** |
+
+> 💡 Darkmoon cannot work around this from inside the container: for a containerized TUI, OSC 52 is the only portable bridge to the host clipboard. Clipboard behaviour therefore depends entirely on your terminal configuration.
 
 [Back to Summary](#summary)
 
