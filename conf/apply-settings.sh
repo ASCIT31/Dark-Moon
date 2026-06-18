@@ -25,6 +25,7 @@ OPENCODE_LOCAL_PROVIDER_ID="${OPENCODE_LOCAL_PROVIDER_ID:-}"
 OPENCODE_LOCAL_PROVIDER_NAME="${OPENCODE_LOCAL_PROVIDER_NAME:-Local model}"
 OPENCODE_LOCAL_BASE_URL="${OPENCODE_LOCAL_BASE_URL:-}"
 OPENCODE_LOCAL_MODEL="${OPENCODE_LOCAL_MODEL:-}"
+OPENCODE_LOCAL_API_KEY="${OPENCODE_LOCAL_API_KEY:-}"
 
 #######################################
 # Decide model strategy
@@ -69,6 +70,12 @@ mkdir -p "$OPENCODE_CONFIG_DIR" "$OPENCODE_AUTH_DIR"
 # Build optional provider block for local mode
 LOCAL_PROVIDER_BLOCK=""
 if [ "$USE_LOCAL" = true ]; then
+  # Optional API key for authenticated OpenAI-compatible endpoints (Bearer auth).
+  # JSON-escaped via python3 so keys containing quotes/backslashes can't break the config.
+  LOCAL_API_KEY_OPTION=""
+  if [ -n "${OPENCODE_LOCAL_API_KEY:-}" ]; then
+    LOCAL_API_KEY_OPTION=$(OPENCODE_LOCAL_API_KEY="$OPENCODE_LOCAL_API_KEY" python3 -c 'import json,os; print(",\n        \"apiKey\": " + json.dumps(os.environ["OPENCODE_LOCAL_API_KEY"]))')
+  fi
   LOCAL_PROVIDER_BLOCK=$(cat <<PROVEOF
 ,
 
@@ -77,7 +84,7 @@ if [ "$USE_LOCAL" = true ]; then
       "npm": "@ai-sdk/openai-compatible",
       "name": "${OPENCODE_LOCAL_PROVIDER_NAME}",
       "options": {
-        "baseURL": "${OPENCODE_LOCAL_BASE_URL}"
+        "baseURL": "${OPENCODE_LOCAL_BASE_URL}"${LOCAL_API_KEY_OPTION}
       },
       "models": {
         "${OPENCODE_LOCAL_MODEL}": {

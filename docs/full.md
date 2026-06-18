@@ -486,6 +486,9 @@ OPENCODE_LOCAL_PROVIDER_ID=llama.cpp
 OPENCODE_LOCAL_PROVIDER_NAME=llama-server (local)
 OPENCODE_LOCAL_BASE_URL=http://localhost:8001/v1
 OPENCODE_LOCAL_MODEL=Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf
+# Optional — API key for authenticated OpenAI-compatible endpoints (Bearer auth).
+# Such endpoints usually require /v1 in OPENCODE_LOCAL_BASE_URL above.
+OPENCODE_LOCAL_API_KEY=sk-...
 ```
 
 [Back to Summary](#summary)
