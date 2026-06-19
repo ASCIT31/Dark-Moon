@@ -531,7 +531,9 @@ Darkmoon is a **fully autonomous** pentest agent: a single campaign chains hundr
 > [!IMPORTANT]
 > **Anthropic cyber-safety restrictions — Claude Opus 4.6 is the most stable choice.** Recent Anthropic models ship security *classifiers* that can **interrupt, refuse, or silently downgrade** offensive-security tasks (reconnaissance, PoC, exploitation) **even on authorized engagements** with the scope/authorization in context. **Fable 5 / Mythos 5** silently fall back to a weaker model on cyber-flagged requests, and in our own testing **Opus 4.8 hit these limits mid-assessment**, whereas **Claude Opus 4.6 ran the full assessment end-to-end** — broad vulnerability coverage, no ethical interruptions, no fallback. **For Darkmoon, Claude Opus 4.6 is the recommended, most stable model.**
 >
-> Darkmoon is intended for **authorized** security testing only. For professional engagements, you can also request a *Cyber Use Case Exemption* through Anthropic's **Cyber Verification Program** to reduce false-positive refusals on legitimate work.
+> Darkmoon is intended for **authorized** security testing only.
+>
+> **Optional but recommended (not required — Darkmoon works without it):** if you can, apply to Anthropic's **Cyber Verification Program (CVP)**. Once approved, dual-use cyber activities (e.g. vulnerability exploitation, offensive-security tooling) are **no longer blocked by default** for your approved **organization**, which further reduces false-positive interruptions on legitimate work. Note that the approval is **per-organization** (each org must apply separately), and **prohibited-use** activities (e.g. mass data exfiltration, ransomware development) remain blocked regardless of CVP status.
 
 #### Why small models do not work
 
