@@ -528,6 +528,11 @@ Darkmoon is a **fully autonomous** pentest agent: a single campaign chains hundr
 > [!IMPORTANT]
 > **Ideal conditions — Claude Opus 4.6 / 4.7.** Darkmoon is built and tuned around frontier models. **Claude Opus 4.7** (or 4.6) is the reference configuration and delivers the most complete scans, the deepest exploitation chains, and the most reliable reports. If you want Darkmoon to perform as designed, use Opus 4.6 / 4.7.
 
+> [!IMPORTANT]
+> **Anthropic cyber-safety restrictions — Claude Opus 4.6 is the most stable choice.** Recent Anthropic models ship security *classifiers* that can **interrupt, refuse, or silently downgrade** offensive-security tasks (reconnaissance, PoC, exploitation) **even on authorized engagements** with the scope/authorization in context. **Fable 5 / Mythos 5** silently fall back to a weaker model on cyber-flagged requests, and in our own testing **Opus 4.8 hit these limits mid-assessment**, whereas **Claude Opus 4.6 ran the full assessment end-to-end** — broad vulnerability coverage, no ethical interruptions, no fallback. **For Darkmoon, Claude Opus 4.6 is the recommended, most stable model.**
+>
+> Darkmoon is intended for **authorized** security testing only. For professional engagements, you can also request a *Cyber Use Case Exemption* through Anthropic's **Cyber Verification Program** to reduce false-positive refusals on legitimate work.
+
 #### Why small models do not work
 
 A 7B or 13B model (e.g. a generic `llama3`, a 7B coder, `gpt-oss-20b`) cannot hold the autonomous loop: it emits malformed tool calls, loses track over long sessions, and never reaches the final `finish_scan` / campaign-finalization step. The visible symptom is a campaign that stays in **`Unknown`** forever and a scan that never reaches *Finished*. **This is a model-capability limit, not a Darkmoon bug.**
