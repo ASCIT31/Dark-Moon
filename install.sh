@@ -214,10 +214,13 @@ EOF
       read -r -p "$(echo -e "${YELLOW}Model name: ${RESET}")" LOCAL_MODEL
     done
 
-    # Optional API key for authenticated OpenAI-compatible endpoints (e.g. proxies).
-    # Leave empty for engines that need no auth (Ollama, local llama.cpp, ...).
-    read -r -s -p "$(echo -e "${YELLOW}API key (optional — leave empty if your endpoint needs none): ${RESET}")" LOCAL_API_KEY
-    echo ""
+    # Ollama / llama.cpp are keyless → never ask for a key.
+    # Only a custom OpenAI-compatible endpoint may require one (optional).
+    LOCAL_API_KEY=""
+    if [ "${LOCAL_PROVIDER_ID}" = "local" ]; then
+      read -r -s -p "$(echo -e "${YELLOW}API key (optional — leave empty if none): ${RESET}")" LOCAL_API_KEY
+      echo ""
+    fi
 
     cat > "${SCRIPT_DIR}/${OPENCODE_ENV_FILE}" <<EOF
 # Darkmoon — LLM local provider config
