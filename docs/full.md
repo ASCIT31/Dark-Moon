@@ -435,7 +435,7 @@ LLM provider configuration is no longer done in `docker-compose.yml`. It is now 
 
 ### II.3.a Interactive configuration via install.sh
 
-On first run (or with `--init`), `install.sh` prompts you to choose between a **cloud provider** or a **local model**:
+On first run (or with `--init`), `install.sh` prompts you to choose between a **cloud provider**, a **local model**, or an **on-prem Anthropic-compatible endpoint**:
 
 ```bash
 ./install.sh           # skip form if .opencode.env already configured
@@ -446,10 +446,11 @@ On first run (or with `--init`), `install.sh` prompts you to choose between a **
 **Cloud provider example:**
 
 ```
-[1] Cloud provider  (Anthropic, OpenRouter, OpenAI, etc.)
-[2] Local model     (Ollama, llama.cpp / llama-server)
+[1] Cloud provider                (Anthropic, OpenRouter, OpenAI, etc.)
+[2] Local model                   (Ollama, llama.cpp / llama-server)
+[3] On-prem Anthropic-compatible  (custom ANTHROPIC_BASE_URL)
 
-Your choice [1/2]: 1
+Your choice [1/2/3]: 1
 Provider name (e.g. anthropic): anthropic
 Model name    (e.g. claude-opus-4-7): claude-opus-4-7
 API key: ****
@@ -458,11 +459,25 @@ API key: ****
 **Local model example (llama.cpp):**
 
 ```
-Your choice [1/2]: 2
+Your choice [1/2/3]: 2
 Local engine [1/2/3]: 2
 Base URL [http://localhost:8080/v1]: http://localhost:8001/v1
 Model name (e.g. glm-4.6:32b): Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf
 ```
+
+**On-prem Anthropic-compatible example:**
+
+Use this when you host a model behind an endpoint that speaks the **Anthropic Messages API** (`/v1/messages`) at a custom URL — e.g. an internal Claude gateway or proxy. This differs from option `[2]`, which targets **OpenAI-compatible** endpoints (`/v1/chat/completions`).
+
+```
+Your choice [1/2/3]: 3
+Base URL (e.g. https://llm.corp.tld/my-model/v1): https://llm.corp.tld/my-model/v1
+Model name (e.g. claude-opus-4-6): claude-opus-4-6
+API key (optional — leave empty if none): ****
+```
+
+> [!NOTE]
+> The model name must be a **recognized Claude model id** (e.g. `claude-opus-4-6`) — opencode routes it through its native Anthropic provider, and your endpoint maps it to the actual served model (often via the base URL path). The API key is **optional**: leave it empty for keyless endpoints (a harmless placeholder is written so the Anthropic SDK stays happy).
 
 [Back to Summary](#summary)
 
@@ -491,6 +506,16 @@ OPENCODE_LOCAL_MODEL=Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf
 OPENCODE_LOCAL_API_KEY=sk-...
 ```
 
+**On-prem Anthropic-compatible:**
+
+```env
+# Darkmoon — on-prem Anthropic-compatible LLM config
+ANTHROPIC_BASE_URL=https://llm.corp.tld/my-model/v1
+ANTHROPIC_MODEL=claude-opus-4-6
+# Optional — leave the placeholder value for keyless endpoints.
+ANTHROPIC_API_KEY=sk-...
+```
+
 [Back to Summary](#summary)
 
 ### II.3.c Role of the variables
@@ -512,6 +537,14 @@ OPENCODE_LOCAL_API_KEY=sk-...
 | `OPENCODE_LOCAL_PROVIDER_NAME`| Display name                              |
 | `OPENCODE_LOCAL_BASE_URL`     | OpenAI-compatible endpoint URL            |
 | `OPENCODE_LOCAL_MODEL`        | Model name served by the local server     |
+
+**On-prem Anthropic-compatible variables:**
+
+| Variable             | Role                                                            |
+| -------------------- | --------------------------------------------------------------- |
+| `ANTHROPIC_BASE_URL` | Custom endpoint speaking the Anthropic Messages API (`/v1/messages`) |
+| `ANTHROPIC_MODEL`    | Recognized Claude model id, mapped to the served model by the endpoint |
+| `ANTHROPIC_API_KEY`  | API key — optional (placeholder written for keyless endpoints)  |
 
 > [!IMPORTANT]
 > No secret is stored in the Docker image or in `docker-compose.yml`. All credentials are isolated in `.opencode.env` which is excluded from version control.
