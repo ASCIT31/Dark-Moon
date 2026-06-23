@@ -27,11 +27,16 @@ OPENCODE_LOCAL_BASE_URL="${OPENCODE_LOCAL_BASE_URL:-}"
 OPENCODE_LOCAL_MODEL="${OPENCODE_LOCAL_MODEL:-}"
 OPENCODE_LOCAL_API_KEY="${OPENCODE_LOCAL_API_KEY:-}"
 
+# On-prem Anthropic-compatible vars (opencode reads ANTHROPIC_BASE_URL / ANTHROPIC_API_KEY from env)
+ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-}"
+ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-}"
+
 #######################################
 # Decide model strategy
-# Priority: local > cloud > fallback
+# Priority: local > anthropic > cloud > fallback
 #######################################
 USE_LOCAL=false
+USE_ANTHROPIC=false
 USE_OPENROUTER=false
 
 if [ "${OPENCODE_LOCAL_MODE}" = "true" ] && \
@@ -39,6 +44,8 @@ if [ "${OPENCODE_LOCAL_MODE}" = "true" ] && \
    [ -n "${OPENCODE_LOCAL_BASE_URL:-}" ] && \
    [ -n "${OPENCODE_LOCAL_MODEL:-}" ]; then
   USE_LOCAL=true
+elif [ -n "${ANTHROPIC_BASE_URL:-}" ] && [ -n "${ANTHROPIC_MODEL:-}" ]; then
+  USE_ANTHROPIC=true
 elif [ -n "${OPENROUTER_PROVIDER:-}" ] && \
      [ -n "${OPENROUTER_API_KEY:-}" ] && \
      [ -n "${OPENCODE_MODEL:-}" ]; then
@@ -50,6 +57,11 @@ if [ "$USE_LOCAL" = true ]; then
   FINAL_MODEL="${OPENCODE_LOCAL_PROVIDER_ID}/${OPENCODE_LOCAL_MODEL}"
   log "Using local provider: ${OPENCODE_LOCAL_PROVIDER_NAME} → model: ${FINAL_MODEL}"
   log "Base URL: ${OPENCODE_LOCAL_BASE_URL}"
+elif [ "$USE_ANTHROPIC" = true ]; then
+  # On-prem Anthropic-compatible: opencode routes via ANTHROPIC_BASE_URL + ANTHROPIC_API_KEY (env)
+  FINAL_MODEL="anthropic/${ANTHROPIC_MODEL}"
+  log "Using on-prem Anthropic-compatible endpoint → model: ${FINAL_MODEL}"
+  log "Base URL: ${ANTHROPIC_BASE_URL}"
 elif [ "$USE_OPENROUTER" = true ]; then
   FINAL_MODEL="$OPENROUTER_PROVIDER/$OPENCODE_MODEL"
   log "Using cloud provider: $FINAL_MODEL"
