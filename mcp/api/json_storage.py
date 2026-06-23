@@ -23,10 +23,10 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Resolve data directory relative to the MCP server root
-_API_DIR = Path(__file__).resolve().parent          # .../server/api
-_SERVER_DIR = _API_DIR.parent                        # .../server
-DATA_DIR = _SERVER_DIR / "data"
+# Resolve data directory — use opencode's standard data dir so it lands in the
+# volume-mounted path (e.g. ./darkmoon-settings or ./reports on the host).
+_OPENDATA_DIR = Path.home() / ".local" / "share" / "opencode"
+DATA_DIR = _OPENDATA_DIR
 
 PROJECTS_FILE = DATA_DIR / "projects.json"
 TARGETS_FILE = DATA_DIR / "targets.json"
