@@ -38,8 +38,28 @@ ensure_build_deps
 # 1) ---- kubeletctl — DOC OFFICIELLE: binary release ---- 
 msg "kubeletctl …"
 
+ARCH="$(uname -m)"
+case "${ARCH}" in
+  x86_64)
+    KUBELETCTL_ARCH="amd64"
+    KUBESCAPE_ARCH="ubuntu-latest"
+    KUBECTL_ARCH="amd64"
+    LIGHTPANDA_ARCH="x86_64"
+    ;;
+  aarch64|arm64)
+    KUBELETCTL_ARCH="arm64"
+    KUBESCAPE_ARCH="ubuntu-latest" # Kubescape currently uses the same binary name or builds from source, check docs if fails
+    KUBECTL_ARCH="arm64"
+    LIGHTPANDA_ARCH="aarch64"
+    ;;
+  *)
+    warn "Unsupported architecture: ${ARCH}"
+    exit 1
+    ;;
+esac
+
 KUBELETCTL_VERSION="v1.13"
-KUBELETCTL_URL="https://github.com/cyberark/kubeletctl/releases/download/${KUBELETCTL_VERSION}/kubeletctl_linux_amd64"
+KUBELETCTL_URL="https://github.com/cyberark/kubeletctl/releases/download/${KUBELETCTL_VERSION}/kubeletctl_linux_${KUBELETCTL_ARCH}"
 TMP_KUBELETCTL="/tmp/kubeletctl"
 
 curl -fsSL "$KUBELETCTL_URL" -o "$TMP_KUBELETCTL"
@@ -60,7 +80,7 @@ msg "kubescape …"
 
 KUBESCAPE_VERSION="v3.0.9"
 curl -fsSL \
-  "https://github.com/kubescape/kubescape/releases/download/${KUBESCAPE_VERSION}/kubescape-ubuntu-latest" \
+  "https://github.com/kubescape/kubescape/releases/download/${KUBESCAPE_VERSION}/kubescape-${KUBESCAPE_ARCH}" \
   -o /tmp/kubescape
 
 chmod +x /tmp/kubescape
@@ -269,7 +289,7 @@ ok "dirb install (libcurl custom)"
 # 15) ---- kubectl — DOC OFFICIELLE: binary release ----
 msg "kubectl …"
 
-KUBECTL_URL="https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+KUBECTL_URL="https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/${KUBECTL_ARCH}/kubectl"
 TMP_KUBECTL="/tmp/kubectl"
 
 curl -fsSL "$KUBECTL_URL" -o "$TMP_KUBECTL"
@@ -303,7 +323,7 @@ fi
 # ------------------------------------------------------------------
 msg 'lightpanda (nightly) …'
 
-LIGHTPANDA_URL="https://github.com/lightpanda-io/browser/releases/download/nightly/lightpanda-x86_64-linux"
+LIGHTPANDA_URL="https://github.com/lightpanda-io/browser/releases/download/nightly/lightpanda-${LIGHTPANDA_ARCH}-linux"
 TMP_LIGHTPANDA=/tmp/lightpanda
 
 if curl -fsSL "$LIGHTPANDA_URL" -o "$TMP_LIGHTPANDA"; then

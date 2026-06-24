@@ -295,10 +295,17 @@ done
 echo -e "${BLUE}🧽 Purging docker build cache...${RESET}"
 docker builder prune -f
 
+COMPOSE_FILE="docker-compose.yml"
+ARCH="$(uname -m)"
+if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    echo -e "${YELLOW}ARM64 architecture detected. Using docker-compose-dev.yml to build images locally...${RESET}"
+    COMPOSE_FILE="docker-compose-dev.yml"
+fi
+
 echo -e "${BLUE}🔨 Rebuilding images (no cache)...${RESET}"
-docker compose build --no-cache
+docker compose -f $COMPOSE_FILE build --no-cache
 
 echo -e "${BLUE}🚀 Recreating containers...${RESET}"
-docker compose up -d --force-recreate
+docker compose -f $COMPOSE_FILE up -d --force-recreate
 
 echo -e "${GREEN}✅ Darkmoon stack rebuilt CLEAN${RESET}"
