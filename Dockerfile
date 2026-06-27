@@ -204,7 +204,7 @@ COPY --from=builder /opt/darkmoon /opt/darkmoon
 # Environment runtime
 # ------------------------------------------------------------
 ENV PATH="/opt/darkmoon/curl/bin:/opt/darkmoon/python/bin:/opt/darkmoon/ruby/bin:${PATH}" \
-    LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:/opt/darkmoon/curl/lib:/opt/darkmoon/python/lib:/opt/darkmoon/ruby/lib"
+    LD_LIBRARY_PATH="/usr/lib/aarch64-linux-gnu:/usr/lib/x86_64-linux-gnu:/opt/darkmoon/curl/lib:/opt/darkmoon/python/lib:/opt/darkmoon/ruby/lib"
 
 RUN ln -s /opt/darkmoon/python/bin/python3 /usr/local/bin/python \
  && ln -s /opt/darkmoon/python/bin/pip3 /usr/local/bin/pip
