@@ -79,8 +79,13 @@ mkdir -p "$OPENCODE_CONFIG_DIR" "$OPENCODE_AUTH_DIR"
 # Write opencode.json (ALWAYS)
 #######################################
 
-# Build optional provider block for local mode
-LOCAL_PROVIDER_BLOCK=""
+# Build optional provider block.
+# - local mode  : declares a full OpenAI-compatible provider.
+# - anthropic   : registers the custom model id under the built-in "anthropic"
+#                 provider, otherwise opencode validates the configured model
+#                 against its hard-coded catalogue and rejects it with
+#                 ProviderModelNotFoundError.
+PROVIDER_BLOCK=""
 if [ "$USE_LOCAL" = true ]; then
   # Optional API key for authenticated OpenAI-compatible endpoints (Bearer auth).
   # JSON-escaped via python3 so keys containing quotes/backslashes can't break the config.
@@ -88,7 +93,7 @@ if [ "$USE_LOCAL" = true ]; then
   if [ -n "${OPENCODE_LOCAL_API_KEY:-}" ]; then
     LOCAL_API_KEY_OPTION=$(OPENCODE_LOCAL_API_KEY="$OPENCODE_LOCAL_API_KEY" python3 -c 'import json,os; print(",\n        \"apiKey\": " + json.dumps(os.environ["OPENCODE_LOCAL_API_KEY"]))')
   fi
-  LOCAL_PROVIDER_BLOCK=$(cat <<PROVEOF
+  PROVIDER_BLOCK=$(cat <<PROVEOF
 ,
 
   "provider": {
@@ -107,11 +112,29 @@ if [ "$USE_LOCAL" = true ]; then
   }
 PROVEOF
 )
+elif [ "$USE_ANTHROPIC" = true ]; then
+  PROVIDER_BLOCK=$(cat <<PROVEOF
+,
+
+  "provider": {
+    "anthropic": {
+      "models": {
+        "${ANTHROPIC_MODEL}": {
+          "name": "${ANTHROPIC_MODEL}"
+        }
+      }
+    }
+  }
+PROVEOF
+)
 fi
 
 cat > "$OPENCODE_CONFIG_FILE" <<EOF
 {
-  "\$schema": "https://opencode.ai/config.json"${LOCAL_PROVIDER_BLOCK},
+  "\$schema": "https://opencode.ai/config.json"${PROVIDER_BLOCK},
+
+  "model": "$FINAL_MODEL",
+  "small_model": "$FINAL_MODEL",
 
   "mcp": {
     "darkmoon": {
