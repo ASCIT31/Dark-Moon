@@ -7,10 +7,18 @@ APP_BIN="opencode"
 # ------------------------------------------------------------
 # Détection docker compose (plugin vs legacy)
 # ------------------------------------------------------------
-if command -v docker-compose >/dev/null 2>&1; then
+# Prefer the Compose v2 plugin (`docker compose`): the modern docker-compose.yml
+# uses Compose-Spec features (e.g. the top-level `name:` key) that the legacy
+# Python `docker-compose` v1 rejects ("'name' does not match any of the regexes").
+# Only fall back to the legacy binary when the v2 plugin is genuinely unavailable.
+if docker compose version >/dev/null 2>&1; then
+  DC=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
   DC=(docker-compose)
 else
-  DC=(docker compose)
+  echo "❌ Neither 'docker compose' (v2 plugin) nor 'docker-compose' (legacy) is available." >&2
+  echo "   Install the Docker Compose v2 plugin: https://docs.docker.com/compose/install/" >&2
+  exit 1
 fi
 
 # ------------------------------------------------------------
