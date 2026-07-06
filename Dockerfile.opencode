@@ -1,7 +1,9 @@
 # =========================
 # Stage 1 — Builder
 # =========================
-FROM oven/bun:1.3.11 AS builder
+# Pinned to opencode's packageManager (root package.json: bun@1.3.14); the
+# upstream build hard-fails on an older bun. Track after each fork sync.
+FROM oven/bun:1.3.14 AS builder
 
 WORKDIR /app
 
@@ -17,21 +19,16 @@ RUN git clone https://github.com/ASCIT31/opencode.git .
 # Install deps
 RUN bun install
 
-# 🔥 OVERRIDES TUI (AVANT BUILD)
-COPY conf/tui/index.ts \
-     /app/packages/opencode/src/installation/index.ts
+# Darkmoon branding on the CURRENT upstream opencode layout (see Dark-Moon-Front-API
+# for full rationale): upstream moved the TUI to @opencode-ai/tui and rewrote
+# installation/index.ts + cli/ui.ts (Effect). The old full-file overrides are stale
+# and break the build. Minimal, resilient footprint instead:
+#   1) Logo    -> pure-data module rendered by packages/tui/src/component/logo.tsx.
+#   2) Version -> OPENCODE_VERSION env (script resolver is env-first -> InstallationVersion).
+COPY conf/tui/logo.ts \
+     /app/packages/tui/src/logo.ts
 
-COPY conf/tui/logo.tsx \
-     /app/packages/opencode/src/cli/cmd/tui/component/logo.tsx
-
-COPY conf/tui/ui.ts \
-     /app/packages/opencode/src/cli/ui.ts
-
-#COPY conf/tui/app.tsx \
-#     /app/packages/opencode/src/cli/cmd/tui/app.tsx
-
-COPY conf/tui/index.tsx \
-     /app/packages/opencode/src/cli/cmd/tui/routes/session/index.tsx
+ENV OPENCODE_VERSION=opencode-darkmoon-1.1.0
 
 ENV BUN_INSTALL_CACHE_DIR=/tmp/bun-cache
 RUN rm -rf ~/.bun /tmp/bun-cache
