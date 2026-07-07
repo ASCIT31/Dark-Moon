@@ -17,7 +17,14 @@ RUN apt-get update && apt-get install -y \
 RUN git clone https://github.com/ASCIT31/opencode.git .
 
 # Install deps
-RUN bun install
+# Resilience: the synced opencode pulls ghostty-web from a GitHub tarball
+# (github:anomalyco/ghostty-web). codeload.github.com rate-limits (HTTP 429) the
+# self-hosted runner's shared IP, so retry the fetch with backoff.
+RUN n=0; until bun install; do \
+      n=$((n+1)); [ "$n" -ge 6 ] && { echo "install: giving up after $n attempts"; exit 1; }; \
+      echo "bun install failed (attempt $n) — codeload 429 likely; backing off $((n*20))s"; \
+      sleep $((n*20)); \
+    done
 
 # Darkmoon branding on the CURRENT upstream opencode layout (see Dark-Moon-Front-API
 # for full rationale): upstream moved the TUI to @opencode-ai/tui and rewrote
@@ -33,7 +40,12 @@ ENV OPENCODE_VERSION=opencode-darkmoon-1.1.0
 ENV BUN_INSTALL_CACHE_DIR=/tmp/bun-cache
 RUN rm -rf ~/.bun /tmp/bun-cache
 # Build OpenCode
-RUN cd packages/opencode && bun ./script/build.ts --single
+# Same codeload/429 resilience for the build (build.ts resolves github: deps too).
+RUN cd packages/opencode && n=0; until bun ./script/build.ts --single; do \
+      n=$((n+1)); [ "$n" -ge 6 ] && { echo "opencode build: giving up after $n attempts"; exit 1; }; \
+      echo "opencode build failed (attempt $n) — codeload 429 likely; backing off $((n*20))s"; \
+      sleep $((n*20)); \
+    done
 
 # Extract binary
 RUN cd packages/opencode && \
