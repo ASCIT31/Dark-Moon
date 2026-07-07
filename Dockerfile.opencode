@@ -37,6 +37,11 @@ COPY conf/tui/logo.ts \
 
 ENV OPENCODE_VERSION=opencode-darkmoon-1.1.0
 
+# Brand the non-TTY (headless/piped) banner too: ui.ts logo() uses a hardcoded
+# "opencode" wordmark when stdout is not a TTY. Point it at our DARK MOON logo.ts
+# (already imported as `glyphs`), so headless output matches the TTY logo.
+RUN sed -i 's|for (const row of wordmark) {|for (const row of glyphs.left.map((l, i) => l + "  " + (glyphs.right[i] ?? ""))) {|' packages/opencode/src/cli/ui.ts
+
 ENV BUN_INSTALL_CACHE_DIR=/tmp/bun-cache
 RUN rm -rf ~/.bun /tmp/bun-cache
 # Build OpenCode
