@@ -84,6 +84,21 @@ Menaces considérées :
 | Réseau | Limité |
 | Permissions | Root maîtrisé |
 
+### 4.4 Données ↔ LLM (Privacy Gateway — v1.2.0)
+
+Frontière de **minimisation des données** entre le modèle et l'exécution (`mcp/src/privacy/`). Le LLM ne reçoit **jamais** les vraies valeurs sensibles (IP, hostnames, domaines, URLs, emails, identifiants, chemins internes) : il ne manipule que des **placeholders déterministes** (`IP_PRIVATE_001`, `HOST_INTERNAL_001`…). Les vraies valeurs sont réinjectées **localement, juste avant l'exécution de l'outil**, puis re-masquées dans toute sortie avant retour au modèle → aucune donnée sensible ne quitte le périmètre vers le fournisseur du modèle.
+
+| Élément | Mesure |
+|------|-------|
+| Tokenisation | Déterministe par session (`PrivacyVault`) |
+| Mapping | Chiffré (Fernet) + dédup HMAC ; **aucune valeur brute** retenue/loggée ; TTL |
+| Réhydratation | *Context-aware* (`CommandGateway`), jamais un remplacement global |
+| Exfiltration | Bloquée : placeholder dans query URL / host externe littéral / echo-print / body sortant / `/dev/tcp` / nc-telnet hors cible |
+| Secrets | `CRED` jamais restauré dans une commande exécutée |
+| Config | `DARKMOON_PRIVACY` (on par défaut) · `DARKMOON_PRIVACY_CATEGORIES` |
+
+Cœur open-source ; durcissement entreprise (vault scellé par le runtime guard, audit trail, mention conformité dans le rapport signé) en édition Pro.
+
 ---
 
 ## 5. Gestion des secrets
