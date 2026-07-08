@@ -42,6 +42,7 @@ DarkMoon solves this with **AI penetration testing**:
 
 - 🤖 **AI-powered pentesting** — autonomous agents conduct full security assessments end-to-end
 - 🛡️ **Security by design** — the AI never directly executes tools; all actions flow through a controlled MCP interface
+- 🕶️ **Privacy gateway (reversible local tokenization)** — the AI **never sees your real sensitive values**. IPs, hostnames, domains, URLs, emails, credentials and internal paths are replaced by deterministic placeholders (`IP_PRIVATE_001`, …); real values are injected **locally, right before a tool runs**, and masked back out of every result. **No sensitive data ever leaves your perimeter to the LLM provider** — use Claude's power under strict data-sovereignty constraints. Exfiltration attempts are blocked.
 - ♾️ **Pentesting automation for CI/CD** — run **automated security testing** post-build to catch critical vulnerabilities before production
 - 🔧 **50+ integrated tools** — a comprehensive **penetration testing tools suite** (Nuclei, NetExec, BloodHound, sqlmap, Naabu, httpx, ffuf, and more)
 - 📈 **Adaptive multi-agent methodology** — specialized agents for Web, Active Directory, Kubernetes, Network, CMS, and more

