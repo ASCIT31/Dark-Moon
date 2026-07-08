@@ -18,6 +18,7 @@ from src.docker_client import DarkmoonDockerClient
 from src.tools.core.executor import GenericExecutor
 from src.tools.core.health import HealthChecker
 from src.tools.workflows.list_workflows import WorkflowRegistry
+from src.privacy import PrivacyVault, CommandGateway, GatewayDecision
 
 
 # Initialize FastMCP server
@@ -35,6 +36,48 @@ health_checker = HealthChecker(docker_client)
 
 # Initialize workflow registry for dynamic discovery
 workflow_registry = WorkflowRegistry(docker_client)
+
+# ============================================================
+# PRIVACY GATEWAY (reversible local tokenization)
+# ------------------------------------------------------------
+# The model only ever sees deterministic placeholders. Real values are injected
+# locally by the CommandGateway right before execution, and re-tokenized out of
+# any tool output before it goes back to the model. Toggle with DARKMOON_PRIVACY.
+# ============================================================
+PRIVACY_ENABLED = os.getenv("DARKMOON_PRIVACY", "1").lower() not in ("0", "false", "no", "off")
+_command_gateway = CommandGateway()
+_vaults: Dict[str, PrivacyVault] = {}
+
+
+# Which categories are tokenized in tool output. Default is conservative: mask
+# the truly sensitive identifiers (IPs, internal hosts, emails) without tokenizing
+# the URLs/domains/paths the agent needs to enumerate. Widen with
+# DARKMOON_PRIVACY_CATEGORIES (comma-separated, e.g. "IP_PRIVATE,HOST_INTERNAL,URL,PATH").
+# Credentials are always protected (registered explicitly, never restored into commands).
+_DEFAULT_PRIVACY_CATS = "IP_PRIVATE,IP_PUBLIC,HOST_INTERNAL,EMAIL"
+
+
+def _resolve_categories():
+    from src.privacy import Category
+    raw = os.getenv("DARKMOON_PRIVACY_CATEGORIES", _DEFAULT_PRIVACY_CATS)
+    cats = []
+    for name in (p.strip().upper() for p in raw.split(",") if p.strip()):
+        try:
+            cats.append(Category[name])
+        except KeyError:
+            pass
+    return tuple(cats) if cats else (Category.IP_PRIVATE, Category.HOST_INTERNAL, Category.EMAIL)
+
+
+def _get_vault(session_id: Optional[str]) -> PrivacyVault:
+    """Return (creating if needed) the per-session privacy vault."""
+    sid = session_id or SESSION_ID
+    vault = _vaults.get(sid)
+    if vault is None or vault.is_expired():
+        ttl = int(os.getenv("DARKMOON_PRIVACY_TTL", str(6 * 3600)))
+        vault = PrivacyVault(session_id=sid, ttl_seconds=ttl, enabled_categories=_resolve_categories())
+        _vaults[sid] = vault
+    return vault
 
 
 # ============================================================================
@@ -172,8 +215,30 @@ def execute_command(
     Note: Use list_allowed_tools() to see all available tools.
     """
 
+    # Privacy gateway: the model sends a command that may reference placeholders
+    # (IP_PRIVATE_001, ...). Rehydrate to real values locally, or block unsafe use.
+    # `command` is what the model sent (placeholders) and is echoed back as-is;
+    # `real_command` (real values) is what actually runs and is never shown back.
+    real_command = command
+    vault = None
+    if PRIVACY_ENABLED:
+        vault = _get_vault(session_id)
+        gw = _command_gateway.process_command(command, vault)
+        if gw.decision == GatewayDecision.BLOCK:
+            return (
+                "=" * 60 + "\n"
+                f"COMMAND  : {command}\n"
+                "PRIVACY  : BLOCKED\n"
+                f"REASON   : {gw.reason}\n"
+                + "=" * 60 + "\n\n"
+                "[BLOCKED BY PRIVACY GATEWAY] This command was not executed. "
+                "Protected values may only be used as scan/tool arguments against the "
+                "in-scope target, never printed, echoed, or sent to another host."
+            )
+        real_command = gw.command or command
+
     result = executor.execute(
-        command=command,
+        command=real_command,
         timeout=timeout,
         workdir=workdir,
         session_id=session_id,   # pass through
@@ -183,6 +248,11 @@ def execute_command(
     duration = result.execution_result.duration
     stdout = result.raw_output or ""
     stderr = result.execution_result.stderr or ""
+
+    # Re-tokenize any real value that appears in the output before the model sees it.
+    if PRIVACY_ENABLED and vault is not None:
+        stdout = _command_gateway.sanitize_output(stdout, vault)
+        stderr = _command_gateway.sanitize_output(stderr, vault)
 
     output = []
     output.append("=" * 60)

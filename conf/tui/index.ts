@@ -179,7 +179,7 @@ export namespace Installation {
     await $`${process.execPath} --version`.nothrow().quiet().text()
   }
 
-  export const VERSION = "opencode-darkmoon-1.1.0"
+  export const VERSION = "opencode-darkmoon-1.2.0"
   export const CHANNEL = "internal"
   export const USER_AGENT = `opencode/${CHANNEL}/${VERSION}/${Flag.OPENCODE_CLIENT}`
 
