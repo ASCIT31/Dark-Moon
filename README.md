@@ -4,8 +4,12 @@
 
 **The Open-Source AI-Powered Autonomous Penetration Testing Platform**
 
+*The only autonomous AI pentester where the model never sees your real IPs, hostnames or credentials.*
+
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub stars](https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=social&label=Star)](https://github.com/ASCIT31/Dark-Moon)
+
+**As featured in** [Cyber Security News](https://cybersecuritynews.com/darkmoon-penetration-testing-platform/) · [SecurityBrief](https://securitybrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [LinuxLinks](https://www.linuxlinks.com/darkmoon-ai-powered-autonomous-penetration-testing-platform/) · [IT Brief](https://itbrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [ChannelLife](https://channellife.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting)
 
 [Full Documentation](docs/full.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
 
