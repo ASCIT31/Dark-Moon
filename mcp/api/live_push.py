@@ -969,15 +969,11 @@ def finalize_campaign(
     # Detect if agent passed a file path / reference instead of actual content.
     # This happens when the agent says "See full report at /output/..." instead
     # of passing the actual markdown. In that case, auto-generate from the DB.
-    _is_reference = (
-        not report_markdown
-        or len(report_markdown.strip()) < 2000
-        or report_markdown.strip().startswith("See full report")
-        or report_markdown.strip().startswith("Report available")
-        or report_markdown.strip().startswith("/")
-        or report_markdown.strip().startswith("pentest_report_")
-        or (len(report_markdown.strip()) < 500 and ("report" in report_markdown.lower() or "path" in report_markdown.lower()))
-    )
+    # DEFINITIVE FIX (deterministic reports): the report BODY is ALWAYS generated
+    # server-side from the stored findings, complete by construction. We never trust an
+    # LLM-provided report_markdown for the body — it is non-deterministic and has produced
+    # condensed/incomplete reports. The LLM's executive_summary (above) is still used.
+    _is_reference = True  # always regenerate from DB, ignore any LLM-provided body
 
     if _is_reference:
         # Auto-generate the report from the DB findings
