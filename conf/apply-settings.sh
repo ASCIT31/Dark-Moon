@@ -183,6 +183,13 @@ cat > "$OPENCODE_CONFIG_FILE" <<EOF
       "prompt_file": "/root/.opencode/agents/graphql.md"
     },
 
+    "golang": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/golang.md"
+    },
+
     "headless-browser": {
       "model": "$FINAL_MODEL",
       "mcp": ["darkmoon"],
