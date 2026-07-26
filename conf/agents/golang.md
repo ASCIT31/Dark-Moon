@@ -320,45 +320,82 @@ Then, once you have identified the endpoints and the Go fingerprint, you will ch
 web attacks against the discovered surface, in logical order with real attack pathing.
 
 Here are the attack classes you are required to perform against a Go web application,
-orchestrated together (this maps directly onto the reference Go training lab: a
-login/register/search/post/image-upload/admin app on MySQL, plus a CSRF trap app):
+orchestrated together with real attack pathing. Each class is annotated with how the
+reference Go training lab (a login / register / search / post / image-upload / admin app
+on MySQL, hardw01f/Vulnerability-goapp, plus a companion CSRF-trap app) exhibits it, so
+you know the concrete sink, route, parameter and payload shape to reach on a real target:
 
-* SQL injection via database/sql string concatenation. Go's `database/sql` is only safe
-  with parameter placeholders; concatenated queries in login, register, search and
-  filter handlers are classic. Probe login as `email' OR '1'='1' -- -`, then move to
-  UNION and error/boolean/time-based extraction. Dump users and password material.
-* Authentication & session bypass. Inspect the session/cookie mechanism (gorilla/sessions
-  vs a homegrown cookieManager). Test for unsigned/tamperable cookies, predictable session
-  ids, role/user_id stored client-side, and privilege escalation to admin (/adminlogin,
-  admin handlers) by forging or swapping the cookie/role value.
-* Stored & reflected XSS through Go templates. `text/template` does NOT auto-escape, and
-  `html/template` is bypassable with `template.HTML`, raw `.gtpl` sinks, or unescaped
-  attribute/JS contexts. Inject via post creation, profile fields and search echo, then
-  prove execution in the rendered sink (not just stored JSON).
-* SSTI in Go templates. Where user input reaches `text/template`/`html/template` parsing,
-  probe `{{.}}`, `{{printf "%s" .}}`, method calls on the pipeline; escalate to data
-  disclosure or, with dangerous funcmaps, to command execution.
-* File upload abuse (imageUploader). Test content-type/extension bypass, path traversal in
-  the stored filename (`../../`), and code execution if uploads land in a served,
-  executable path. Prove with retrieval and, when possible, execution.
-* IDOR / mass-assignment / broken authorization. Enumerate object ids (posts, users,
-  images) across the three privilege cycles; flip owner/role fields on update
-  (mass-assignment) to reach other users' data or admin.
-* CSRF. State-changing routes (post, register, profile, the dedicated CSRF-trap app) with
-  no anti-CSRF token or SameSite protection. Prove with a cross-origin state change.
-* SSRF & LFI on any URL-like or file field (image import, avatar-by-url, template include).
-* Information disclosure: Go stack traces, `/debug/pprof`, `/debug/vars`, verbose SQL
-  errors, DB detail pages (e.g. a DBDetails template), and secrets in error output.
-* If a GraphQL layer built with gqlgen or 99designs is present, hand introspection/loot
-  back to the graphql signal so the orchestrator can dispatch the graphql agent.
+* OS command injection (CRITICAL — do this first). Go handlers that shell out with
+  exec.Command("sh", "-c", <string built from user input>) give direct RCE. In the lab the
+  search handler POST /timeline/searchpost (form field `post`) concatenates the term into
+  `mysql -h mysql -u root -prootwolf -e 'select post,created_at from vulnapp.posts where
+  post like "%<post>%"'` and runs it under `sh -c`. Break out with a double quote plus a
+  shell metacharacter: post=`"; id; #`, post=`%" ; id ; echo "`, post=`$(id)`, backticks.
+  Confirm RCE, then read files/env and pivot. ANY parameter feeding os/exec is this bug.
+* SQL injection via database/sql. `database/sql` is safe ONLY with `?` placeholders;
+  string-concatenated queries and every query built for the `sh -c mysql -e '...'` pattern
+  are injectable. The same /timeline/searchpost sink is also SQLi (break the `"%...%"`
+  literal: post=`%" UNION SELECT null,version() -- -`). The admin session lookup GetAdminSid
+  builds `select adminsid from vulnapp.adminsessions where adminsessionid="<adminSID
+  cookie>"` by concatenation, so inject through the `adminSID` cookie itself. Probe login /
+  register / search / filter handlers as `email' OR '1'='1' -- -`, then UNION / error /
+  boolean / time-based extraction; dump users and password material.
+* Admin authentication bypass. The admin plane (GET|POST /adminlogin, /adminconfirm,
+  /adminusers) authorises a request purely on the presence and value of the `adminSID`
+  cookie, validated through the concatenated GetAdminSid query above. Forge admin access by
+  injecting the cookie: adminSID=`" OR "1"="1` (or a command-injection payload) so the
+  lookup returns a row, then re-enumerate the entire app as administrator.
+* Session forgery & IDOR via client-side identity. The homegrown cookieManager trusts three
+  client cookies: `UserID`, `SessionID`, `UserName`. GetCookieValue does
+  strconv.Atoi(UserID) and uses it as the acting user WITHOUT binding it to the session, and
+  `SessionID` is base64(victim_email) — deterministic, unsigned, forgeable. Change the
+  `UserID` cookie to another integer for horizontal privesc, and mint `SessionID` as base64
+  of a known email to impersonate. Every route deriving uid from the cookie (/profile,
+  /profile/edit, /profile/edit/update, /profile/changepasswd, /profile/edit/image, /post)
+  is IDOR-exposed.
+* Reflected XSS + Go format-string injection. GET / (the root sayYourName handler) writes a
+  form value straight into the response with fmt.Fprintf(w, name) — so the value is both
+  reflected unescaped (XSS: ?name=<script>alert(1)</script>) AND used as a printf format
+  string (?name=%v%v%v%s, `%!` verbs leak arguments / emit %!v(MISSING) oracles). Test every
+  reflected parameter for BOTH.
+* Stored XSS through text/template. The lab renders posts and profile fields with
+  text/template (post.gtpl, timeline.gtpl, users.gtpl), which does NOT auto-escape. Store
+  <script>/event-handler payloads via POST /post (field `post`) and via profile fields
+  (username, address, animal, word) on /profile/edit/update, then prove execution when
+  /timeline or /profile renders them. On html/template sinks, hunt template.HTML, raw .gtpl
+  includes, and unescaped JS/attribute contexts.
+* Unrestricted file upload + path traversal. POST /profile/edit/upload writes the multipart
+  file with os.OpenFile("./assets/img/"+handler.Filename, ...) — no extension, content-type
+  or path check. Traverse via a crafted Filename (`../../` to overwrite files outside
+  assets), and upload active content (.gtpl/.html/.svg) later served from /assets/img/ or
+  parsed as a template -> stored XSS / SSTI / code exec. Prove by retrieval and, where the
+  sink parses it, by template execution.
+* SSTI in Go templates. Where user input reaches text/template / html/template parsing
+  (including an uploaded/served .gtpl), probe {{.}}, {{printf "%s" .}}, method calls on the
+  pipeline, and dangerous funcmap entries; escalate to disclosure or command execution.
+* Mass-assignment / broken authorization. On profile update, attempt to flip owner / role /
+  uid fields the handler binds from the request; combine with the UserID-cookie IDOR to
+  reach other users' data or the admin role.
+* CSRF. State-changing routes (POST /post, /new, /profile/edit/update, /profile/changepasswd,
+  and the dedicated companion CSRF-trap app) ship no anti-CSRF token and no SameSite
+  protection. Prove with a cross-origin forged state change.
+* Information disclosure. GET /db (DBDetails template) leaks database connection details; the
+  hardcoded DSN is `root:rootwolf@tcp(mysql)/vulnapp`. Also harvest Go stack traces,
+  /debug/pprof/*, /debug/vars (expvar), verbose database/sql errors, and the /hints and
+  /test helper pages. Feed any leaked route/secret back into the chain above.
+* If a GraphQL layer (gqlgen / 99designs) is present, hand introspection/loot back to the
+  graphql signal so the orchestrator dispatches the graphql agent.
 
 Mandatory:
 
 You must prioritize exploitation of:
 
-1. SQL injection on the authentication and search handlers (highest impact, drives loot).
-2. Session/cookie forgery to reach the admin plane, then re-enumerate as admin.
-3. Stored XSS and file upload as the persistence/RCE-adjacent vectors.
+1. OS command injection + SQLi on POST /timeline/searchpost (field `post`) — direct RCE and
+   the highest-impact objective; land it before anything else.
+2. adminSID-cookie SQL injection to bypass the admin plane, then re-enumerate as admin.
+3. UserID / SessionID cookie forgery for IDOR / impersonation, then stored XSS (posts and
+   profile) and the unrestricted /profile/edit/upload file upload as the persistence /
+   RCE-adjacent vectors.
 
 No aggressive bruteforce (limited login attempts, intelligent testing only).
 
