@@ -23,6 +23,16 @@ break it. Keep it UNCONFIRMED (at its real severity) if the evidence is only:
 - a file served but not executed (no RCE);
 - the mere presence of a key/secret or client-side code (client trust != server trust);
 - a public-by-design secret (Stripe pk_, Sentry DSN, NEXT_PUBLIC_/Maps web keys) -> info/low, C/I/A:N.
+- a secret/key/credential shipped with an explicit in-band disclaimer that it is intentional
+  (a nearby comment or field containing "demo", "example", "sample", "test", "placeholder",
+  "intentionally public", or "public config") -> info/by-design, C/I/A:N; quote the disclaimer.
+  This holds EVEN when the field is named "privateKey"/"secret"/"apiKey" -> READ the surrounding
+  file/config before assigning severity, never inflate on the field name alone.
+- CORS that reflects an arbitrary request Origin into Access-Control-Allow-Origin together with
+  Access-Control-Allow-Credentials: true is HIGH (any site can issue authenticated cross-origin
+  requests and read the response -> session/token theft), C:H/I:H. A wildcard
+  Access-Control-Allow-Origin: * with credentials is LOWER (browsers refuse credentials to a
+  wildcard origin) -> low/medium, not high.
 If the challenge fails — impact genuinely demonstrated — label CONFIRMED/EXPLOITED with confidence.
 ================================================================================
 
