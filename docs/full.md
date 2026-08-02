@@ -1690,13 +1690,33 @@ You are an autonomous AI cybersecurity agent.
 
 ### V.3.b List of Agents
 
-Currently, there are 4 agents:
+Darkmoon now ships a **`pentest` orchestrator** plus **33 specialist sub-agents**. The orchestrator fingerprints the target, then dispatches the matching specialist(s) and chains their findings. Web/CMS agents auto-dispatch on stack detection; cloud / IaC / identity / CI-CD / data / firmware agents are **credential- or artifact-gated** (dispatched only on a positive artifact — a leaked key, an exposed API/port, a firmware image — never on inference).
 
-- `pentest-web` — the agent dedicated to web application pentesting, attempts attacks like XSS, SQLi, SSRF, XXE, etc.
-- `pentest-ad` — the agent for Windows infrastructure and Active Directory pentesting (ADDS, SMB, Windows, etc.).
-- `pentest-kubernetes` — the agent for surface attack pentesting of a Kubernetes cluster.
-- `pentest-network` — the agent for network infrastructure attacks (FTP, FTPS, SFTP, SSH, TELNET, SMTP, SNMP, etc.).
+**Orchestrator**
+- `pentest` — signal-detection FSM: recon, stack fingerprinting, dispatch, cascade, and server-side reporting. Also covers the network plane (FTP/SSH/SMTP/SNMP/TELNET…).
 
+**Web application & framework agents** (auto-dispatch on stack signal)
+- `nodejs`, `nest`, `python-flask`, `php`, `aspnet`, `ruby-on-rails`, `springboot`, **`golang`** (Gin/Echo/Fiber/Beego/net-http), `graphql`
+- CMS/e-commerce: `wordpress`, `drupal`, `joomla`, `magento`, `prestashop`, `moodle`
+- `headless-browser` — JS-rendered / SPA crawling and DOM-sink analysis
+
+**Infrastructure & identity**
+- `active-directory` — Windows/ADDS/SMB; `kubernetes` — cluster attack surface
+
+**Cloud & identity plane** (credential/artifact-gated)
+- `aws`, `azure`, `gcp` — resource-plane privesc, metadata/IMDS, storage exfiltration
+- `entra-id` — Microsoft Entra ID (Azure AD) identity: roles, apps, service principals, ROPC
+
+**Infrastructure-as-Code & CI/CD** (credential/artifact-gated)
+- `terraform` (state secret mining), `ansible` (inventory/vault)
+- `github`, `gitlab`, `jenkins` — supply-chain, secrets, runners, OIDC-to-cloud
+
+**Containers, data & secrets** (credential/artifact-gated)
+- `docker` (exposed daemon/socket), `container-registry` (OCI v2)
+- `sql-databases` (PostgreSQL/MySQL/MSSQL/Oracle), `messaging-cache` (Redis/RabbitMQ/Kafka/MQTT/…), `hashicorp-vault`
+
+**Firmware & IoT** (artifact-gated)
+- **`firmware`** — embedded/IoT firmware and devices: image extraction (binwalk/squashfs), hardcoded-credential & backdoor recovery, embedded web (LuCI/CGI) command-injection, insecure services, outdated-component CVEs. Two modes: **IMAGE** (a firmware file) and **DEVICE** (a live IoT appliance).
 [Back to Summary](#summary)
 
 ### V.3.c Common Sections
