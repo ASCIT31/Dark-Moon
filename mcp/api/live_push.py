@@ -730,10 +730,23 @@ def _generate_report_from_db(
     host = target.get("host", target_id) if target else target_id
 
     SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+
+    def _cvss_num(v: Dict) -> float:
+        # Defensive: an agent may push a non-numeric cvss_score ("9.8 (High)",
+        # "N/A", ""). A bare float() there raises ValueError and 500s the whole
+        # report. Parse the leading number if present, else 0.
+        raw = v.get("cvss_score")
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            import re as _re
+            m = _re.search(r"\d+(?:\.\d+)?", str(raw or ""))
+            return float(m.group()) if m else 0.0
+
     vulns = sorted(
         vulns,
         key=lambda v: (SEV_ORDER.get(str(v.get("severity", "info")).lower(), 9),
-                       -float(v.get("cvss_score") or 0)),
+                       -_cvss_num(v)),
     )
 
     SEV_LABEL  = {"critical": "CRITICAL", "high": "HIGH", "medium": "MEDIUM",

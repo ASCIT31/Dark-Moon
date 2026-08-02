@@ -171,6 +171,27 @@ RUN sed -i 's|http://archive.ubuntu.com|http://fr.archive.ubuntu.com|g' /etc/apt
     wget \
     xz-utils \
     p7zip-full \
+    zip \
+    unzip \
+    iputils-ping \
+    \
+    # database / cache clients (sql-databases & messaging-cache agents)
+    postgresql-client \
+    default-mysql-client \
+    redis-tools \
+    \
+    # offline cracking + wordlist gen (gcp/storage encrypted-archive chain)
+    cewl \
+    john \
+    libcompress-raw-lzma-perl \
+    \
+    # firmware / IoT analysis (firmware agent)
+    binwalk \
+    squashfs-tools \
+    sqlite3 \
+    arp-scan \
+    nmap \
+    netcat-openbsd \
  && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
@@ -183,6 +204,20 @@ RUN wget https://hashcat.net/files/hashcat-6.2.6.7z \
  && rm hashcat-6.2.6.7z
 
 # ------------------------------------------------------------
+# 7z2john for the GCS/storage encrypted-archive crack chain (7-Zip -> hashcat -m 11600)
+# ------------------------------------------------------------
+RUN wget -qO /usr/local/bin/7z2john.pl https://raw.githubusercontent.com/openwall/john/bleeding-jumbo/run/7z2john.pl \
+ && printf '#!/bin/sh\nexec perl /usr/local/bin/7z2john.pl "$@"\n' > /usr/local/bin/7z2john \
+ && chmod +x /usr/local/bin/7z2john /usr/local/bin/7z2john.pl
+
+# ------------------------------------------------------------
+# firmwalker — automated firmware filesystem secret hunter (firmware agent)
+# ------------------------------------------------------------
+RUN git clone --depth 1 https://github.com/craigz28/firmwalker.git /opt/firmwalker \
+ && ln -sf /opt/firmwalker/firmwalker.sh /usr/local/bin/firmwalker \
+ && chmod +x /opt/firmwalker/firmwalker.sh
+
+# ------------------------------------------------------------
 # Node.js + Playwright (stable project install)
 # ------------------------------------------------------------
 WORKDIR /opt/darkmoon
@@ -193,6 +228,20 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
  && npm install playwright \
  && npx playwright install chromium \
  && npm cache clean --force
+
+# ------------------------------------------------------------
+# Google Cloud SDK (gcp agent): gcloud + gsutil + bq via official tarball
+# az (Azure CLI) and aws are installed into /opt/darkmoon/python by setup_py.sh
+# ------------------------------------------------------------
+ARG GCLOUD_VERSION=490.0.0
+RUN curl -fsSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${GCLOUD_VERSION}-linux-x86_64.tar.gz" -o /tmp/gcloud.tgz \
+ && tar xzf /tmp/gcloud.tgz -C /opt \
+ && rm -f /tmp/gcloud.tgz \
+ && /opt/google-cloud-sdk/install.sh --quiet --usage-reporting false --path-update false --command-completion false \
+ && ln -sf /opt/google-cloud-sdk/bin/gcloud /usr/local/bin/gcloud \
+ && ln -sf /opt/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil \
+ && ln -sf /opt/google-cloud-sdk/bin/bq /usr/local/bin/bq \
+ && gcloud --version | head -1
 
 # ------------------------------------------------------------
 # Core artefacts copiés depuis builder

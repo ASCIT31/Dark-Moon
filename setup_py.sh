@@ -224,6 +224,9 @@ msg "Installation arjun …"
 msg "Installation awscli …"
 "$PIP_BIN" install --no-cache-dir awscli && ok "awscli"
 
+msg "Installation azure-cli (Entra ID / Azure agents) …"
+"$PIP_BIN" install --no-cache-dir azure-cli && ok "azure-cli"
+
 # ------------------------------------------------------------
 # FinalRecon (reconnaissance web) - Version pinnée
 # ------------------------------------------------------------
@@ -288,6 +291,12 @@ cat >"$BIN_OUT/aws" <<'EOF'
 exec /opt/darkmoon/python/bin/aws "$@"
 EOF
 chmod +x "$BIN_OUT/aws"
+
+cat >"$BIN_OUT/az" <<'EOF'
+#!/bin/sh
+exec /opt/darkmoon/python/bin/az "$@"
+EOF
+chmod +x "$BIN_OUT/az"
 
 cat >"$BIN_OUT/finalrecon" <<'EOF'
 #!/bin/sh

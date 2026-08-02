@@ -15,9 +15,9 @@ class GenericExecutor:
 
         # Whitelist of allowed tools (for security)
         self.allowed_tools = {
-            # Port scanners
+            # Port scanners (naabu only; masscan/nmap/rustscan are intentionally
+            # not installed — the toolbox scanner is naabu)
             "naabu",
-            "masscan",
             # Web tools
             "httpx",
             "nuclei",
@@ -126,11 +126,36 @@ class GenericExecutor:
 	    "net.py",
 	    "netview.py",
 	    "ntfs-read.py",
-	    "ntmlrelayx.py",
+	    "ntlmrelayx.py",
             # Kubernetes
             "kubectl",
             "kubeletctl",
             "kubescape",
+            # Cloud / platform / data CLIs (agents expansion: cloud, IaC, DB, cache)
+            "aws",
+            "az",
+            "gcloud",
+            "gsutil",
+            "bq",
+            "git",
+            "psql",
+            "mysql",
+            "mysqladmin",
+            "redis-cli",
+            # firmware / IoT analysis (firmware agent)
+            "binwalk",
+            "unsquashfs",
+            "sasquatch",
+            "firmwalker",
+            "nmap",
+            "nc",
+            "ncat",
+            "john",
+            "unshadow",
+            "sqlite3",
+            "strings",
+            "arp-scan",
+            "file",
             # Misc
             "jq",
             "grep",

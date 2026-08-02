@@ -995,12 +995,27 @@ The orchestrator coordinates specialized sub-agents such as:
 * Flask / Python
 * ASP.NET
 * GraphQL
+* Go
 * Kubernetes
 * Active Directory
 * Ruby on Rails
 * Spring Boot
 * Headless Browser
 * CMS engines (WordPress, Drupal, Joomla, Magento, PrestaShop, Moodle)
+
+It also coordinates a set of **credential-gated** sub-agents for the cloud,
+identity, CI/CD, IaC, secrets, data and infrastructure planes. These are dispatched
+only on a **positive artifact** (a leaked credential, an exposed API/port, or scope
+the operator supplied) — never on inference — the same manual-only discipline the
+Active Directory and Kubernetes agents follow:
+
+* Public cloud — `aws`, `azure`, `gcp`
+* Microsoft identity — `entra-id`
+* Source control & CI/CD — `github`, `gitlab`, `jenkins`
+* Infrastructure as Code — `terraform`, `ansible`
+* Containers & registries — `docker`, `container-registry`
+* Secrets management — `hashicorp-vault`
+* Databases & messaging/cache — `sql-databases`, `messaging-cache`
 
 Each agent focuses on **a specific technology stack**.
 
