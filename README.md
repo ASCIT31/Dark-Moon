@@ -8,6 +8,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub stars](https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=social&label=Star)](https://github.com/ASCIT31/Dark-Moon)
+[![Benchmark: 57 vulns on OWASP Juice Shop](https://img.shields.io/badge/benchmark-57%20real%20vulns%20on%20Juice%20Shop-critical)](https://github.com/ASCIT31/Darkmoon-Benchmarks)
 
 **As featured in** [Help Net Security](https://www.helpnetsecurity.com/2026/06/29/darkmoon-open-source-ai-pentesting-platform/) · [Cyber Security News](https://cybersecuritynews.com/darkmoon-penetration-testing-platform/) · [SecurityBrief](https://securitybrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [LinuxLinks](https://www.linuxlinks.com/darkmoon-ai-powered-autonomous-penetration-testing-platform/) · [IT Brief](https://itbrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [ChannelLife](https://channellife.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting)
 
@@ -55,6 +56,31 @@ DarkMoon solves this with **AI penetration testing**:
 Perfect for **security teams**, **DevSecOps engineers**, **ethical hacking** professionals, and organizations of all sizes.
 
 ---
+
+## 📊 Benchmark: 57 real vulnerabilities on OWASP Juice Shop
+
+Real, reproducible **black-box** run against OWASP Juice Shop on a **local LLM** (nothing leaves your infrastructure):
+
+| Metric | Result |
+|---|---|
+| Vulnerabilities found | **57** (8 critical / 24 high / 21 medium / 4 low) |
+| Wall-clock time | **28.5 min** |
+| Proof-of-exploitation | per finding |
+| LLM | local (Ollama / llama.cpp) |
+
+Reproduce it and compare tools yourself: **[ASCIT31/Darkmoon-Benchmarks](https://github.com/ASCIT31/Darkmoon-Benchmarks)**.
+
+## 🆚 How DarkMoon compares
+
+| | **DarkMoon** | strix | shannon | PentAGI |
+|---|:--:|:--:|:--:|:--:|
+| Runs on **local LLM** (data never leaves) | ✅ | ❌ cloud | ❌ cloud | partial |
+| Privacy Gateway (local tokenization) | ✅ | ❌ | ❌ | ❌ |
+| Active Directory + Kubernetes | ✅ | ❌ | ❌ | partial |
+| Proof-of-exploitation | ✅ | ✅ | ✅ | ✅ |
+| Open source | ✅ GPL-3.0 | ✅ | ✅ | ✅ |
+
+*Compiled from public repos/docs (2026-08); corrections welcome via PR.*
 
 ## Quick Start
 
