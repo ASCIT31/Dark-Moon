@@ -22,14 +22,14 @@
 
 DarkMoon is an **automated penetration testing tool** that orchestrates complete security assessments using **artificial intelligence security** agents. Built as an open-source **cybersecurity tool**, it enables organizations to run professional-grade **vulnerability assessments** without manual intervention.
 
-Instead of replacing the pentester, DarkMoon acts as an **autonomous security testing system** — it reasons, plans, and coordinates specialized agents that execute real offensive security operations through a controlled execution layer.
+Instead of replacing the pentester, DarkMoon acts as an **autonomous security testing system**, it reasons, plans, and coordinates specialized agents that execute real offensive security operations through a controlled execution layer.
 
 <div>
   <a href="https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO">
     <img src="docs/pics/darkmoon-youtube.png" />
   </a>
 
-  <p><strong>Watch DarkMoon in action — Full autonomous penetration test demo</strong></p>
+  <p><strong>Watch DarkMoon in action, Full autonomous penetration test demo</strong></p>
 </div>
 
 ---
@@ -38,20 +38,20 @@ Instead of replacing the pentester, DarkMoon acts as an **autonomous security te
 
 Traditional **penetration testing** is:
 
-- ⏱️ **Time-consuming** — manual testing takes weeks
-- 💰 **Expensive** — expert consultants cost thousands per day
-- 🔄 **Inconsistent** — results vary by tester expertise
-- 📊 **Hard to scale** — limited by human resources
+- ⏱️ **Time-consuming**, manual testing takes weeks
+- 💰 **Expensive**, expert consultants cost thousands per day
+- 🔄 **Inconsistent**, results vary by tester expertise
+- 📊 **Hard to scale**, limited by human resources
 
 DarkMoon solves this with **AI penetration testing**:
 
-- 🤖 **AI-powered pentesting** — autonomous agents conduct full security assessments end-to-end
-- 🛡️ **Security by design** — the AI never directly executes tools; all actions flow through a controlled MCP interface
-- 🕶️ **Privacy gateway (reversible local tokenization)** — the AI **never sees your real sensitive values**. IPs, hostnames, domains, URLs, emails, credentials and internal paths are replaced by deterministic placeholders (`IP_PRIVATE_001`, …); real values are injected **locally, right before a tool runs**, and masked back out of every result. **No sensitive data ever leaves your perimeter to the LLM provider** — use Claude's power under strict data-sovereignty constraints. Exfiltration attempts are blocked.
-- ♾️ **Pentesting automation for CI/CD** — run **automated security testing** post-build to catch critical vulnerabilities before production
-- 🔧 **50+ integrated tools** — a comprehensive **penetration testing tools suite** (Nuclei, NetExec, BloodHound, sqlmap, Naabu, httpx, ffuf, and more)
-- 📈 **Adaptive multi-agent methodology** — specialized agents for Web, Active Directory, Kubernetes, Network, CMS, and more
-- 📝 **Vulnerability reporting automation** — structured, evidence-based reports generated automatically
+- 🤖 **AI-powered pentesting**, autonomous agents conduct full security assessments end-to-end
+- 🛡️ **Security by design**, the AI never directly executes tools; all actions flow through a controlled MCP interface
+- 🕶️ **Privacy gateway (reversible local tokenization)**, the AI **never sees your real sensitive values**. IPs, hostnames, domains, URLs, emails, credentials and internal paths are replaced by deterministic placeholders (`IP_PRIVATE_001`, …); real values are injected **locally, right before a tool runs**, and masked back out of every result. **No sensitive data ever leaves your perimeter to the LLM provider**, use Claude's power under strict data-sovereignty constraints. Exfiltration attempts are blocked.
+- ♾️ **Pentesting automation for CI/CD**, run **automated security testing** post-build to catch critical vulnerabilities before production
+- 🔧 **50+ integrated tools**, a comprehensive **penetration testing tools suite** (Nuclei, NetExec, BloodHound, sqlmap, Naabu, httpx, ffuf, and more)
+- 📈 **Adaptive multi-agent methodology**, specialized agents for Web, Active Directory, Kubernetes, Network, CMS, and more
+- 📝 **Vulnerability reporting automation**, structured, evidence-based reports generated automatically
 
 Perfect for **security teams**, **DevSecOps engineers**, **ethical hacking** professionals, and organizations of all sizes.
 
@@ -89,7 +89,7 @@ Reproduce it and compare tools yourself: **[ASCIT31/Darkmoon-Benchmarks](https:/
 - Docker & Docker Compose
 - An LLM API key (OpenRouter, Anthropic, OpenAI, or local models)
 
-> **Note:** GPU configuration, NVIDIA driver troubleshooting, and advanced environment setup are covered in the [Full Documentation — GPU Troubleshooting](docs/full.md#ii2--darkmoon--gpu-troubleshooting-guide-official).
+> **Note:** GPU configuration, NVIDIA driver troubleshooting, and advanced environment setup are covered in the [Full Documentation, GPU Troubleshooting](docs/full.md#ii2--darkmoon--gpu-troubleshooting-guide-official).
 
 ### Installation
 
@@ -102,7 +102,7 @@ cd Dark-Moon
 
 **2. Configure your LLM provider**
 
-`install.sh` handles provider configuration interactively — no need to edit `docker-compose.yml`:
+`install.sh` handles provider configuration interactively, no need to edit `docker-compose.yml`:
 
 ```bash
 ./install.sh           # skip form if .opencode.env already configured
@@ -112,7 +112,7 @@ cd Dark-Moon
 
 Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local models** (Ollama, llama.cpp).
 
-> **Note:** For full details on environment variables and local model setup, see the [Full Documentation — Environment Variables](docs/full.md#ii3-configuration-of-environment-variables).
+> **Note:** For full details on environment variables and local model setup, see the [Full Documentation, Environment Variables](docs/full.md#ii3-configuration-of-environment-variables).
 
 **3. Build and launch**
 
@@ -132,7 +132,7 @@ Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local mode
 ./darkmoon.sh --log <session_id>
 ```
 
-> **Note:** Real-time session logs display every command executed by the MCP server. See [Full Documentation — Session Logs](docs/full.md#ii7e-step-1--start-an-assessment) for details.
+> **Note:** Real-time session logs display every command executed by the MCP server. See [Full Documentation, Session Logs](docs/full.md#ii7e-step-1--start-an-assessment) for details.
 
 ---
 
@@ -165,7 +165,7 @@ DarkMoon dynamically selects and dispatches specialized agents depending on the 
 
 Multiple agents can execute **in parallel** across hybrid architectures.
 
-> **Note:** For the complete list of agents, their structure, lifecycle, and how to create custom agents, see [Full Documentation — AI Agents](docs/full.md#v-ai-agents).
+> **Note:** For the complete list of agents, their structure, lifecycle, and how to create custom agents, see [Full Documentation, AI Agents](docs/full.md#v-ai-agents).
 
 ### Architecture Overview
 
@@ -191,9 +191,9 @@ sequenceDiagram
   O-->>U: Summary / result
 ```
 
-The AI reasons and plans. The MCP controls what can be executed. The Toolbox runs isolated tools inside Docker. **The AI never directly touches the system** — this is **security by design**.
+The AI reasons and plans. The MCP controls what can be executed. The Toolbox runs isolated tools inside Docker. **The AI never directly touches the system**, this is **security by design**.
 
-> **Note:** For the full architecture breakdown (deployment diagrams, network flows, security boundaries), see [Full Documentation — Architecture](docs/full.md#iv-architecture).
+> **Note:** For the full architecture breakdown (deployment diagrams, network flows, security boundaries), see [Full Documentation, Architecture](docs/full.md#iv-architecture).
 
 ---
 
@@ -213,9 +213,9 @@ DarkMoon supports flexible scope definition directly from the command line.
 ./darkmoon.sh "TARGET: http://172.19.0.3:3000 PROGRAM=\"Juice Shop\" FOCUS=sqli,xss,idor NOISE=moderate FORMAT=h1"
 ```
 
-Key flags include `FOCUS`, `EXCLUDE`, `CREDS`, `TOKEN`, `NOISE`, `SEVERITY`, `FORMAT`, and more — all interpreted naturally by the AI.
+Key flags include `FOCUS`, `EXCLUDE`, `CREDS`, `TOKEN`, `NOISE`, `SEVERITY`, `FORMAT`, and more, all interpreted naturally by the AI.
 
-> **Note:** For the complete flags reference, asset types, EXCLUDE/FOCUS free-form syntax, and advanced multi-target scoping, see [Full Documentation — Scope Definition](docs/full.md#ii7c-launch-darkmoon-with-tui-console).
+> **Note:** For the complete flags reference, asset types, EXCLUDE/FOCUS free-form syntax, and advanced multi-target scoping, see [Full Documentation, Scope Definition](docs/full.md#ii7c-launch-darkmoon-with-tui-console).
 
 ---
 
@@ -234,9 +234,9 @@ DarkMoon ships with a purpose-built Docker image containing **50+ security tools
 | Network | Hydra, curl, dig, SNMP tools |
 | Browser | Lightpanda (headless) |
 
-All tools are directly accessible — no path configuration needed.
+All tools are directly accessible, no path configuration needed.
 
-> **Note:** For the complete tools list with installation details and how to add new tools, see [Full Documentation — Toolbox](docs/full.md#vi-toolbox).
+> **Note:** For the complete tools list with installation details and how to add new tools, see [Full Documentation, Toolbox](docs/full.md#vi-toolbox).
 
 ---
 
@@ -265,11 +265,11 @@ DarkMoon's [Full Documentation](docs/full.md) covers everything you need to oper
 
 DarkMoon is designed as a versatile **security testing platform** for:
 
-- 🔒 **Security teams** — run continuous **automated penetration testing** across your infrastructure
-- ⚙️ **DevSecOps pipelines** — integrate **AI-driven security research** into CI/CD workflows
-- 🎯 **Bug bounty hunters** — accelerate **ethical hacking** with autonomous target analysis
-- 🔬 **Security researchers** — explore attack surfaces with an **AI cybersecurity platform** that adapts in real time
-- 🎓 **Training & education** — learn offensive security with guided, reproducible assessments
+- 🔒 **Security teams**, run continuous **automated penetration testing** across your infrastructure
+- ⚙️ **DevSecOps pipelines**, integrate **AI-driven security research** into CI/CD workflows
+- 🎯 **Bug bounty hunters**, accelerate **ethical hacking** with autonomous target analysis
+- 🔬 **Security researchers**, explore attack surfaces with an **AI cybersecurity platform** that adapts in real time
+- 🎓 **Training & education**, learn offensive security with guided, reproducible assessments
 
 ---
 
@@ -286,13 +286,13 @@ DarkMoon is designed as a versatile **security testing platform** for:
 ./darkmoon.sh "TARGET: https://app.example.com PROGRAM=\"Example BB\" FOCUS=sqli,rce,ssrf EXCLUDE=H1 FORMAT=h1"
 ```
 
-> **Note:** For more prompt examples including DVGA, Juice Shop, and headless browser scenarios, see [Full Documentation — Prompt Examples](docs/full.md#iii-uses).
+> **Note:** For more prompt examples including DVGA, Juice Shop, and headless browser scenarios, see [Full Documentation, Prompt Examples](docs/full.md#iii-uses).
 
 ---
 
 ## Contributing
 
-DarkMoon is open source and welcomes contributions. Whether you want to add new agents, integrate tools, create workflows, or improve documentation — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+DarkMoon is open source and welcomes contributions. Whether you want to add new agents, integrate tools, create workflows, or improve documentation, see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
