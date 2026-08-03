@@ -16,9 +16,11 @@ class GenericExecutor:
 
         # Whitelist of allowed tools (for security)
         self.allowed_tools = {
-            # Port scanners. naabu is the discovery scanner; nmap is installed
-            # but is restricted to targeted service/version probes (see pentest.md).
-            # masscan/rustscan are intentionally not installed.
+            # Port scanners. naabu is the ONLY one: nmap, masscan and rustscan
+            # are deliberately absent from the toolbox and must stay out of this
+            # list. nmap was added by the 2026-08-02 agents expansion and removed
+            # again here, together with its apt package and its uses in
+            # firmware.md, which now scans with naabu in bounded slices.
             "naabu",
             # Web tools
             "httpx",
@@ -149,7 +151,6 @@ class GenericExecutor:
             "unsquashfs",
             "sasquatch",
             "firmwalker",
-            "nmap",
             "nc",
             "john",
             "unshadow",

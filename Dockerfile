@@ -202,7 +202,6 @@ RUN sed -i 's|http://archive.ubuntu.com|http://fr.archive.ubuntu.com|g' /etc/apt
     squashfs-tools \
     sqlite3 \
     arp-scan \
-    nmap \
     netcat-openbsd \
     file \
  && rm -rf /var/lib/apt/lists/*

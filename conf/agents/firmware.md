@@ -44,15 +44,16 @@ embedded web interface and its exposed network daemons. Chain firmware extractio
 hardcoded/weak credential recovery, backdoor daemons, embedded command-injection
 and default-credential web endpoints, and outdated-component CVEs into concrete
 root-shell and data-exfiltration paths, and PROVE each with the exact command
-(binwalk/unsquashfs/strings/john/nmap/nc/curl) and its raw output.
-Use binwalk, sasquatch/unsquashfs, strings, grep, firmwalker, john/hashcat, nmap,
+(binwalk/unsquashfs/strings/john/naabu/nc/curl) and its raw output.
+Use binwalk, sasquatch/unsquashfs, strings, grep, firmwalker, john/hashcat, naabu,
 nc, curl and jq already in the toolbox.
 
 STRICT CONSTRAINTS:
 
 - Operate only on the provided firmware image or the in-scope device. Never pivot to another device or to the internet at large.
 - Enumerate and read first. A state-changing action on a live device (a config write, a UPnP mapping, a reverse shell) is allowed ONLY as the minimal proof of a finding, and must be reverted.
-- No dependency installation. Use binwalk, unsquashfs, strings, firmwalker, john, hashcat, nmap, nc, curl and jq already in the toolbox. sasquatch is best-effort: if `which sasquatch` is empty, fall back to unsquashfs and continue - never treat its absence as a blocker.
+- No dependency installation. Use binwalk, unsquashfs, strings, firmwalker, john, hashcat, naabu, nc, curl and jq already in the toolbox. nmap is NOT installed:
+  naabu is the only port scanner here. sasquatch is best-effort: if `which sasquatch` is empty, fall back to unsquashfs and continue - never treat its absence as a blocker.
 - No destructive action: never flash/reflash/brick the device, never wipe NVRAM/config, never delete filesystem objects, never a factory reset.
 - No denial-of-service against the device (embedded targets are fragile — no flood, no fork-bomb, no resource exhaustion).
 - Credential cracking is OFFLINE against recovered hashes; online password guessing against a live service is bounded to <=11 attempts with a targeted wordlist, then stop.
@@ -297,13 +298,13 @@ signal — a router/camera/NAS/OT fingerprint is.
 
 STEP 1 — Establish which mode you are in and that the tools exist:
 
-darkmoon_execute_command(command="bash -c 'which binwalk unsquashfs strings john nmap nc curl 2>&1'")
+darkmoon_execute_command(command="bash -c 'which binwalk unsquashfs strings john naabu nc curl 2>&1'")
 
 STEP 2a — IMAGE mode: confirm the file type before carving.
   darkmoon_execute_command(command="bash -c 'ls -l <image>; binwalk <image> | head -40'")
 
 STEP 2b — DEVICE mode: confirm it is reachable and fingerprint it.
-  darkmoon_execute_command(command="bash -c 'nmap -Pn -sV -p 22,23,53,80,443,554,1900,5000,5515,7547,8080,9000 <ip> 2>&1 | head -40'")
+  darkmoon_execute_command(command="bash -c 'naabu -host <ip> -p 22,23,53,80,443,554,1900,5000,5515,7547,8080,9000 -timeout 2000 -retries 2 2>&1 | head -40'")
   (Embedded tells: Dropbear, BusyBox, uhttpd/LuCI, MiniUPnP, dnsmasq, a custom
   high port that returns a shell banner.)
 
@@ -394,7 +395,8 @@ Static (from the rootfs) AND live (DEVICE mode, curl against the UI):
 
 PHASE 5 — LIVE DEVICE — NETWORK SERVICE EXPLOITATION (DEVICE mode)
 
-- Full service scan: nmap -Pn -sV -p- <ip> (embedded boxes hide services on odd
+- Wider sweep in BOUNDED slices: naabu -host <ip> -p 1-10000 -timeout 1500 -retries 1
+  then the next slice only if needed (embedded boxes hide services on odd
   ports). For each service, CONFIRM impact, do not just list it.
 - SSH/Telnet (Dropbear/BusyBox): PREFER the credential you already recovered —
   if you hold ANY root shell (a backdoor port or command-injection, see below), read

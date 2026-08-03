@@ -19,7 +19,7 @@ STREAM_BASE = "/tmp/darkmoon_mcp_stream"
 # of these were still running 72 minutes after their campaign had frozen.
 _REAPABLE = (
     "hydra", "medusa", "ncrack", "patator", "sqlmap", "ffuf", "dirb",
-    "gobuster", "feroxbuster", "wfuzz", "nmap", "naabu", "masscan", "nuclei",
+    "gobuster", "feroxbuster", "wfuzz", "naabu", "masscan", "nuclei",
 )
 
 
