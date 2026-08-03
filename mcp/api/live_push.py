@@ -630,6 +630,34 @@ def push_finding(
 
     campaign["stats"] = stats
 
+    # Derive the dispatch log from the findings store, exactly like the stats
+    # above. An agent that pushed a finding demonstrably ran, so the log can be
+    # rebuilt from evidence instead of being declared. Populating it only from
+    # the agents_dispatched argument of finalize_campaign() lost the entire log
+    # whenever a campaign never reached finalize, and left it empty even on
+    # campaigns that completed but did not pass the argument [INC-012].
+    # A richer list explicitly passed at finalize still wins over this one.
+    seen: Dict[str, int] = {}
+    for v in vulns:
+        name = str(v.get("discovered_by_agent") or "").strip()
+        if name:
+            seen[name] = seen.get(name, 0) + 1
+    if seen:
+        previous = {
+            a.get("agent"): a
+            for a in campaign.get("agents_dispatched", [])
+            if isinstance(a, dict)
+        }
+        campaign["agents_dispatched"] = [
+            {
+                "agent": name,
+                "findings": count,
+                "level": previous.get(name, {}).get("level", 0),
+                "status": previous.get(name, {}).get("status", "completed"),
+            }
+            for name, count in sorted(seen.items(), key=lambda kv: (-kv[1], kv[0]))
+        ]
+
     if stats.get("critical", 0) > 0:
         campaign["overall_risk"] = "critical"
     elif stats.get("high", 0) > 0:
@@ -842,7 +870,7 @@ def _generate_report_from_db(
     A("| # | ID | Title | Severity | CVSS | Status | Endpoint |\n")
     A("|---|-----|-------|----------|------|--------|----------|\n")
     for i, v in enumerate(vulns):
-        cvss  = f"{v['cvss_score']:.1f}" if v.get("cvss_score") else "N/A"
+        cvss  = f"{_cvss_num(v):.1f}" if v.get("cvss_score") else "N/A"
         ep    = (v.get("endpoint") or "").replace("https://","").replace("http://","")
         ep    = ep[:50]+"..." if len(ep)>50 else ep
         title = v.get("title","")[:50]+"..." if len(v.get("title",""))>50 else v.get("title","")
@@ -852,7 +880,7 @@ def _generate_report_from_db(
     # ── VULNERABILITY DETAILS ────────────────────────────────────────
     A("## 3. VULNERABILITY DETAILS\n\n")
     for i, v in enumerate(vulns):
-        cvss_score = f"{v['cvss_score']:.1f}" if v.get("cvss_score") else "N/A"
+        cvss_score = f"{_cvss_num(v):.1f}" if v.get("cvss_score") else "N/A"
         cvss_vec   = v.get("cvss_vector") or "N/A"
         ev         = v.get("evidence", {})
         commands   = ev.get("commands", [])
