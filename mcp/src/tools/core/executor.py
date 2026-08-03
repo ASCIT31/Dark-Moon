@@ -15,8 +15,9 @@ class GenericExecutor:
 
         # Whitelist of allowed tools (for security)
         self.allowed_tools = {
-            # Port scanners (naabu only; masscan/nmap/rustscan are intentionally
-            # not installed — the toolbox scanner is naabu)
+            # Port scanners. naabu is the discovery scanner; nmap is installed
+            # but is restricted to targeted service/version probes (see pentest.md).
+            # masscan/rustscan are intentionally not installed.
             "naabu",
             # Web tools
             "httpx",
@@ -149,7 +150,6 @@ class GenericExecutor:
             "firmwalker",
             "nmap",
             "nc",
-            "ncat",
             "john",
             "unshadow",
             "sqlite3",

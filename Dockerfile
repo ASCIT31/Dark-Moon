@@ -192,6 +192,7 @@ RUN sed -i 's|http://archive.ubuntu.com|http://fr.archive.ubuntu.com|g' /etc/apt
     arp-scan \
     nmap \
     netcat-openbsd \
+    file \
  && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
@@ -216,6 +217,25 @@ RUN wget -qO /usr/local/bin/7z2john.pl https://raw.githubusercontent.com/openwal
 RUN git clone --depth 1 https://github.com/craigz28/firmwalker.git /opt/firmwalker \
  && ln -sf /opt/firmwalker/firmwalker.sh /usr/local/bin/firmwalker \
  && chmod +x /opt/firmwalker/firmwalker.sh
+# ------------------------------------------------------------
+# sasquatch — vendor-patched unsquashfs for the non-standard LZMA/XZ SquashFS
+# images shipped by embedded vendors (firmware agent).
+# Best-effort on purpose: firmware.md falls back to plain unsquashfs when it is
+# absent, so a dead mirror or a new arch must never break the whole image build.
+# ------------------------------------------------------------
+ARG SASQUATCH_TAG=sasquatch-v4.5.1-6
+RUN set -eux; \
+    ARCH="$(dpkg --print-architecture)"; \
+    URL="https://github.com/onekey-sec/sasquatch/releases/download/${SASQUATCH_TAG}/sasquatch_1.0_${ARCH}.deb"; \
+    if curl -fsSL --retry 2 --max-time 120 "$URL" -o /tmp/sasquatch.deb; then \
+      dpkg -i /tmp/sasquatch.deb || true; \
+      rm -f /tmp/sasquatch.deb; \
+    fi; \
+    if command -v sasquatch >/dev/null 2>&1; then \
+      echo "[OK] sasquatch installed"; \
+    else \
+      echo "[WARN] sasquatch unavailable for ${ARCH} - firmware agent will fall back to unsquashfs"; \
+    fi
 
 # ------------------------------------------------------------
 # Node.js + Playwright (stable project install)

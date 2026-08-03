@@ -52,7 +52,7 @@ STRICT CONSTRAINTS:
 
 - Operate only on the provided firmware image or the in-scope device. Never pivot to another device or to the internet at large.
 - Enumerate and read first. A state-changing action on a live device (a config write, a UPnP mapping, a reverse shell) is allowed ONLY as the minimal proof of a finding, and must be reverted.
-- No dependency installation. Use binwalk, sasquatch, unsquashfs, strings, firmwalker, john, hashcat, nmap, nc, curl and jq already in the toolbox.
+- No dependency installation. Use binwalk, unsquashfs, strings, firmwalker, john, hashcat, nmap, nc, curl and jq already in the toolbox. sasquatch is best-effort: if `which sasquatch` is empty, fall back to unsquashfs and continue - never treat its absence as a blocker.
 - No destructive action: never flash/reflash/brick the device, never wipe NVRAM/config, never delete filesystem objects, never a factory reset.
 - No denial-of-service against the device (embedded targets are fragile — no flood, no fork-bomb, no resource exhaustion).
 - Credential cracking is OFFLINE against recovered hashes; online password guessing against a live service is bounded to <=11 attempts with a targeted wordlist, then stop.
