@@ -157,13 +157,24 @@ DarkMoon dynamically selects and dispatches specialized agents depending on the 
 | Detected Technology | Agent Triggered |
 |---|---|
 | WordPress, Drupal, Joomla, Magento, PrestaShop, Moodle | CMS-specific agent |
-| PHP, Node.js, Flask, ASP.NET, Spring Boot, Ruby on Rails | Stack-specific agent |
+| PHP, Node.js, Flask, ASP.NET, Spring Boot, Ruby on Rails, Go | Stack-specific agent |
 | GraphQL | GraphQL agent |
 | Active Directory | AD agent |
 | Kubernetes | Kubernetes agent |
+| AWS, Azure, GCP | Cloud-provider agent |
+| Entra ID (Microsoft identity) | Identity agent |
+| GitHub, GitLab, Jenkins | SCM & CI/CD agent |
+| Terraform, Ansible | Infrastructure-as-Code agent |
+| Docker, container registries | Container agent |
+| HashiCorp Vault | Secrets agent |
+| PostgreSQL, MySQL, MSSQL, Oracle | Database agent |
+| Redis, RabbitMQ, Kafka, MQTT | Messaging & cache agent |
+| Firmware / IoT images | Firmware agent |
 | Headless browser required | Headless browser agent |
 
 Multiple agents can execute **in parallel** across hybrid architectures.
+
+Planes that require credentials to be meaningful (cloud accounts, CI/CD, secret stores, databases, Active Directory, Kubernetes) are **never dispatched on inference**. They fire only when a concrete artifact is found (a key, a token, a reachable metadata endpoint) or when you authorize them explicitly, and are otherwise flagged in the report.
 
 > **Note:** For the complete list of agents, their structure, lifecycle, and how to create custom agents, see [Full Documentation, AI Agents](docs/full.md#v-ai-agents).
 
@@ -225,12 +236,16 @@ DarkMoon ships with a purpose-built Docker image containing **50+ security tools
 
 | Category | Tools (examples) |
 |---|---|
-| Port scanning | Naabu, Masscan |
+| Port scanning | Naabu (discovery), nmap (targeted service probes) |
 | Web scanning | Nuclei, ffuf, dirb, sqlmap, Arjun, wafw00f |
 | Recon & crawling | Subfinder, Katana, Waybackurls, httpx |
 | CMS | WPScan, CMSeeK, WhatWeb |
 | Active Directory | NetExec, BloodHound, Impacket (30+ scripts) |
-| Kubernetes | kubectl, Kubescape, Kubeletctl |
+| Kubernetes | kubectl, Kubescape, Kubeletctl, kube-bench, rbac-police |
+| Cloud CLIs | aws, az, gcloud, gsutil, bq |
+| Databases & cache | psql, mysql, redis-cli, sqlite3 |
+| Firmware / IoT | binwalk, unsquashfs, sasquatch, firmwalker |
+| Cracking | hashcat, john, 7z2john |
 | Network | Hydra, curl, dig, SNMP tools |
 | Browser | Lightpanda (headless) |
 
