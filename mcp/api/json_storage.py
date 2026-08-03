@@ -35,6 +35,17 @@ INFRASTRUCTURE_DIR = DATA_DIR / "infrastructure"
 VULNERABILITIES_DIR = DATA_DIR / "vulnerabilities"
 REPORTS_DIR = DATA_DIR / "reports"
 
+# The Pro stack keeps DATA_DIR on a tmpfs (see the compose tmpfs list) and binds a
+# separate persistent volume for reports, announced through DARKMOON_REPORTS_DIR.
+# Nothing read that variable, so generated reports were written to the tmpfs and
+# vanished on the next container restart, while the host-side ./reports directory
+# the operator actually looks at stayed empty. Honour it when it is set; Community
+# and prod do not set it and keep writing into their volume-mounted data dir
+# exactly as before.
+_REPORTS_OVERRIDE = os.environ.get("DARKMOON_REPORTS_DIR", "").strip()
+if _REPORTS_OVERRIDE:
+    REPORTS_DIR = Path(_REPORTS_OVERRIDE)
+
 
 # ---------------------------------------------------------------------------
 # Generic helpers
