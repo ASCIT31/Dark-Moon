@@ -203,6 +203,7 @@ RUN sed -i 's|http://archive.ubuntu.com|http://fr.archive.ubuntu.com|g' /etc/apt
     sqlite3 \
     arp-scan \
     netcat-openbsd \
+    nfs-common \
     file \
  && rm -rf /var/lib/apt/lists/*
 

