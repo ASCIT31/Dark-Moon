@@ -93,6 +93,10 @@ A platform that allows you to conduct a complete penetration testing campaign
     - [VI.5.a Build the image](#vi5a-build-the-image)
     - [VI.5.b Start a shell](#vi5b-start-a-shell)
     - [VI.5.c Use a tool](#vi5c-use-a-tool)
+  - [VI.5bis. Execution safety and GPU acceleration](#vi5bis-execution-safety-and-gpu-acceleration)
+    - [VI.5bis.a Why a command can no longer freeze a campaign](#vi5bisa-why-a-command-can-no-longer-freeze-a-campaign)
+    - [VI.5bis.b GPU acceleration](#vi5bisb-gpu-acceleration)
+    - [VI.5bis.c Where reports are written](#vi5bisc-where-reports-are-written)
   - [VI.6. How to add a new tool (for the community)](#vi6-how-to-add-a-new-tool-for-the-community)
     - [VI.6.a Choose the right place](#vi6a-choose-the-right-place)
     - [VI.6.b Rules to follow](#vi6b-rules-to-follow)
@@ -2090,6 +2094,92 @@ netexec -h
 
 > [!NOTE]
 > No complicated path is required.
+
+[Back to Summary](#summary)
+
+## VI.5bis. Execution safety and GPU acceleration
+
+### VI.5bis.a Why a command can no longer freeze a campaign
+
+A campaign is a single sequential loop: the agent runs a command, waits for its
+output, then reasons about it. A command that never returns therefore does not
+merely fail, it freezes everything after it. No further findings, no finalize,
+no report.
+
+The MCP executor accepted a `timeout` argument and never enforced it, so an
+unbounded command held the loop open indefinitely. A campaign was lost this way:
+the model escalated to `hydra -P rockyou.txt` (14 million candidates) and the run
+sat frozen while two orphaned processes kept hammering the lab for 72 minutes.
+
+Three layers now prevent it, in `mcp/src/execution_guard.py`:
+
+1. **Pre-flight refusal.** Commands that provably cannot finish are rejected
+   before they start: credential attacks over multi-million-entry lists, reading
+   a live socket with `cat` (a service never sends EOF), full-range port sweeps,
+   fuzzing with giant wordlists, `tail -f`, deep `sqlmap` runs. The check is
+   narrow on purpose: `hydra` with a short candidate list still runs.
+2. **Enforcement in the container.** Every command is wrapped in coreutils
+   `timeout`, so the process dies even if the client goes away. Scanner
+   grandchildren that survive the wrapper are reaped.
+3. **An actionable answer.** A refusal or a timeout returns why it blocked, how
+   to reach the same objective bounded, and an escalation ladder: retry once
+   bounded, change angle, then declare the vector not-exploitable and move on.
+   A bare "timed out" makes a model retry the identical command.
+
+The matching doctrine is in every agent prompt under `NON-BLOCKING EXECUTION`.
+Abandoning a dead end is an expected outcome; freezing the campaign is not.
+
+### VI.5bis.b GPU acceleration
+
+Offline hash cracking is the one workload a GPU changes by orders of magnitude.
+Measured on an RTX 5060 Laptop against md5crypt:
+
+| Backend | Speed | rockyou (14.3M) |
+|---|---|---|
+| GPU (CUDA) | 7 570 kH/s | about 2 seconds |
+| CPU (pthreads) | 33.5 kH/s | hours |
+
+Network brute-forcers (`hydra`, `medusa`, `ncrack`) gain **nothing** from a GPU:
+their rate is set by the target's response time, not by local compute.
+
+The toolbox entrypoint detects the hardware at container start, covering NVIDIA
+(native and WSL2 through `/dev/dxg`), AMD (ROCm and `/dev/kfd`) and
+Intel/generic OpenCL. It then confirms with `hashcat -I` before claiming
+acceleration, so a GPU that hashcat cannot actually use is reported as absent
+rather than advertised. The result is written to `/run/darkmoon-gpu.env`:
+
+```
+DM_GPU=1
+DM_GPU_VENDOR=nvidia
+DM_GPU_NAME=NVIDIA GeForce RTX 5060 Laptop GPU
+DM_HASHCAT_OPTS=-D 2
+```
+
+The executor reads it and rewrites hashcat invocations: pinned to the GPU when
+one is usable, and always given `--runtime`, so a full dictionary run completes
+on GPU and returns partial results within budget on CPU instead of holding the
+campaign for hours. Heavy work is right-sized, not refused.
+
+**Enabling it.** `gpus: all` lives in `docker-compose.gpu.yml` rather than the
+main compose, because it makes the container refuse to start on a host with no
+GPU runtime, which would break every CPU-only install. `install.sh` probes for a
+usable runtime and adds the overlay automatically. Manually:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+```
+
+Without a GPU everything still works, hashcat simply runs on CPU and the agent
+is told so explicitly.
+
+### VI.5bis.c Where reports are written
+
+Reports are generated server-side from the findings store and written to
+`REPORTS_DIR`. When `DARKMOON_REPORTS_DIR` is set, that path wins. The Pro stack
+uses it because its data directory sits on a tmpfs while a separate persistent
+volume is bound for reports; without the override a generated report lived only
+in memory and disappeared on the next restart. Community and prod do not set the
+variable: their data directory already is the volume-mounted path.
 
 [Back to Summary](#summary)
 
