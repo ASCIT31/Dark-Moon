@@ -302,10 +302,26 @@ if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
     COMPOSE_FILE="docker-compose-dev.yml"
 fi
 
+# GPU passthrough is opt-in at install time. hashcat is the one tool it changes
+# (offline cracking: hours on CPU threads, seconds on a GPU); network brute-forcers
+# are bound by the target, not by local compute, so they gain nothing. `gpus: all`
+# is kept in an overlay because it makes the container refuse to start on a host
+# without a GPU runtime, which would break every CPU-only install.
+COMPOSE_ARGS="-f $COMPOSE_FILE"
+if docker info --format '{{json .Runtimes}}' 2>/dev/null | grep -q nvidia \
+   || docker run --rm --gpus all ubuntu:22.04 true >/dev/null 2>&1; then
+    echo -e "${GREEN}GPU runtime detected. Enabling GPU passthrough for the toolbox.${RESET}"
+    COMPOSE_ARGS="$COMPOSE_ARGS -f docker-compose.gpu.yml"
+else
+    echo -e "${YELLOW}No GPU runtime detected. The toolbox will run hashcat on CPU.${RESET}"
+    echo -e "${YELLOW}To enable it later, install the NVIDIA container toolkit and re-run:${RESET}"
+    echo -e "${YELLOW}  docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d${RESET}"
+fi
+
 echo -e "${BLUE}🔨 Rebuilding images (no cache)...${RESET}"
-docker compose -f $COMPOSE_FILE build --no-cache
+docker compose $COMPOSE_ARGS build --no-cache
 
 echo -e "${BLUE}🚀 Recreating containers...${RESET}"
-docker compose -f $COMPOSE_FILE up -d --force-recreate
+docker compose $COMPOSE_ARGS up -d --force-recreate
 
 echo -e "${GREEN}✅ Darkmoon stack rebuilt CLEAN${RESET}"

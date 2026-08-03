@@ -104,10 +104,71 @@ _RULES = [
     ),
 ]
 
+# Time budget for an offline cracking run. hashcat honours it natively via
+# --runtime, so a heavy job returns what it found instead of running for hours.
+CRACK_BUDGET_SECONDS = 300
+
 # Any command with no explicit bound gets this ceiling, in seconds.
 DEFAULT_HARD_TIMEOUT = 300
 # Nothing may ask for more than this, whatever the caller passes.
 MAX_HARD_TIMEOUT = 900
+
+
+def gpu_state() -> dict:
+    """Read what the toolbox entrypoint detected at container start.
+
+    Written to /run/darkmoon-gpu.env because an `export` in the entrypoint does
+    not reach the sibling processes the MCP starts through `docker exec`.
+    """
+    state = {"DM_GPU": "0", "DM_GPU_VENDOR": "unknown", "DM_HASHCAT_OPTS": ""}
+    try:
+        with open("/run/darkmoon-gpu.env") as fh:
+            for line in fh:
+                if "=" in line:
+                    k, _, v = line.strip().partition("=")
+                    state[k] = v
+    except OSError:
+        pass
+    return state
+
+
+def adapt_command(command: str, gpu: Optional[dict] = None) -> tuple[str, str]:
+    """Make a heavy command fit the time budget instead of refusing it.
+
+    The rule is not "block expensive work", it is "guarantee it finishes". Offline
+    cracking is legitimate and valuable; it just has to run on the right component
+    and carry a bound. hashcat has a native `--runtime`, so a full rockyou run is
+    allowed on both CPU and GPU: on GPU it completes, on CPU it returns whatever it
+    found within the budget instead of running for hours.
+
+    Returns (possibly rewritten command, human-readable note or "").
+    """
+    if not command or "hashcat" not in command:
+        return command, ""
+
+    g = gpu if gpu is not None else gpu_state()
+    on_gpu = str(g.get("DM_GPU", "0")) == "1"
+    notes = []
+    out = command
+
+    # Pin hashcat to the GPU when one is usable. Left alone otherwise: forcing
+    # -D 2 with no GPU makes hashcat exit with "No devices found/left".
+    if on_gpu and "-D " not in out and "--opencl-device-types" not in out:
+        out = out.replace("hashcat", f"hashcat {g.get('DM_HASHCAT_OPTS', '-D 2')}", 1)
+        notes.append(f"pinned to GPU ({g.get('DM_GPU_VENDOR', 'gpu')})")
+
+    # Always bound the run. Without this a slow hash on CPU threads holds the
+    # campaign for hours, which is exactly how one was lost.
+    if "--runtime" not in out:
+        out = out.replace("hashcat", f"hashcat --runtime {CRACK_BUDGET_SECONDS}", 1)
+        notes.append(f"capped at {CRACK_BUDGET_SECONDS}s")
+
+    if not on_gpu:
+        notes.append(
+            "NO GPU: this host cracks about 200x slower. Expect partial coverage, "
+            "and prefer a targeted candidate list over a full dictionary"
+        )
+    return out, "; ".join(notes)
 
 
 def classify(command: str) -> Verdict:

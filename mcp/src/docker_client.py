@@ -9,7 +9,7 @@ from docker.models.containers import Container
 from docker.errors import DockerException, NotFound
 
 from src.models.common import ExecutionResult, ExecutionStatus
-from src.execution_guard import classify, effective_timeout, remediation
+from src.execution_guard import adapt_command, classify, effective_timeout, remediation
 
 STREAM_BASE = "/tmp/darkmoon_mcp_stream"
 
@@ -46,6 +46,7 @@ class DarkmoonDockerClient:
         # Ensure stream socket exists (server created by darkmoon-cli)
         # Client will just connect if available.
         self._stream_enabled = True
+        self._gpu_cache = None
 
     def _broadcast(self, b: bytes, session_id: str | None = None):
         if not self._stream_enabled:
@@ -107,6 +108,19 @@ class DarkmoonDockerClient:
             # findings, no finalize, no report. Enforcing the deadline in the
             # container means the process is killed even if the client goes away.
             hard_timeout = effective_timeout(timeout)
+
+            # Route heavy offline cracking to the right component instead of
+            # refusing it. hashcat gets pinned to the GPU when the entrypoint found
+            # a usable one, and always gets `--runtime`, so a full dictionary run
+            # returns what it found inside the budget rather than holding the
+            # campaign for hours. Measured on an RTX 5060: 7.57 MH/s on GPU against
+            # 33.5 kH/s on CPU threads for md5crypt, a factor of 225.
+            if isinstance(command, str):
+                adapted, note = adapt_command(command, self._gpu_state(container))
+                if note:
+                    command = adapted
+                    self._broadcast(f"\n\033[1;33m[guard]\033[0m {note}\n".encode(), session_id)
+
             if isinstance(command, list):
                 cmd = ["timeout", "--kill-after=5", str(hard_timeout)] + command
                 cmd_str = " ".join(command)
@@ -204,6 +218,34 @@ class DarkmoonDockerClient:
                 duration=duration,
                 metadata={"command": str(command), "error": str(e)},
             )
+
+    def _gpu_state(self, container) -> Dict[str, str]:
+        """Read the GPU profile the toolbox entrypoint wrote at container start.
+
+        The file lives INSIDE the toolbox, not next to the MCP: reading it from the
+        local filesystem silently returned "no GPU" on every host and hashcat was
+        never pinned to the card. Cached for the process lifetime, since hardware
+        does not change under a running container.
+        """
+        if getattr(self, "_gpu_cache", None) is not None:
+            return self._gpu_cache
+
+        state = {"DM_GPU": "0", "DM_GPU_VENDOR": "unknown", "DM_HASHCAT_OPTS": ""}
+        try:
+            exec_id = self.client.api.exec_create(
+                container=container.id,
+                cmd=["bash", "-c", "cat /run/darkmoon-gpu.env 2>/dev/null || true"],
+            )["Id"]
+            raw = self.client.api.exec_start(exec_id).decode("utf-8", errors="ignore")
+            for line in raw.splitlines():
+                if "=" in line:
+                    k, _, v = line.strip().partition("=")
+                    state[k.strip()] = v.strip()
+        except Exception:
+            pass  # absent or unreadable: fall back to CPU assumptions, never crash
+
+        self._gpu_cache = state
+        return state
 
     def _reap_survivors(self, container, cmd_str: str) -> None:
         """Kill scanner grandchildren that outlived the `timeout` wrapper.

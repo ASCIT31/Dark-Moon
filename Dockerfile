@@ -162,12 +162,24 @@ RUN sed -i 's|http://archive.ubuntu.com|http://fr.archive.ubuntu.com|g' /etc/apt
     # OpenCL loader
     ocl-icd-libopencl1 \
     opencl-headers \
+    clinfo \
     \
-    # CPU OpenCL backend (fallback)
+    # GPU backends for hashcat, one per vendor family. The image is built once and
+    # runs on machines we do not control, so every backend ships and the entrypoint
+    # picks whichever the host actually exposes at runtime.
+    #   NVIDIA  -> CUDA comes from the base image; the driver libraries are mounted
+    #              by the container runtime, which needs NVIDIA_DRIVER_CAPABILITIES
+    #              (set below) plus `--gpus all` on the docker/compose side.
+    #   AMD     -> Mesa rusticl/clover: works through /dev/dri without the multi-GB
+    #              ROCm stack. Machines with full ROCm keep using it via /dev/kfd.
+    #   Intel   -> NEO compute runtime for Arc and recent integrated graphics.
+    mesa-opencl-icd \
+    intel-opencl-icd \
+    \
+    # CPU OpenCL backend (last-resort fallback, always present)
     pocl-opencl-icd \
     \
     # tools
-    clinfo \
     wget \
     xz-utils \
     p7zip-full \
@@ -299,6 +311,13 @@ RUN curl -fsSL --max-redirs 5 \
  && ln -sf /usr/share/wordlists/rockyou.txt \
           /usr/share/seclists/Passwords/rockyou.txt \
  && echo "[OK] rockyou.txt $(wc -l < /usr/share/wordlists/rockyou.txt) lines"
+
+# The NVIDIA container runtime only mounts the driver libraries when these are
+# declared. Without them a container started with `--gpus all` still sees no GPU,
+# which is why hashcat silently fell back to CPU pthreads on every deployment.
+# Harmless on hosts with no NVIDIA GPU: the runtime simply ignores them.
+ENV NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 ENV SECLISTS=/usr/share/seclists \
     NUCLEI_TEMPLATES=${DM_HOME}/nuclei-templates

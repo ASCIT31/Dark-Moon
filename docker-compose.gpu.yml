@@ -1,0 +1,19 @@
+# GPU passthrough overlay for the Darkmoon toolbox.
+#
+# Kept out of docker-compose.yml on purpose: `gpus: all` makes the container fail
+# to start on a host with no GPU or no container runtime for it, which would break
+# every CPU-only install. install.sh probes for a usable GPU and only then adds
+# this file with `-f docker-compose.yml -f docker-compose.gpu.yml`.
+#
+# What it buys: hashcat runs on the GPU instead of pthreads. Offline cracking goes
+# from hours to seconds. Network brute-forcers (hydra, medusa, ncrack) are NOT
+# affected, they are bound by the target's response time, not by local compute.
+#
+# Manual use:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+services:
+  darkmoon:
+    gpus: all
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
