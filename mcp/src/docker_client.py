@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import socket
 import docker
@@ -8,8 +9,18 @@ from docker.models.containers import Container
 from docker.errors import DockerException, NotFound
 
 from src.models.common import ExecutionResult, ExecutionStatus
+from src.execution_guard import classify, effective_timeout, remediation
 
 STREAM_BASE = "/tmp/darkmoon_mcp_stream"
+
+# Long-running scanners that routinely outlive the `timeout` wrapper: coreutils
+# signals its direct child (bash), and a grandchild started through a pipe can be
+# reparented and keep hammering the target long after the campaign moved on. Two
+# of these were still running 72 minutes after their campaign had frozen.
+_REAPABLE = (
+    "hydra", "medusa", "ncrack", "patator", "sqlmap", "ffuf", "dirb",
+    "gobuster", "feroxbuster", "wfuzz", "nmap", "naabu", "masscan", "nuclei",
+)
 
 
 class DarkmoonDockerClient:
@@ -86,12 +97,21 @@ class DarkmoonDockerClient:
         start_time = time.time()
 
         try:
-            # Prepare command
+            # Prepare command.
+            #
+            # Every command is wrapped in coreutils `timeout` INSIDE the container.
+            # The `timeout` argument used to be recorded in metadata and never
+            # enforced: the stream loop below blocks until the process exits, so a
+            # command that never ends (an unbounded `hydra -P rockyou.txt`, a `cat`
+            # on a socket that never sends EOF) froze the whole campaign — no more
+            # findings, no finalize, no report. Enforcing the deadline in the
+            # container means the process is killed even if the client goes away.
+            hard_timeout = effective_timeout(timeout)
             if isinstance(command, list):
-                cmd = command
+                cmd = ["timeout", "--kill-after=5", str(hard_timeout)] + command
                 cmd_str = " ".join(command)
             else:
-                cmd = ["bash", "-c", command]
+                cmd = ["timeout", "--kill-after=5", str(hard_timeout), "bash", "-c", command]
                 cmd_str = command
 
             # OPTIONAL: ignore health checks in the live stream (no spam)
@@ -135,6 +155,27 @@ class DarkmoonDockerClient:
             inspect = self.client.api.exec_inspect(exec_id)
             exit_code = inspect.get("ExitCode", 1)
 
+            # coreutils `timeout` reports 124 on expiry (137 when it had to SIGKILL).
+            # Hand the agent an actionable explanation instead of silence: a bare
+            # "timed out" makes a model retry the identical command, which is how a
+            # campaign burns an hour on the same dead end.
+            if exit_code in (124, 137):
+                self._reap_survivors(container, cmd_str)
+                return ExecutionResult(
+                    status=ExecutionStatus.TIMEOUT,
+                    stdout=stdout_acc,
+                    stderr=remediation(cmd_str, duration, hard_timeout),
+                    exit_code=exit_code,
+                    duration=duration,
+                    metadata={
+                        "command": cmd_str,
+                        "workdir": workdir,
+                        "timeout": hard_timeout,
+                        "timed_out": True,
+                        "guard": classify(cmd_str).label or "unclassified",
+                    },
+                )
+
             status = (
                 ExecutionStatus.SUCCESS
                 if exit_code == 0
@@ -150,7 +191,7 @@ class DarkmoonDockerClient:
                 metadata={
                     "command": cmd_str,
                     "workdir": workdir,
-                    "timeout": timeout,
+                    "timeout": hard_timeout,
                 },
             )
 
@@ -163,6 +204,29 @@ class DarkmoonDockerClient:
                 duration=duration,
                 metadata={"command": str(command), "error": str(e)},
             )
+
+    def _reap_survivors(self, container, cmd_str: str) -> None:
+        """Kill scanner grandchildren that outlived the `timeout` wrapper.
+
+        `timeout` signals the bash it started; a tool launched inside a pipeline
+        can survive that and keep running against the target indefinitely. Only
+        binaries from a fixed allow-list are reaped, and only when the command
+        that just expired actually mentions them, so this can never kill an
+        unrelated process.
+        """
+        targets = [t for t in _REAPABLE if re.search(rf"\b{t}\b", cmd_str or "")]
+        if not targets:
+            return
+        try:
+            for tool in targets:
+                self.client.api.exec_start(
+                    self.client.api.exec_create(
+                        container=container.id,
+                        cmd=["bash", "-c", f"pkill -9 -x {tool} 2>/dev/null || true"],
+                    )["Id"]
+                )
+        except Exception:
+            pass  # best effort: never let cleanup mask the timeout itself
 
     def check_tool_available(self, tool_name: str) -> bool:
         result = self.execute_command(f"which {tool_name}", timeout=5)

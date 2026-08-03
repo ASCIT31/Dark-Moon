@@ -2,6 +2,7 @@ import shlex
 from typing import Optional, Dict, List
 from src.docker_client import DarkmoonDockerClient
 from src.models.common import ToolOutput, ExecutionResult
+from src.execution_guard import classify
 
 
 class GenericExecutor:
@@ -189,6 +190,24 @@ class GenericExecutor:
         for pattern in self.blocked_patterns:
             if pattern in command:
                 return False, f"Blocked pattern detected: {pattern}"
+
+        # Refuse commands that provably cannot finish, BEFORE burning the deadline
+        # on them. The agent prompts already forbid unbounded credential attacks and
+        # giant wordlists, and a model still ran `hydra -P rockyou.txt` (14M
+        # candidates) and froze a whole campaign for 72 minutes. A rule that only
+        # lives in a prompt is a suggestion; this is the enforcement point.
+        # The refusal carries the same remediation the timeout path would give, so
+        # the agent can immediately reach its objective a bounded way instead of
+        # retrying the identical command.
+        verdict = classify(command)
+        if verdict.blocked:
+            return False, (
+                f"[REFUSED: {verdict.label}] This command cannot complete and would "
+                f"freeze the campaign.\n\nWHY: {verdict.why}\n\n"
+                f"DO THIS INSTEAD: {verdict.instead}\n\n"
+                "If two bounded attempts fail, record the vector as not-exploitable "
+                "and move on. Abandoning a dead end is a correct outcome."
+            )
 
         # Extract first word (tool name)
         try:

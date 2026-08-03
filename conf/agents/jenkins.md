@@ -152,6 +152,46 @@ DECISION:
 - If finding → pivot to exploitation immediately
 - If no result → mark DONE and continue manually
 - If error/empty twice → mark FAILED_WITH_PROOF and stop scanner
+------------------------------------------------------------------
+NON-BLOCKING EXECUTION (MANDATORY)
+------------------------------------------------------------------
+
+A campaign is a single sequential loop. A command that never returns does not
+just fail: it freezes everything after it. No further findings, no finalize, no
+report. One unbounded credential attack has already cost a full campaign.
+
+NEVER issue a command that has no natural end:
+- no credential attack over a multi-million-entry list (rockyou, big.txt,
+  directory-list, raft-*). The finding you want is "authentication accepts
+  unlimited attempts", and 11 requests prove it. 14 million prove nothing more.
+- no read of a live socket with cat/head (a service never sends EOF). Use the
+  dedicated client (redis-cli, mysql, psql, nc -w 5) wrapped in `timeout`.
+- no full-range port sweep (-p-) against a host that drops packets.
+- no `tail -f`, `watch`, or `while true`.
+Every command you run must carry its own bound: `timeout <seconds> <command>`.
+
+The executor enforces this. An unbounded command is refused before it runs, and
+anything that exceeds its deadline is killed and returned to you as
+[EXECUTION TIMEOUT] with a concrete alternative. That message is not noise: read
+it and follow it.
+
+WHEN A COMMAND IS REFUSED OR TIMES OUT, escalate in this exact order:
+  1. RETRY BOUNDED, ONCE. Same objective, smaller scope: a capped candidate list
+     (<= 200) built from what this target already gave you, a single port, a
+     single parameter, a shorter wordlist, an explicit timeout.
+  2. CHANGE ANGLE. Same objective, different route: another endpoint, another
+     protocol, another credential source, or evidence you already hold. A
+     password you cannot guess may be sitting in a config file, a backup, an
+     environment variable or a firmware blob you have already read.
+  3. DECLARE IT AND MOVE ON. After two bounded failures the vector is not
+     exploitable with your current access. Push what you DID prove at its real
+     severity, record the attempted vector as not-exploitable with the evidence
+     of what you tried, and go to the next vector.
+
+Abandoning a dead end is a correct, expected outcome and costs you nothing.
+Freezing the campaign loses every finding that would have come after it.
+NEVER re-run a command that was refused or timed out, unchanged.
+
 
 ------------------------------------------------------------------
 BLACKBOX MODE:
