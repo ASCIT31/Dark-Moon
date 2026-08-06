@@ -15,3 +15,11 @@ workflows/
 Thumbs.db
 ehthumbs.db
 desktop.ini
+
+# Editor state. A committed .vscode/mcp.json is not inert: it offers every
+# person who opens this repo an MCP server that fetches and runs a package.
+# Editor configuration that executes code stays local (PR #38).
+.vscode/
+.idea/
+*.swp
+*~
