@@ -274,6 +274,36 @@ class DarkmoonDockerClient:
         result = self.execute_command(f"which {tool_name}", timeout=5)
         return result.success
 
+    def check_tools_bulk(self, tools: List[str]) -> Dict[str, bool]:
+        """Probe many tools in ONE container round-trip.
+
+        The old health check ran one `docker exec which <tool>` per tool. At a
+        dozen tools that is a dozen round-trips of container-exec overhead on
+        every campaign start; over the full toolbox it would be a hundred. A
+        single `command -v` loop inside one exec returns the whole map at once,
+        so reporting the complete toolbox costs no more than probing four tools
+        did before. A tool name is validated to a safe charset so the joined
+        loop can never inject.
+        """
+        safe = [t for t in tools if re.fullmatch(r"[A-Za-z0-9_.+-]+", t or "")]
+        if not safe:
+            return {}
+        names = " ".join(safe)
+        script = (
+            'for t in ' + names + '; do '
+            'if command -v "$t" >/dev/null 2>&1; then echo "$t=1"; '
+            'else echo "$t=0"; fi; done'
+        )
+        result = self.execute_command(["bash", "-c", script], timeout=30)
+        status = {t: False for t in safe}
+        for line in (result.stdout or "").splitlines():
+            line = line.strip()
+            if "=" in line:
+                name, _, val = line.partition("=")
+                if name in status:
+                    status[name] = val.strip() == "1"
+        return status
+
     def get_disk_usage(self) -> Optional[Dict[str, Any]]:
         """Get disk usage information from the container."""
         result = self.execute_command("df -h /opt/darkmoon/out", timeout=5)

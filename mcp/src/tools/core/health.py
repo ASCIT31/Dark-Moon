@@ -2,6 +2,13 @@ from typing import Dict, Any, List
 from src.docker_client import DarkmoonDockerClient
 from src.models.common import HealthStatus
 
+# Shell built-ins and generic utilities that are allow-listed for command
+# composition but are not "security tools" worth surfacing to the model.
+_NON_TOOLS = {
+    "bash", "cat", "chmod", "grep", "awk", "sed", "jq", "echo", "printf",
+    "node", "npm", "npx", "zip", "unzip", "pip", "python",
+}
+
 
 class HealthChecker:
     """
@@ -12,7 +19,8 @@ class HealthChecker:
     def __init__(self, docker_client: DarkmoonDockerClient):
         self.docker_client = docker_client
 
-        # Essential tools that must be available
+        # Essential tools that must be present for the toolbox to be "healthy".
+        # This gates the healthy/unhealthy verdict only, NOT what the model sees.
         self.essential_tools = [
             "naabu",
             "nuclei",
@@ -20,18 +28,27 @@ class HealthChecker:
             "subfinder",
         ]
 
-        # Optional tools (nice to have)
-        self.optional_tools = [
-            "ffuf",
-            "netexec",
-            "kubectl",
-            "sqlmap",
-            "wafw00f",
-            "katana",
-            "waybackurls",
-            "kubeletctl",
-            "kubescape",
-        ]
+    def _reportable_tools(self) -> List[str]:
+        """The full security toolbox, taken from the executor allow-list.
+
+        tools_available used to be a hard-coded list of 13 names. The model reads
+        that map and concludes those are the only tools it has, so it never
+        reaches for snmpwalk, dig, showmount, redis-cli, psql, the cloud CLIs,
+        binwalk and the rest — even though execute_command can run all ~130. The
+        health check must therefore advertise the WHOLE toolbox, derived from the
+        one source of truth (the executor allow-list), so it can never drift from
+        what actually runs.
+        """
+        try:
+            from src.tools.core.executor import GenericExecutor
+            allowed = GenericExecutor(self.docker_client).list_allowed_tools()
+        except Exception:
+            allowed = list(self.essential_tools)
+        tools = sorted(t for t in allowed if t not in _NON_TOOLS)
+        for t in self.essential_tools:
+            if t not in tools:
+                tools.append(t)
+        return tools
 
     def check(self) -> HealthStatus:
         """
@@ -51,20 +68,12 @@ class HealthChecker:
                 message=health_info["message"],
             )
 
-        # Check essential tools
-        essential_status = {}
-        for tool in self.essential_tools:
-            essential_status[tool] = self.docker_client.check_tool_available(tool)
+        # Probe the WHOLE toolbox in a single container round-trip, so the model
+        # sees every tool it actually has instead of a hard-coded subset.
+        all_tools_status = self.docker_client.check_tools_bulk(self._reportable_tools())
 
-        # Check optional tools
-        optional_status = {}
-        for tool in self.optional_tools:
-            optional_status[tool] = self.docker_client.check_tool_available(tool)
-
-        # Combine tool statuses
-        all_tools_status = {**essential_status, **optional_status}
-
-        # Determine overall health
+        # The healthy/unhealthy verdict rests only on the essential tools.
+        essential_status = {t: all_tools_status.get(t, False) for t in self.essential_tools}
         essential_healthy = all(essential_status.values())
         disk_usage = health_info.get("disk_usage")
 
