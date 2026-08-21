@@ -7,6 +7,7 @@ services:
 
   darkmoon:
     image: ascit/darkmoon:latest
+    pull_policy: always
     container_name: darkmoon
     user: "0:0"
     network_mode: "host"
@@ -30,6 +31,7 @@ services:
 
   opencode:
     image: ascit/opencode-darkmoon:latest
+    pull_policy: always
     container_name: opencode
     stdin_open: true
     tty: true
