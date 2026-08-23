@@ -50,6 +50,41 @@ class Category(str, Enum):
     CRED = "CRED"
 
 
+# The documented default protection boundary: every category the regex-based
+# tokenizer can auto-detect from free text. This is the SINGLE SOURCE OF TRUTH,
+# shared by the vault dataclass default and the MCP server, so the two can never
+# drift apart and silently narrow the boundary below what the docs promise.
+# (USER/CRED are register-only — never auto-detected — so they are not listed
+# here; they are protected once explicitly registered.) See issue #40.
+DEFAULT_CATEGORIES: Tuple["Category", ...] = (
+    Category.URL,
+    Category.EMAIL,
+    Category.IP_PRIVATE,
+    Category.IP_PUBLIC,
+    Category.HOST_INTERNAL,
+    Category.DOMAIN,
+    Category.PATH,
+)
+
+
+def resolve_categories(raw: Optional[str]) -> Tuple["Category", ...]:
+    """Parse a comma-separated category override into a tuple of Categories.
+
+    Returns ``DEFAULT_CATEGORIES`` when ``raw`` is None/empty or lists no valid
+    category name, so an unset or malformed ``DARKMOON_PRIVACY_CATEGORIES`` can
+    never silently narrow the protection boundary below the documented default.
+    """
+    if not raw or not raw.strip():
+        return DEFAULT_CATEGORIES
+    cats: List[Category] = []
+    for name in (p.strip().upper() for p in raw.split(",") if p.strip()):
+        try:
+            cats.append(Category[name])
+        except KeyError:
+            pass
+    return tuple(cats) if cats else DEFAULT_CATEGORIES
+
+
 # A placeholder is CATEGORY_NNN. Restrict to our known prefixes so we never
 # mistake an unrelated uppercase token for a placeholder.
 _PREFIXES = "|".join(sorted((c.value for c in Category), key=len, reverse=True))
@@ -91,15 +126,7 @@ class PrivacyVault:
 
     session_id: str
     ttl_seconds: int = 6 * 3600
-    enabled_categories: Tuple[Category, ...] = (
-        Category.URL,
-        Category.EMAIL,
-        Category.IP_PRIVATE,
-        Category.IP_PUBLIC,
-        Category.HOST_INTERNAL,
-        Category.DOMAIN,
-        Category.PATH,
-    )
+    enabled_categories: Tuple[Category, ...] = DEFAULT_CATEGORIES
     created_at: float = field(default_factory=time.time)
 
     # internal state (never logged)
@@ -224,12 +251,17 @@ class PrivacyVault:
             text = _URL_RE.sub(sub_url, text)
         if Category.EMAIL in enabled:
             text = _EMAIL_RE.sub(sub_email, text)
+        # PATH before DOMAIN: a path segment such as ``file.txt`` also matches the
+        # FQDN pattern, so tokenizing paths first stops the domain pass from
+        # eating a path component (and corrupting the stored path value). This
+        # interaction only surfaced once DOMAIN and PATH were both enabled by
+        # default — see issue #40.
+        if Category.PATH in enabled:
+            text = _PATH_RE.sub(sub_path, text)
         if enabled & {Category.IP_PRIVATE, Category.IP_PUBLIC}:
             text = _IPV4_RE.sub(sub_ip, text)
         if enabled & {Category.HOST_INTERNAL, Category.DOMAIN}:
             text = _DOMAIN_RE.sub(sub_domain, text)
-        if Category.PATH in enabled:
-            text = _PATH_RE.sub(sub_path, text)
         return text
 
     # -- rehydration (placeholder -> real). Local execution paths only. ------

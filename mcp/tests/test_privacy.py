@@ -21,7 +21,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest  # noqa: E402
 
-from src.privacy import PrivacyVault, CommandGateway, Category, PLACEHOLDER_RE  # noqa: E402
+from src.privacy import (  # noqa: E402
+    PrivacyVault,
+    CommandGateway,
+    Category,
+    PLACEHOLDER_RE,
+    DEFAULT_CATEGORIES,
+    resolve_categories,
+)
 
 REAL_IP = "10.42.1.5"
 
@@ -194,3 +201,58 @@ def test_secret_never_restored_by_default(vault, gw):
     assert res.blocked
     # explicit local-only report path may restore it
     assert vault.rehydrate(ph, allow_secret=True) == "S3cr3t-Passw0rd!"
+
+
+# --- 8. default protection boundary matches the documentation (issue #40) ----
+# The MCP server used to override the vault default with a narrow set
+# (IP_PRIVATE, IP_PUBLIC, HOST_INTERNAL, EMAIL) that silently dropped URL,
+# DOMAIN and PATH, so the server-created vault leaked exactly those. These tests
+# pin the default to the documented boundary using the SAME resolver the server
+# calls, so the two can never drift apart again.
+def _server_default_vault():
+    """A vault built exactly as server.py builds it when no override is set."""
+    return PrivacyVault(session_id="srvdefault", enabled_categories=resolve_categories(None))
+
+
+def test_resolve_categories_default_covers_documented_boundary():
+    cats = resolve_categories(None)
+    assert cats == DEFAULT_CATEGORIES
+    for c in (Category.URL, Category.DOMAIN, Category.PATH,
+              Category.IP_PRIVATE, Category.IP_PUBLIC, Category.HOST_INTERNAL, Category.EMAIL):
+        assert c in cats, f"{c} missing from the default protection boundary"
+
+
+def test_resolve_categories_empty_or_malformed_falls_back_to_default():
+    # Unset, blank, and all-invalid overrides must NOT narrow the boundary.
+    assert resolve_categories(None) == DEFAULT_CATEGORIES
+    assert resolve_categories("") == DEFAULT_CATEGORIES
+    assert resolve_categories("   ") == DEFAULT_CATEGORIES
+    assert resolve_categories("NOPE,NOTACAT") == DEFAULT_CATEGORIES
+
+
+def test_resolve_categories_explicit_override_is_honoured():
+    cats = resolve_categories("IP_PRIVATE,URL")
+    assert set(cats) == {Category.IP_PRIVATE, Category.URL}
+
+
+def test_server_default_vault_tokenizes_url_domain_and_path():
+    """Reproduction from issue #40 — must be fully tokenized under the default."""
+    v = _server_default_vault()
+    out = v.tokenize(
+        "https://example.com/a /srv/private/file.txt admin@example.com 10.42.1.5 evilcorp.com"
+    )
+    # None of the real values may survive into what the model would receive.
+    for leaked in ("https://example.com/a", "/srv/private/file.txt",
+                   "admin@example.com", "10.42.1.5", "evilcorp.com"):
+        assert leaked not in out, f"privacy leak: {leaked!r} was not tokenized"
+    # And the expected placeholder categories are present.
+    assert "URL_001" in out
+    assert "PATH_001" in out
+    assert "DOMAIN_001" in out
+    assert "EMAIL_001" in out
+    assert "IP_PRIVATE_001" in out
+
+
+def test_vault_dataclass_default_matches_shared_default():
+    # A bare vault (no explicit categories) uses the shared single-source default.
+    assert PrivacyVault(session_id="bare").enabled_categories == DEFAULT_CATEGORIES

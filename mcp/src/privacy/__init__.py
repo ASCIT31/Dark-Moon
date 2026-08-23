@@ -13,13 +13,21 @@ before it goes back to the LLM.
                   calls, blocks exfiltration, sanitizes output.
 """
 
-from .vault import PrivacyVault, Category, PLACEHOLDER_RE
+from .vault import (
+    PrivacyVault,
+    Category,
+    PLACEHOLDER_RE,
+    DEFAULT_CATEGORIES,
+    resolve_categories,
+)
 from .gateway import CommandGateway, GatewayResult, GatewayDecision
 
 __all__ = [
     "PrivacyVault",
     "Category",
     "PLACEHOLDER_RE",
+    "DEFAULT_CATEGORIES",
+    "resolve_categories",
     "CommandGateway",
     "GatewayResult",
     "GatewayDecision",

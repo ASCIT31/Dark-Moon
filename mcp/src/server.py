@@ -18,7 +18,7 @@ from src.docker_client import DarkmoonDockerClient
 from src.tools.core.executor import GenericExecutor
 from src.tools.core.health import HealthChecker
 from src.tools.workflows.list_workflows import WorkflowRegistry
-from src.privacy import PrivacyVault, CommandGateway, GatewayDecision
+from src.privacy import PrivacyVault, CommandGateway, GatewayDecision, resolve_categories
 
 
 # Initialize FastMCP server
@@ -49,24 +49,18 @@ _command_gateway = CommandGateway()
 _vaults: Dict[str, PrivacyVault] = {}
 
 
-# Which categories are tokenized in tool output. Default is conservative: mask
-# the truly sensitive identifiers (IPs, internal hosts, emails) without tokenizing
-# the URLs/domains/paths the agent needs to enumerate. Widen with
-# DARKMOON_PRIVACY_CATEGORIES (comma-separated, e.g. "IP_PRIVATE,HOST_INTERNAL,URL,PATH").
-# Credentials are always protected (registered explicitly, never restored into commands).
-_DEFAULT_PRIVACY_CATS = "IP_PRIVATE,IP_PUBLIC,HOST_INTERNAL,EMAIL"
-
-
+# Which categories are tokenized. By default we cover the FULL documented
+# boundary — IPs, internal hosts, domains, URLs, emails and internal paths — so
+# the model never receives them inside a tool call or its output. The default set
+# lives in privacy.DEFAULT_CATEGORIES (single source of truth, shared with the
+# vault) so the server can no longer silently narrow it below what the docs
+# promise. An operator may still override it with DARKMOON_PRIVACY_CATEGORIES
+# (comma-separated, e.g. "IP_PRIVATE,HOST_INTERNAL,URL,PATH"); an unset or
+# malformed value falls back to the full default. USER/CRED are register-only
+# categories (never auto-detected from free text) and, once registered, are
+# never restored into an executed command. See issue #40.
 def _resolve_categories():
-    from src.privacy import Category
-    raw = os.getenv("DARKMOON_PRIVACY_CATEGORIES", _DEFAULT_PRIVACY_CATS)
-    cats = []
-    for name in (p.strip().upper() for p in raw.split(",") if p.strip()):
-        try:
-            cats.append(Category[name])
-        except KeyError:
-            pass
-    return tuple(cats) if cats else (Category.IP_PRIVATE, Category.HOST_INTERNAL, Category.EMAIL)
+    return resolve_categories(os.getenv("DARKMOON_PRIVACY_CATEGORIES"))
 
 
 def _get_vault(session_id: Optional[str]) -> PrivacyVault:

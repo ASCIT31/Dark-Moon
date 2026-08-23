@@ -86,7 +86,7 @@ Menaces considérées :
 
 ### 4.4 Données ↔ LLM (Privacy Gateway — v1.2.0)
 
-Frontière de **minimisation des données** entre le modèle et l'exécution (`mcp/src/privacy/`). Le LLM ne reçoit **jamais** les vraies valeurs sensibles (IP, hostnames, domaines, URLs, emails, identifiants, chemins internes) : il ne manipule que des **placeholders déterministes** (`IP_PRIVATE_001`, `HOST_INTERNAL_001`…). Les vraies valeurs sont réinjectées **localement, juste avant l'exécution de l'outil**, puis re-masquées dans toute sortie avant retour au modèle → aucune donnée sensible ne quitte le périmètre vers le fournisseur du modèle.
+Frontière de **minimisation des données** entre le modèle et l'exécution (`mcp/src/privacy/`). Sur le chemin des **appels d'outils MCP et de leurs sorties**, les valeurs sensibles auto-détectables — **IP, hostnames internes, domaines, URLs, emails, chemins** — sont remplacées par des **placeholders déterministes** (`IP_PRIVATE_001`, `HOST_INTERNAL_001`…) avant d'atteindre le modèle. Ces catégories forment le **périmètre par défaut** (`privacy.DEFAULT_CATEGORIES`, source unique partagée par le serveur et le vault). Les vraies valeurs sont réinjectées **localement, juste avant l'exécution de l'outil**, puis re-masquées dans toute sortie avant retour au modèle.
 
 | Élément | Mesure |
 |------|-------|
@@ -96,6 +96,11 @@ Frontière de **minimisation des données** entre le modèle et l'exécution (`m
 | Exfiltration | Bloquée : placeholder dans query URL / host externe littéral / echo-print / body sortant / `/dev/tcp` / nc-telnet hors cible |
 | Secrets | `CRED` jamais restauré dans une commande exécutée |
 | Config | `DARKMOON_PRIVACY` (on par défaut) · `DARKMOON_PRIVACY_CATEGORIES` |
+
+**Périmètre actuel & limites connues** (réf. [issue #40](https://github.com/ASCIT31/Dark-Moon/issues/40)) :
+- Le périmètre par défaut couvre les catégories **auto-détectables** listées ci-dessus (correctif : `URL`/`DOMAIN`/`PATH` sont désormais inclus par défaut — auparavant ils pouvaient échapper à la tokenisation). Un `DARKMOON_PRIVACY_CATEGORIES` absent ou invalide **retombe sur ce défaut complet**, il ne peut plus le rétrécir silencieusement.
+- **Identifiants / usernames** (`CRED`, `USER`) sont des catégories **register-only** : ils ne sont **pas** auto-détectés depuis du texte libre. Une fois enregistrés, un `CRED` n'est **jamais** restauré dans une commande exécutée.
+- Le **prompt initial de campagne** (`TARGET`/`CREDS`/`TOKEN` fournis au lancement) est actuellement transmis tel quel au modèle : la tokenisation **pré-modèle** du prompt (vault de session partagé entre la couche prompt et le MCP) est un chantier de frontière de confiance planifié, non encore livré. Tant qu'il n'est pas en place, ne pas considérer les secrets passés dans le prompt de lancement comme masqués vis-à-vis d'un fournisseur de modèle cloud.
 
 Cœur open-source ; durcissement entreprise (vault scellé par le runtime guard, audit trail, mention conformité dans le rapport signé) en édition Pro.
 
