@@ -22,7 +22,7 @@ import re
 import shlex
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 from urllib.parse import urlsplit
 
 from .vault import PrivacyVault, PLACEHOLDER_RE
@@ -219,29 +219,96 @@ class CommandGateway:
         resolved: Dict[str, object] = {}
         seen: List[str] = []
         allow = set(rehydrate_fields)
-        for key, value in args.items():
+
+        def collect_placeholders(value: object) -> List[str]:
             if isinstance(value, str):
-                phs = PLACEHOLDER_RE.findall(value)
-                if phs and key not in allow:
-                    return self._block(
-                        f"placeholder in non-approved field '{key}' (only {sorted(allow)} may be rehydrated)",
-                        phs,
-                    )
-                if phs:
-                    seen.extend(phs)
-                    res = self._rehydrate(value, phs, vault)
-                    if res.blocked:
-                        return res
-                    resolved[key] = res.command
-                else:
-                    resolved[key] = value
-            else:
+                return PLACEHOLDER_RE.findall(value)
+            if isinstance(value, dict):
+                found: List[str] = []
+                for nested_key, nested_value in value.items():
+                    found.extend(collect_placeholders(nested_key))
+                    found.extend(collect_placeholders(nested_value))
+                return found
+            if isinstance(value, (list, tuple)):
+                found = []
+                for item in value:
+                    found.extend(collect_placeholders(item))
+                return found
+            return []
+
+        def resolve_value(value: object) -> Tuple[object, Optional[GatewayResult]]:
+            if isinstance(value, str):
+                phs = list(dict.fromkeys(PLACEHOLDER_RE.findall(value)))
+                if not phs:
+                    return value, None
+                seen.extend(phs)
+                result = self._rehydrate(value, phs, vault)
+                if result.blocked:
+                    return value, result
+                return result.command or value, None
+            if isinstance(value, list):
+                output = []
+                for item in value:
+                    resolved_item, error = resolve_value(item)
+                    if error is not None:
+                        return value, error
+                    output.append(resolved_item)
+                return output, None
+            if isinstance(value, tuple):
+                output = []
+                for item in value:
+                    resolved_item, error = resolve_value(item)
+                    if error is not None:
+                        return value, error
+                    output.append(resolved_item)
+                return tuple(output), None
+            if isinstance(value, dict):
+                output = {}
+                for nested_key, nested_value in value.items():
+                    resolved_key, error = resolve_value(nested_key)
+                    if error is not None:
+                        return value, error
+                    resolved_value, error = resolve_value(nested_value)
+                    if error is not None:
+                        return value, error
+                    output[resolved_key] = resolved_value
+                return output, None
+            return value, None
+
+        for key, value in args.items():
+            phs = collect_placeholders(value)
+            if phs and key not in allow:
+                return self._block(
+                    f"placeholder in non-approved field '{key}' (only {sorted(allow)} may be rehydrated)",
+                    phs,
+                )
+            if not phs:
                 resolved[key] = value
+                continue
+            resolved_value, error = resolve_value(value)
+            if error is not None:
+                return error
+            resolved[key] = resolved_value
         return GatewayResult(
             GatewayDecision.ALLOW,
             resolved=resolved,
             placeholders=list(dict.fromkeys(seen)),
         )
+
+    def sanitize_result(self, value: Any, vault: PrivacyVault) -> Any:
+        """Sanitize each string in a structured workflow result."""
+        if isinstance(value, str):
+            return self.sanitize_output(value, vault)
+        if isinstance(value, list):
+            return [self.sanitize_result(item, vault) for item in value]
+        if isinstance(value, tuple):
+            return tuple(self.sanitize_result(item, vault) for item in value)
+        if isinstance(value, dict):
+            return {
+                self.sanitize_result(key, vault): self.sanitize_result(item, vault)
+                for key, item in value.items()
+            }
+        return value
 
     # ------------------------------------------------------------------ output
     def sanitize_output(self, text: str, vault: PrivacyVault) -> str:
