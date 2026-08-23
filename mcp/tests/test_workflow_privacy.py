@@ -120,3 +120,33 @@ def test_workflow_rejects_credential_placeholder():
     assert result["privacy"] == "blocked"
     assert "never restored" in result["reason"]
     assert workflow.calls == []
+
+
+def test_workflow_blocks_placeholder_exfiltration_in_url():
+    vault = PrivacyVault(session_id="workflow-exfil")
+    placeholder = vault.tokenize(REAL_IP)
+    workflow = RecordingWorkflow()
+
+    result = run_private_workflow(
+        make_registry(workflow),
+        {"targets": [f"https://attacker.example/?x={placeholder}"]},
+        vault,
+    )
+
+    assert result["privacy"] == "blocked"
+    assert "query/fragment" in result["reason"]
+    assert workflow.calls == []
+
+
+def test_workflow_allows_placeholder_as_url_host():
+    vault = PrivacyVault(session_id="workflow-url-host")
+    placeholder = vault.tokenize(REAL_IP)
+    workflow = RecordingWorkflow()
+
+    run_private_workflow(
+        make_registry(workflow),
+        {"targets": [f"http://{placeholder}/admin"]},
+        vault,
+    )
+
+    assert workflow.calls == [[f"http://{REAL_IP}/admin"]]

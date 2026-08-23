@@ -40,6 +40,7 @@ _OUTBOUND_DATA_FLAGS = {
 # Characters that must never appear in a rehydrated value (injection guard).
 _SHELL_META_RE = re.compile(r"""[;|&`$><(){}\[\]\n\r'"\\!*?~]""")
 _NET_REDIRECT_RE = re.compile(r"/dev/(?:tcp|udp)/|>\(|<\(")
+_HTTP_URL_RE = re.compile(r"https?://[^\s\"'<>`|\\]+", re.IGNORECASE)
 
 
 class GatewayDecision(str, Enum):
@@ -72,6 +73,21 @@ class CommandGateway:
 
     def _block(self, reason: str, placeholders: Sequence[str]) -> GatewayResult:
         return GatewayResult(GatewayDecision.BLOCK, reason=reason, placeholders=list(placeholders))
+
+    def _url_context_block_reason(self, value: str) -> Optional[str]:
+        """Return a reason when a URL sends a placeholder to a third party."""
+        for match in _HTTP_URL_RE.finditer(value):
+            url = match.group(0)
+            if not PLACEHOLDER_RE.search(url):
+                continue
+            parts = urlsplit(url)
+            host = (parts.hostname or "").upper()
+            host_is_placeholder = bool(PLACEHOLDER_RE.fullmatch(host))
+            if PLACEHOLDER_RE.search(parts.query) or PLACEHOLDER_RE.search(parts.fragment):
+                return "placeholder embedded in a URL query/fragment (exfiltration vector)"
+            if not host_is_placeholder:
+                return "placeholder sent to a literal (non-target) URL host (exfiltration)"
+        return None
 
     # ------------------------------------------------------------------ raw shell
     def process_command(self, command: str, vault: PrivacyVault, _depth: int = 0) -> GatewayResult:
@@ -139,25 +155,9 @@ class CommandGateway:
 
         # 4) Per-token URL analysis (the classic exfil vector).
         for tok in argv:
-            tok_ph = PLACEHOLDER_RE.findall(tok)
-            if not tok_ph:
-                continue
-            if re.match(r"https?://", tok, re.IGNORECASE):
-                parts = urlsplit(tok)
-                # urlsplit lowercases .hostname; restore case to match a placeholder.
-                host = (parts.hostname or "").upper()
-                host_is_ph = bool(PLACEHOLDER_RE.fullmatch(host))
-                # A protected value in the query/fragment is exfiltration.
-                if PLACEHOLDER_RE.search(parts.query) or PLACEHOLDER_RE.search(parts.fragment):
-                    return self._block(
-                        "placeholder embedded in a URL query/fragment (exfiltration vector)", placeholders
-                    )
-                # If the destination host is a literal (not the target itself),
-                # any placeholder in the URL is being sent to a third party.
-                if not host_is_ph:
-                    return self._block(
-                        "placeholder sent to a literal (non-target) URL host (exfiltration)", placeholders
-                    )
+            reason = self._url_context_block_reason(tok)
+            if reason is not None:
+                return self._block(reason, placeholders)
 
         # 5) Outbound request bodies (curl/wget POST/upload) with a placeholder.
         for i, tok in enumerate(argv):
@@ -242,6 +242,9 @@ class CommandGateway:
                 if not phs:
                     return value, None
                 seen.extend(phs)
+                reason = self._url_context_block_reason(value)
+                if reason is not None:
+                    return value, self._block(reason, phs)
                 result = self._rehydrate(value, phs, vault)
                 if result.blocked:
                     return value, result
