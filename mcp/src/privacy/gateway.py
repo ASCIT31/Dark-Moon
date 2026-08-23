@@ -22,7 +22,7 @@ import re
 import shlex
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 from urllib.parse import urlsplit
 
 from .vault import PrivacyVault, PLACEHOLDER_RE
@@ -40,6 +40,7 @@ _OUTBOUND_DATA_FLAGS = {
 # Characters that must never appear in a rehydrated value (injection guard).
 _SHELL_META_RE = re.compile(r"""[;|&`$><(){}\[\]\n\r'"\\!*?~]""")
 _NET_REDIRECT_RE = re.compile(r"/dev/(?:tcp|udp)/|>\(|<\(")
+_HTTP_URL_RE = re.compile(r"https?://[^\s\"'<>`|\\]+", re.IGNORECASE)
 
 
 class GatewayDecision(str, Enum):
@@ -72,6 +73,21 @@ class CommandGateway:
 
     def _block(self, reason: str, placeholders: Sequence[str]) -> GatewayResult:
         return GatewayResult(GatewayDecision.BLOCK, reason=reason, placeholders=list(placeholders))
+
+    def _url_context_block_reason(self, value: str) -> Optional[str]:
+        """Return a reason when a URL sends a placeholder to a third party."""
+        for match in _HTTP_URL_RE.finditer(value):
+            url = match.group(0)
+            if not PLACEHOLDER_RE.search(url):
+                continue
+            parts = urlsplit(url)
+            host = (parts.hostname or "").upper()
+            host_is_placeholder = bool(PLACEHOLDER_RE.fullmatch(host))
+            if PLACEHOLDER_RE.search(parts.query) or PLACEHOLDER_RE.search(parts.fragment):
+                return "placeholder embedded in a URL query/fragment (exfiltration vector)"
+            if not host_is_placeholder:
+                return "placeholder sent to a literal (non-target) URL host (exfiltration)"
+        return None
 
     # ------------------------------------------------------------------ raw shell
     def process_command(self, command: str, vault: PrivacyVault, _depth: int = 0) -> GatewayResult:
@@ -139,25 +155,9 @@ class CommandGateway:
 
         # 4) Per-token URL analysis (the classic exfil vector).
         for tok in argv:
-            tok_ph = PLACEHOLDER_RE.findall(tok)
-            if not tok_ph:
-                continue
-            if re.match(r"https?://", tok, re.IGNORECASE):
-                parts = urlsplit(tok)
-                # urlsplit lowercases .hostname; restore case to match a placeholder.
-                host = (parts.hostname or "").upper()
-                host_is_ph = bool(PLACEHOLDER_RE.fullmatch(host))
-                # A protected value in the query/fragment is exfiltration.
-                if PLACEHOLDER_RE.search(parts.query) or PLACEHOLDER_RE.search(parts.fragment):
-                    return self._block(
-                        "placeholder embedded in a URL query/fragment (exfiltration vector)", placeholders
-                    )
-                # If the destination host is a literal (not the target itself),
-                # any placeholder in the URL is being sent to a third party.
-                if not host_is_ph:
-                    return self._block(
-                        "placeholder sent to a literal (non-target) URL host (exfiltration)", placeholders
-                    )
+            reason = self._url_context_block_reason(tok)
+            if reason is not None:
+                return self._block(reason, placeholders)
 
         # 5) Outbound request bodies (curl/wget POST/upload) with a placeholder.
         for i, tok in enumerate(argv):
@@ -219,29 +219,99 @@ class CommandGateway:
         resolved: Dict[str, object] = {}
         seen: List[str] = []
         allow = set(rehydrate_fields)
-        for key, value in args.items():
+
+        def collect_placeholders(value: object) -> List[str]:
             if isinstance(value, str):
-                phs = PLACEHOLDER_RE.findall(value)
-                if phs and key not in allow:
-                    return self._block(
-                        f"placeholder in non-approved field '{key}' (only {sorted(allow)} may be rehydrated)",
-                        phs,
-                    )
-                if phs:
-                    seen.extend(phs)
-                    res = self._rehydrate(value, phs, vault)
-                    if res.blocked:
-                        return res
-                    resolved[key] = res.command
-                else:
-                    resolved[key] = value
-            else:
+                return PLACEHOLDER_RE.findall(value)
+            if isinstance(value, dict):
+                found: List[str] = []
+                for nested_key, nested_value in value.items():
+                    found.extend(collect_placeholders(nested_key))
+                    found.extend(collect_placeholders(nested_value))
+                return found
+            if isinstance(value, (list, tuple)):
+                found = []
+                for item in value:
+                    found.extend(collect_placeholders(item))
+                return found
+            return []
+
+        def resolve_value(value: object) -> Tuple[object, Optional[GatewayResult]]:
+            if isinstance(value, str):
+                phs = list(dict.fromkeys(PLACEHOLDER_RE.findall(value)))
+                if not phs:
+                    return value, None
+                seen.extend(phs)
+                reason = self._url_context_block_reason(value)
+                if reason is not None:
+                    return value, self._block(reason, phs)
+                result = self._rehydrate(value, phs, vault)
+                if result.blocked:
+                    return value, result
+                return result.command or value, None
+            if isinstance(value, list):
+                output = []
+                for item in value:
+                    resolved_item, error = resolve_value(item)
+                    if error is not None:
+                        return value, error
+                    output.append(resolved_item)
+                return output, None
+            if isinstance(value, tuple):
+                output = []
+                for item in value:
+                    resolved_item, error = resolve_value(item)
+                    if error is not None:
+                        return value, error
+                    output.append(resolved_item)
+                return tuple(output), None
+            if isinstance(value, dict):
+                output = {}
+                for nested_key, nested_value in value.items():
+                    resolved_key, error = resolve_value(nested_key)
+                    if error is not None:
+                        return value, error
+                    resolved_value, error = resolve_value(nested_value)
+                    if error is not None:
+                        return value, error
+                    output[resolved_key] = resolved_value
+                return output, None
+            return value, None
+
+        for key, value in args.items():
+            phs = collect_placeholders(value)
+            if phs and key not in allow:
+                return self._block(
+                    f"placeholder in non-approved field '{key}' (only {sorted(allow)} may be rehydrated)",
+                    phs,
+                )
+            if not phs:
                 resolved[key] = value
+                continue
+            resolved_value, error = resolve_value(value)
+            if error is not None:
+                return error
+            resolved[key] = resolved_value
         return GatewayResult(
             GatewayDecision.ALLOW,
             resolved=resolved,
             placeholders=list(dict.fromkeys(seen)),
         )
+
+    def sanitize_result(self, value: Any, vault: PrivacyVault) -> Any:
+        """Sanitize each string in a structured workflow result."""
+        if isinstance(value, str):
+            return self.sanitize_output(value, vault)
+        if isinstance(value, list):
+            return [self.sanitize_result(item, vault) for item in value]
+        if isinstance(value, tuple):
+            return tuple(self.sanitize_result(item, vault) for item in value)
+        if isinstance(value, dict):
+            return {
+                self.sanitize_result(key, vault): self.sanitize_result(item, vault)
+                for key, item in value.items()
+            }
+        return value
 
     # ------------------------------------------------------------------ output
     def sanitize_output(self, text: str, vault: PrivacyVault) -> str:

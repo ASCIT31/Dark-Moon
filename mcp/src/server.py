@@ -352,7 +352,8 @@ def list_workflows() -> Dict[str, Any]:
 def run_workflow(
     workflow: str,
     method: str,
-    params: Optional[Dict[str, Any]] = None
+    params: Optional[Dict[str, Any]] = None,
+    session_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Execute a workflow method dynamically by name.
@@ -363,6 +364,7 @@ def run_workflow(
         workflow: Name of the workflow (e.g., "port_scan", "subdomain_discovery")
         method: Name of the method to call (e.g., "scan_ports", "discover_subdomains")
         params: Dictionary of parameters to pass to the method
+        session_id: Privacy vault session ID. Uses the server session by default.
 
     Returns:
         Result of the workflow execution, or error details if failed.
@@ -386,7 +388,19 @@ def run_workflow(
         # Web crawling
         run_workflow("web_crawler", "crawl_website", {"target": "https://example.com"})
     """
-    return workflow_registry.run_workflow(workflow, method, params)
+    privacy_gateway = None
+    privacy_vault = None
+    if PRIVACY_ENABLED:
+        privacy_gateway = _command_gateway
+        privacy_vault = _get_vault(session_id)
+
+    return workflow_registry.run_workflow(
+        workflow,
+        method,
+        params,
+        privacy_gateway=privacy_gateway,
+        privacy_vault=privacy_vault,
+    )
 
 # ============================================================================
 # DASHBOARD EXPORT TOOLS (4 tools)
