@@ -2,17 +2,25 @@
 
 ![DarkMoon Logo](docs/pics/logo_blue.png)
 
-**The Open-Source AI-Powered Autonomous Penetration Testing Platform**
+# DarkMoon
 
-*The only autonomous AI pentester where the model never sees your real IPs, hostnames or credentials.*
+### The open-source AI penetration testing platform that runs a full pentest on its own, and never leaks your data
+
+**Point DarkMoon at an authorized target. 50 specialist AI agents reason, chain real exploits across web, cloud, Active Directory and Kubernetes, and return proof for every finding. Self-hosted, and the model only ever sees `IP_PRIVATE_001`, never your real IPs, hosts or credentials.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub stars](https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=social&label=Star)](https://github.com/ASCIT31/Dark-Moon)
 [![Benchmark: 57 vulns on OWASP Juice Shop](https://img.shields.io/badge/benchmark-57%20real%20vulns%20on%20Juice%20Shop-critical)](https://github.com/ASCIT31/Darkmoon-Benchmarks)
 
-**As featured in** [Help Net Security](https://www.helpnetsecurity.com/2026/06/29/darkmoon-open-source-ai-pentesting-platform/) · [Cyber Security News](https://cybersecuritynews.com/darkmoon-penetration-testing-platform/) · [SecurityBrief](https://securitybrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [LinuxLinks](https://www.linuxlinks.com/darkmoon-ai-powered-autonomous-penetration-testing-platform/) · [IT Brief](https://itbrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [ChannelLife](https://channellife.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting)
+[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**▶️ Watch the 60s demo**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO) · [**🚀 Quickstart**](#quick-start) · [**📊 57-vuln benchmark**](https://github.com/ASCIT31/Darkmoon-Benchmarks)
 
-[Full Documentation](docs/full.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
+**As featured in** [Help Net Security](https://www.helpnetsecurity.com/2026/06/29/darkmoon-open-source-ai-pentesting-platform/) · [Cyber Security News](https://cybersecuritynews.com/darkmoon-penetration-testing-platform/) · [DevOps.com](https://devops.com/why-ci-cd-security-testing-is-going-autonomous-and-why-it-should-stay-local/) · [SecurityBrief](https://securitybrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [LinuxLinks](https://www.linuxlinks.com/darkmoon-ai-powered-autonomous-penetration-testing-platform/) · [IT Brief](https://itbrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [ChannelLife](https://channellife.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting)
+
+<a href="https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO">
+  <img src="docs/pics/darkmoon-youtube.png" alt="Watch DarkMoon run a full autonomous penetration test" />
+</a>
+
+**▶️ Watch DarkMoon run a full autonomous penetration test**
 
 </div>
 
@@ -20,40 +28,23 @@
 
 ## What is DarkMoon?
 
-DarkMoon is an **automated penetration testing tool** that orchestrates complete security assessments using **artificial intelligence security** agents. Built as an open-source **cybersecurity tool**, it enables organizations to run professional-grade **vulnerability assessments** without manual intervention.
+DarkMoon is an **open-source AI penetration testing** platform. Point it at a target you are authorized to test, and it runs the whole assessment on its own: it reasons, plans, and dispatches **50 specialist agents** that execute real offensive operations through a controlled MCP layer, then reports every vulnerability with the exact command, the raw output and the proof behind it.
 
-Instead of replacing the pentester, DarkMoon acts as an **autonomous security testing system**, it reasons, plans, and coordinates specialized agents that execute real offensive security operations through a controlled execution layer.
-
-<div>
-  <a href="https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO">
-    <img src="docs/pics/darkmoon-youtube.png" />
-  </a>
-
-  <p><strong>Watch DarkMoon in action, Full autonomous penetration test demo</strong></p>
-</div>
+It does not replace the pentester. It clears the repetitive part of an assessment with evidence, so your experts spend their time on judgment, not toil.
 
 ---
 
 ## Why DarkMoon?
 
-Traditional **penetration testing** is:
+- 🌐 **Beyond the web** — one agentic system across web, APIs, Active Directory, Kubernetes, cloud (AWS, Azure, GCP), CI/CD, databases and IoT firmware, chained end to end
+- 🕶️ **Your data never reaches the LLM** — reversible local tokenization turns real IPs, hostnames, credentials and paths into deterministic placeholders (`IP_PRIVATE_001`, ...), rehydrated locally only at the moment a tool runs and masked back out of every result. Runs fully on a local model. Exfiltration is blocked. This is the part no cloud competitor has.
+- 🧾 **Proof, not scores** — every finding ships with the exact command and raw output, reproducible, so there is nothing to trust blindly and almost nothing to triage
+- 🔧 **50 specialist agents, 50+ offensive tools** — Nuclei, NetExec, BloodHound, sqlmap, Impacket, Naabu, httpx, ffuf and more, orchestrated over MCP
+- 🛡️ **Security by design** — the AI never runs a command directly; every action flows through a controlled, logged MCP interface
+- ♾️ **CI/CD native** — trigger a pentest in the pipeline and get findings as artifacts
+- 📖 **Nothing hidden** — GPLv3, self-hosted, each agent's methodology is plain Markdown you can read, diff and fork
 
-- ⏱️ **Time-consuming**, manual testing takes weeks
-- 💰 **Expensive**, expert consultants cost thousands per day
-- 🔄 **Inconsistent**, results vary by tester expertise
-- 📊 **Hard to scale**, limited by human resources
-
-DarkMoon solves this with **AI penetration testing**:
-
-- 🤖 **AI-powered pentesting**, autonomous agents conduct full security assessments end-to-end
-- 🛡️ **Security by design**, the AI never directly executes tools; all actions flow through a controlled MCP interface
-- 🕶️ **Privacy gateway (reversible local tokenization)**, the AI **never sees your real sensitive values**. IPs, hostnames, domains, URLs, emails, credentials and internal paths are replaced by deterministic placeholders (`IP_PRIVATE_001`, …); real values are injected **locally, right before a tool runs**, and masked back out of every result. **No sensitive data ever leaves your perimeter to the LLM provider**, use Claude's power under strict data-sovereignty constraints. Exfiltration attempts are blocked.
-- ♾️ **Pentesting automation for CI/CD**, run **automated security testing** post-build to catch critical vulnerabilities before production
-- 🔧 **50+ integrated tools**, a comprehensive **penetration testing tools suite** (Nuclei, NetExec, BloodHound, sqlmap, Naabu, httpx, ffuf, and more)
-- 📈 **Adaptive multi-agent methodology**, specialized agents for Web, Active Directory, Kubernetes, Network, CMS, and more
-- 📝 **Vulnerability reporting automation**, structured, evidence-based reports generated automatically
-
-Perfect for **security teams**, **DevSecOps engineers**, **ethical hacking** professionals, and organizations of all sizes.
+Built for **security teams**, **DevSecOps engineers**, **red teamers** and **ethical hacking** professionals.
 
 ---
 
