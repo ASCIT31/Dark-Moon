@@ -129,6 +129,9 @@ class PrivacyVault:
     enabled_categories: Tuple[Category, ...] = DEFAULT_CATEGORIES
     created_at: float = field(default_factory=time.time)
 
+    # Optional override for the server-wide default.
+    privacy_enabled: Optional[bool] = None
+
     # internal state (never logged)
     _key: bytes = field(default_factory=lambda: os.urandom(32), repr=False)
     _hmac_key: bytes = field(default_factory=lambda: os.urandom(32), repr=False)
