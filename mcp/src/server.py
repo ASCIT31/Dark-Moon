@@ -48,6 +48,13 @@ PRIVACY_ENABLED = os.getenv("DARKMOON_PRIVACY", "1").lower() not in ("0", "false
 _command_gateway = CommandGateway()
 _vaults: Dict[str, PrivacyVault] = {}
 
+def _privacy_enabled_for(session_id: Optional[str]) -> bool:
+    """Return whether the privacy vault is enabled for this session"""
+    sid = session_id or SESSION_ID
+    vault = _vaults.get(sid)
+    if vault is not None and not vault.is_expired() and vault.privacy_enabled is not None:
+        return vault.privacy_enabled
+    return PRIVACY_ENABLED
 
 # Which categories are tokenized. By default we cover the FULL documented
 # boundary — IPs, internal hosts, domains, URLs, emails and internal paths — so
@@ -213,23 +220,23 @@ def execute_command(
     # (IP_PRIVATE_001, ...). Rehydrate to real values locally, or block unsafe use.
     # `command` is what the model sent (placeholders) and is echoed back as-is;
     # `real_command` (real values) is what actually runs and is never shown back.
-    real_command = command
-    vault = None
-    if PRIVACY_ENABLED:
-        vault = _get_vault(session_id)
-        gw = _command_gateway.process_command(command, vault)
-        if gw.decision == GatewayDecision.BLOCK:
-            return (
-                "=" * 60 + "\n"
-                f"COMMAND  : {command}\n"
-                "PRIVACY  : BLOCKED\n"
-                f"REASON   : {gw.reason}\n"
-                + "=" * 60 + "\n\n"
-                "[BLOCKED BY PRIVACY GATEWAY] This command was not executed. "
-                "Protected values may only be used as scan/tool arguments against the "
-                "in-scope target, never printed, echoed, or sent to another host."
-            )
-        real_command = gw.command or command
+    vault = _get_vault(session_id)
+    # enforce_exfil_policy depends on whether the privacy gateway is enabled for this session
+    # when it is off, structural checks still run, but exfiltration policy is not enforced
+    # so that a structurally correct command still runs 
+    gw = _command_gateway.process_command(command, vault, enforce_exfil_policy=_privacy_enabled_for(session_id))
+    if gw.decision == GatewayDecision.BLOCK:
+        return (
+            "=" * 60 + "\n"
+            f"COMMAND  : {command}\n"
+            "PRIVACY  : BLOCKED\n"
+            f"REASON   : {gw.reason}\n"
+            + "=" * 60 + "\n\n"
+            "[BLOCKED BY PRIVACY GATEWAY] This command was not executed. "
+            "Protected values may only be used as scan/tool arguments against the "
+            "in-scope target, never printed, echoed, or sent to another host."
+        )
+    real_command = gw.command or command
 
     result = executor.execute(
         command=real_command,
@@ -244,7 +251,7 @@ def execute_command(
     stderr = result.execution_result.stderr or ""
 
     # Re-tokenize any real value that appears in the output before the model sees it.
-    if PRIVACY_ENABLED and vault is not None:
+    if _privacy_enabled_for(session_id) and vault is not None:
         stdout = _command_gateway.sanitize_output(stdout, vault)
         stderr = _command_gateway.sanitize_output(stderr, vault)
 
@@ -388,11 +395,12 @@ def run_workflow(
         # Web crawling
         run_workflow("web_crawler", "crawl_website", {"target": "https://example.com"})
     """
-    privacy_gateway = None
-    privacy_vault = None
-    if PRIVACY_ENABLED:
-        privacy_gateway = _command_gateway
-        privacy_vault = _get_vault(session_id)
+    # privacy gateway and vault are always assigned now 
+    # (and never None since get_vault creates if missing and gateway is defined above)
+    # so structural checks and rehydration inside run_workflow always run,
+    # and the exfiltration policy is passed below as a sanitize_output parameter
+    privacy_gateway = _command_gateway
+    privacy_vault = _get_vault(session_id)
 
     return workflow_registry.run_workflow(
         workflow,
@@ -400,6 +408,7 @@ def run_workflow(
         params,
         privacy_gateway=privacy_gateway,
         privacy_vault=privacy_vault,
+        sanitize_output=_privacy_enabled_for(session_id),
     )
 
 # ============================================================================

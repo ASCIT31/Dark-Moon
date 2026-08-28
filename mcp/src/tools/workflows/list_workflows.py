@@ -302,6 +302,7 @@ class WorkflowRegistry:
         *,
         privacy_gateway: Optional[CommandGateway] = None,
         privacy_vault: Optional[PrivacyVault] = None,
+        sanitize_output: bool = True,
     ) -> Dict[str, Any]:
         """
         Execute a workflow method by name.
@@ -320,7 +321,8 @@ class WorkflowRegistry:
             ValueError: If workflow or method not found
         """
         def finish(result: Dict[str, Any]) -> Dict[str, Any]:
-            if privacy_gateway is None or privacy_vault is None:
+            # If sanitize_output flag is set, the result needs sanitization
+            if privacy_gateway is None or privacy_vault is None or not sanitize_output:
                 return result
             return privacy_gateway.sanitize_result(result, privacy_vault)
 
@@ -355,6 +357,7 @@ class WorkflowRegistry:
                     args=converted_params,
                     rehydrate_fields=tuple(converted_params),
                     vault=privacy_vault,
+                    enforce_exfil_policy=sanitize_output
                 )
                 if privacy_result.blocked:
                     return finish({
