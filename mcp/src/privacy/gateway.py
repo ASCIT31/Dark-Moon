@@ -90,7 +90,7 @@ class CommandGateway:
         return None
 
     # ------------------------------------------------------------------ raw shell
-    def process_command(self, command: str, vault: PrivacyVault, _depth: int = 0) -> GatewayResult:
+    def process_command(self, command: str, vault: PrivacyVault, _depth: int = 0, enforce_exfil_policy: bool = True) -> GatewayResult:
         # Secret placeholders (credentials/tokens) must never end up in an
         # executed command, even glued to a flag (e.g. `-pCRED_001`), so scan
         # for them without a word boundary and refuse outright.
@@ -136,45 +136,49 @@ class CommandGateway:
                 inner = argv[idx + 1]
             except (ValueError, IndexError):
                 return self._block("malformed shell -c invocation", placeholders)
-            inner_res = self.process_command(inner, vault, _depth=_depth + 1)
+            inner_res = self.process_command(inner, vault, _depth=_depth + 1, enforce_exfil_policy=enforce_exfil_policy)
             if inner_res.blocked:
                 return inner_res
             rebuilt = " ".join(argv[:idx + 1]) + " " + shlex.quote(inner_res.command or "")
             return GatewayResult(GatewayDecision.ALLOW, command=rebuilt, placeholders=placeholders)
 
-        # 2) Print / echo sinks — refuse to reveal a value.
-        if tool in _PRINT_SINKS:
-            return self._block(
-                f"placeholder passed to '{tool}' (printing/echoing a protected value is not allowed)",
-                placeholders,
-            )
-
-        # 3) Network redirection / process substitution carrying a placeholder.
-        if _NET_REDIRECT_RE.search(command):
-            return self._block("placeholder combined with a network redirect/process substitution", placeholders)
-
-        # 4) Per-token URL analysis (the classic exfil vector).
-        for tok in argv:
-            reason = self._url_context_block_reason(tok)
-            if reason is not None:
-                return self._block(reason, placeholders)
-
-        # 5) Outbound request bodies (curl/wget POST/upload) with a placeholder.
-        for i, tok in enumerate(argv):
-            if tok in _OUTBOUND_DATA_FLAGS:
-                nxt = argv[i + 1] if i + 1 < len(argv) else ""
-                if PLACEHOLDER_RE.search(nxt) or (tok.startswith("--") and "=" in tok and PLACEHOLDER_RE.search(tok)):
-                    return self._block("placeholder placed in an outbound request body/upload (exfiltration)", placeholders)
-
-        # 6) Bare network sinks (nc/telnet/ssh/...): the destination must be the
-        #    target placeholder itself, never a literal with a placeholder tag along.
-        if tool in _NET_SINKS and tool not in {"curl", "wget"}:
-            arg_hosts = [a for a in argv[1:] if not a.startswith("-")]
-            dest_is_ph = any(PLACEHOLDER_RE.fullmatch(a) for a in arg_hosts[:1])
-            if not dest_is_ph:
+        # Exfiltration policy items 2-6 are only enforced when the caller requests it (True by default).
+        # However, what can never be shown to the model are the secret values, which are never rehydrated 
+        # (as the secret check runs above this if and returns early).
+        if enforce_exfil_policy:
+            # 2) Print / echo sinks — refuse to reveal a value.
+            if tool in _PRINT_SINKS:
                 return self._block(
-                    f"'{tool}' with a placeholder but a non-target destination (exfiltration)", placeholders
+                    f"placeholder passed to '{tool}' (printing/echoing a protected value is not allowed)",
+                    placeholders,
                 )
+
+            # 3) Network redirection / process substitution carrying a placeholder.
+            if _NET_REDIRECT_RE.search(command):
+                return self._block("placeholder combined with a network redirect/process substitution", placeholders)
+
+            # 4) Per-token URL analysis (the classic exfil vector).
+            for tok in argv:
+                reason = self._url_context_block_reason(tok)
+                if reason is not None:
+                    return self._block(reason, placeholders)
+
+            # 5) Outbound request bodies (curl/wget POST/upload) with a placeholder.
+            for i, tok in enumerate(argv):
+                if tok in _OUTBOUND_DATA_FLAGS:
+                    nxt = argv[i + 1] if i + 1 < len(argv) else ""
+                    if PLACEHOLDER_RE.search(nxt) or (tok.startswith("--") and "=" in tok and PLACEHOLDER_RE.search(tok)):
+                        return self._block("placeholder placed in an outbound request body/upload (exfiltration)", placeholders)
+
+            # 6) Bare network sinks (nc/telnet/ssh/...): the destination must be the
+            #    target placeholder itself, never a literal with a placeholder tag along.
+            if tool in _NET_SINKS and tool not in {"curl", "wget"}:
+                arg_hosts = [a for a in argv[1:] if not a.startswith("-")]
+                dest_is_ph = any(PLACEHOLDER_RE.fullmatch(a) for a in arg_hosts[:1])
+                if not dest_is_ph:
+                    return self._block(
+                        f"'{tool}' with a placeholder but a non-target destination (exfiltration)", placeholders
+                    )
 
         # Approved: rehydrate the validated placeholders in place.
         return self._rehydrate(command, placeholders, vault)
@@ -210,6 +214,7 @@ class CommandGateway:
         args: Dict[str, object],
         rehydrate_fields: Sequence[str],
         vault: PrivacyVault,
+        enforce_exfil_policy: bool = True
     ) -> GatewayResult:
         """Rehydrate only the whitelisted fields of a structured tool call.
 
@@ -242,9 +247,12 @@ class CommandGateway:
                 if not phs:
                     return value, None
                 seen.extend(phs)
-                reason = self._url_context_block_reason(value)
-                if reason is not None:
-                    return value, self._block(reason, phs)
+                # Exfiltration policy is only enforced when requested (True by default)
+                # but secret values are never rehydrated (_rehydrate checks and blocks).
+                if enforce_exfil_policy:
+                    reason = self._url_context_block_reason(value)
+                    if reason is not None:
+                        return value, self._block(reason, phs)
                 result = self._rehydrate(value, phs, vault)
                 if result.blocked:
                     return value, result
