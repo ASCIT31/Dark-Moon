@@ -10,25 +10,37 @@ before it goes back to the LLM.
 - PrivacyVault  : creates/stores the placeholder<->value mapping (per session),
                   protects it locally, enforces TTL, never logs raw values.
 - CommandGateway: context-aware rehydration of LLM-generated commands / tool
-                  calls, blocks exfiltration, sanitizes output.
+                  calls, withholds values headed for an exfiltration sink, and
+                  sanitizes output. It degrades rather than blocking (see
+                  GatewayPolicy) so privacy never stops a pentest command.
 """
 
 from .vault import (
     PrivacyVault,
     Category,
     PLACEHOLDER_RE,
+    PLACEHOLDER_ANY_RE,
     DEFAULT_CATEGORIES,
     resolve_categories,
 )
-from .gateway import CommandGateway, GatewayResult, GatewayDecision
+from .gateway import (
+    CommandGateway,
+    GatewayResult,
+    GatewayDecision,
+    GatewayPolicy,
+    resolve_policy,
+)
 
 __all__ = [
     "PrivacyVault",
     "Category",
     "PLACEHOLDER_RE",
+    "PLACEHOLDER_ANY_RE",
     "DEFAULT_CATEGORIES",
     "resolve_categories",
     "CommandGateway",
     "GatewayResult",
     "GatewayDecision",
+    "GatewayPolicy",
+    "resolve_policy",
 ]

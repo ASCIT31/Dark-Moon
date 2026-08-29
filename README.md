@@ -37,7 +37,7 @@ It does not replace the pentester. It clears the repetitive part of an assessmen
 ## Why DarkMoon?
 
 - 🌐 **Beyond the web** — one agentic system across web, APIs, Active Directory, Kubernetes, cloud (AWS, Azure, GCP), CI/CD, databases and IoT firmware, chained end to end
-- 🕶️ **Your data never reaches the LLM** — reversible local tokenization turns real IPs, hostnames, credentials and paths into deterministic placeholders (`IP_PRIVATE_001`, ...), rehydrated locally only at the moment a tool runs and masked back out of every result. Runs fully on a local model. Exfiltration is blocked. This is the part no cloud competitor has.
+- 🕶️ **Your data never reaches the LLM** — reversible local tokenization turns real IPs, hostnames, URLs, credentials and paths into deterministic placeholders (`IP_PRIVATE_001`, ...), rehydrated locally only at the moment a tool runs and masked back out of every result. Runs fully on a local model. And it never costs you a command: when a value is headed somewhere it must not go, the command still runs and the far end receives the placeholder instead. This is the part no cloud competitor has.
 - 🧾 **Proof, not scores** — every finding ships with the exact command and raw output, reproducible, so there is nothing to trust blindly and almost nothing to triage
 - 🔧 **50 specialist agents, 50+ offensive tools** — Nuclei, NetExec, BloodHound, sqlmap, Impacket, Naabu, httpx, ffuf and more, orchestrated over MCP
 - 🛡️ **Security by design** — the AI never runs a command directly; every action flows through a controlled, logged MCP interface

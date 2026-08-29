@@ -89,6 +89,12 @@ def resolve_categories(raw: Optional[str]) -> Tuple["Category", ...]:
 # mistake an unrelated uppercase token for a placeholder.
 _PREFIXES = "|".join(sorted((c.value for c in Category), key=len, reverse=True))
 PLACEHOLDER_RE = re.compile(rf"\b(?P<ph>(?:{_PREFIXES})_\d{{3,}})\b")
+# The same token without the leading word boundary, so a placeholder glued to a
+# short flag is still seen: `netexec -uUSER_001`, `mysql -pCRED_001`. The
+# gateway used this shape for secrets only, which meant `-pCRED_001` was caught
+# but `-pIP_PRIVATE_001` was invisible to every other rule and travelled into
+# the executed command untouched.
+PLACEHOLDER_ANY_RE = re.compile(rf"(?P<ph>(?:{_PREFIXES})_\d{{3,}})\b")
 
 # --- Detection patterns (ordered from most specific to least). ----------------
 _URL_RE = re.compile(r"\bhttps?://[^\s\"'<>`|\\]+", re.IGNORECASE)
@@ -103,6 +109,52 @@ _PATH_RE = re.compile(r"(?<![\w./])(?:/[A-Za-z0-9._\-]+){2,}/?|[A-Za-z]:\\\\?(?:
 
 # Internal-looking single-label hosts / suffixes are treated as HOST_INTERNAL.
 _INTERNAL_SUFFIXES = (".local", ".internal", ".corp", ".lan", ".home", ".intra", ".test")
+
+# `_DOMAIN_RE` cannot tell `index.php` from `acme-corp.com`: both are
+# "labels separated by dots ending in letters". Once DOMAIN became a default
+# category (issue #40) every filename in tool output started minting a DOMAIN
+# placeholder, which is worse than a leak — the model stops being able to read
+# an extension, spot a pattern or fuzz a name (PR #42), and a later
+# `nuclei -u DOMAIN_001` silently resolves to `index.php` instead of the target.
+# A trailing label that is a well-known file extension is therefore never a host.
+_FILE_EXTENSIONS = frozenset("""
+asp aspx bak bat bin bz2 c cfg cgi class conf config cpp crt cs csr css csv db
+deb dll dmp doc docx dtd egg env err exe gif go gz h hbs htm html ini jar java
+jpeg jpg js json jsp key kt log lst md mdb msi old orig pcap pdf pem php phtml
+pl pm png ppt pptx properties ps1 psd1 psm1 py pyc rar rb rpm rs sh sln so sql
+sqlite svg swp tar tgz tmp toml ts tsv txt vbs war wav webp xls xlsx xml yaml
+yml zip
+""".split())
+
+
+def _looks_like_filename(value: str) -> bool:
+    """True when a `_DOMAIN_RE` match is really a filename, not a hostname."""
+    tail = value.rsplit(".", 1)[-1].lower()
+    return tail in _FILE_EXTENSIONS
+
+
+# Plain credentials the model must never receive. Issue #40: the gateway only
+# ever recognised an already-registered ``CRED_NNN`` placeholder, and nothing in
+# production registered one, so a password echoed by a tool went straight into
+# the model context. These patterns register the *secret group only*, leaving the
+# surrounding flag/key intact so the command stays readable and re-runnable.
+_CRED_PATTERNS = (
+    # -pS3cret / --password=S3cret / password: S3cret / "pass": "S3cret"
+    re.compile(r"(?<![\w-])(-p|--password[=\s]|--pass[=\s]|-w\s)(?P<secret>[^\s\"',;|&]{4,})"),
+    re.compile(r"(?i)[A-Za-z0-9_$.\-]{0,32}(?:passwords?|passwd|passphrase|pass|pwd|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|token|credentials?)\s*[:=]>?\s*[\"']?(?P<secret>[^\s\"',;|&<>]{4,})"),
+    # Authorization: Bearer <token> / Basic <b64>
+    re.compile(r"(?i)\bauthorization\s*:\s*(?:bearer|basic|token)\s+(?P<secret>[A-Za-z0-9._~+/=\-]{8,})"),
+    # user:password@host inside a URI
+    re.compile(r"(?<=://)[A-Za-z0-9._%\-]+:(?P<secret>[^\s@/:]{4,})(?=@)"),
+    # NTLM / NT hash and long hex digests worth protecting
+    re.compile(r"(?<![A-Fa-f0-9])(?P<secret>[A-Fa-f0-9]{32}:[A-Fa-f0-9]{32})(?![A-Fa-f0-9])"),
+)
+
+# Values that match a credential pattern but carry no secret.
+_CRED_FALSE_POSITIVES = frozenset({
+    "none", "null", "true", "false", "changeme", "password", "redacted",
+    "xxxx", "****", "<password>", "$password", "password}",
+})
 
 
 def _is_private_ip(value: str) -> Optional[bool]:
@@ -205,6 +257,33 @@ class PrivacyVault:
         self._by_ph[placeholder] = entry
         return placeholder
 
+    def register_credentials(self, text: str) -> str:
+        """Tokenize plain credentials found in ``text`` as ``CRED_NNN``.
+
+        Issue #40: ``CRED`` had no automatic registration path, so a password a
+        tool printed (or one the operator typed into the prompt) reached the model
+        verbatim while the documentation promised it never would. Detection is
+        deliberately narrow - an explicit password flag, a ``key: value`` secret,
+        an ``Authorization`` header, URI userinfo, or an NT hash pair - so ordinary
+        scan output is not shredded into placeholders.
+
+        Only the secret itself is replaced; the flag or key around it survives, so
+        the model still sees ``-pCRED_001`` and can reason about the command shape.
+        """
+        if not text:
+            return text
+        for pattern in _CRED_PATTERNS:
+            def sub(m):
+                secret = m.group("secret")
+                if not secret or secret.lower() in _CRED_FALSE_POSITIVES:
+                    return m.group(0)
+                if PLACEHOLDER_RE.fullmatch(secret):
+                    return m.group(0)  # already tokenized
+                return m.group(0).replace(secret, self.register(secret, Category.CRED))
+
+            text = pattern.sub(sub, text)
+        return text
+
     def _categorize_host(self, host: str) -> Category:
         low = host.lower()
         if _is_private_ip(host):
@@ -242,6 +321,10 @@ class PrivacyVault:
 
         def sub_domain(m: re.Match) -> str:
             val = m.group(0)
+            # A filename is not a host. Tokenizing `wp-config.php` as DOMAIN_004
+            # blinds the model to the very patterns it is meant to hunt for.
+            if _looks_like_filename(val):
+                return val
             cat = self._categorize_host(val)
             if cat not in enabled:
                 return val

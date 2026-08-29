@@ -302,7 +302,7 @@ class WorkflowRegistry:
         *,
         privacy_gateway: Optional[CommandGateway] = None,
         privacy_vault: Optional[PrivacyVault] = None,
-        sanitize_output: bool = True,
+        enforce_exfil_policy: bool = True,
     ) -> Dict[str, Any]:
         """
         Execute a workflow method by name.
@@ -313,6 +313,8 @@ class WorkflowRegistry:
             params: Parameters to pass to the method
             privacy_gateway: Gateway for the workflow privacy boundary.
             privacy_vault: Session vault for local placeholder resolution.
+            enforce_exfil_policy: Apply the positional exfiltration rules. Output
+                is sanitized either way.
 
         Returns:
             Result of the workflow execution
@@ -321,8 +323,12 @@ class WorkflowRegistry:
             ValueError: If workflow or method not found
         """
         def finish(result: Dict[str, Any]) -> Dict[str, Any]:
-            # If sanitize_output flag is set, the result needs sanitization
-            if privacy_gateway is None or privacy_vault is None or not sanitize_output:
+            # Output sanitization is never optional. Relaxing a session's
+            # exfiltration policy widens what the gateway will rehydrate into a
+            # command; it must not also start handing the model the real values
+            # it already holds placeholders for. This is the invariant the
+            # degrade policy leans on.
+            if privacy_gateway is None or privacy_vault is None:
                 return result
             return privacy_gateway.sanitize_result(result, privacy_vault)
 
@@ -357,9 +363,10 @@ class WorkflowRegistry:
                     args=converted_params,
                     rehydrate_fields=tuple(converted_params),
                     vault=privacy_vault,
-                    enforce_exfil_policy=sanitize_output
+                    enforce_exfil_policy=enforce_exfil_policy,
                 )
                 if privacy_result.blocked:
+                    # Only reachable under DARKMOON_PRIVACY_POLICY=strict.
                     return finish({
                         "error": "Privacy gateway blocked workflow parameters",
                         "privacy": "blocked",

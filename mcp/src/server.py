@@ -18,7 +18,13 @@ from src.docker_client import DarkmoonDockerClient
 from src.tools.core.executor import GenericExecutor
 from src.tools.core.health import HealthChecker
 from src.tools.workflows.list_workflows import WorkflowRegistry
-from src.privacy import PrivacyVault, CommandGateway, GatewayDecision, resolve_categories
+from src.privacy import (
+    PrivacyVault,
+    CommandGateway,
+    GatewayDecision,
+    resolve_categories,
+    resolve_policy,
+)
 
 
 # Initialize FastMCP server
@@ -43,10 +49,22 @@ workflow_registry = WorkflowRegistry(docker_client)
 # The model only ever sees deterministic placeholders. Real values are injected
 # locally by the CommandGateway right before execution, and re-tokenized out of
 # any tool output before it goes back to the model. Toggle with DARKMOON_PRIVACY.
+#
+# The gateway does not block. When a placeholder sits somewhere its real value
+# must not go, the command still runs with the placeholder left in place, and
+# the model is told which values were held back. Widening the default boundary
+# to URL/DOMAIN/PATH (issue #40) meant nearly every pentest command carries a
+# placeholder, so a blocking gateway refused ordinary work (PR #42). Set
+# DARKMOON_PRIVACY_POLICY=strict to get the old refuse-outright behaviour.
 # ============================================================
 PRIVACY_ENABLED = os.getenv("DARKMOON_PRIVACY", "1").lower() not in ("0", "false", "no", "off")
 _command_gateway = CommandGateway()
 _vaults: Dict[str, PrivacyVault] = {}
+
+
+def _privacy_policy():
+    """Resolved per call so an operator can flip the policy without a restart."""
+    return resolve_policy()
 
 def _privacy_enabled_for(session_id: Optional[str]) -> bool:
     """Return whether the privacy vault is enabled for this session"""
@@ -221,15 +239,22 @@ def execute_command(
     # `command` is what the model sent (placeholders) and is echoed back as-is;
     # `real_command` (real values) is what actually runs and is never shown back.
     vault = _get_vault(session_id)
-    # enforce_exfil_policy depends on whether the privacy gateway is enabled for this session
-    # when it is off, structural checks still run, but exfiltration policy is not enforced
-    # so that a structurally correct command still runs 
-    gw = _command_gateway.process_command(command, vault, enforce_exfil_policy=_privacy_enabled_for(session_id))
+    # enforce_exfil_policy depends on whether the privacy gateway is enabled for
+    # this session. When it is off, structural checks still run and rehydration
+    # still happens, but the positional exfiltration rules are not applied.
+    gw = _command_gateway.process_command(
+        command,
+        vault,
+        enforce_exfil_policy=_privacy_enabled_for(session_id),
+        policy=_privacy_policy(),
+    )
     if gw.decision == GatewayDecision.BLOCK:
+        # Only reachable under DARKMOON_PRIVACY_POLICY=strict. The default policy
+        # degrades instead, so a pentest command is never refused for privacy.
         return (
             "=" * 60 + "\n"
             f"COMMAND  : {command}\n"
-            "PRIVACY  : BLOCKED\n"
+            "PRIVACY  : BLOCKED (strict policy)\n"
             f"REASON   : {gw.reason}\n"
             + "=" * 60 + "\n\n"
             "[BLOCKED BY PRIVACY GATEWAY] This command was not executed. "
@@ -250,8 +275,12 @@ def execute_command(
     stdout = result.raw_output or ""
     stderr = result.execution_result.stderr or ""
 
-    # Re-tokenize any real value that appears in the output before the model sees it.
-    if _privacy_enabled_for(session_id) and vault is not None:
+    # Re-tokenize any real value that appears in the output before the model sees
+    # it. This runs whenever the vault holds a mapping, even for a session whose
+    # exfiltration policy is relaxed: a session that turns the policy off must not
+    # start leaking values the model was already given placeholders for. Output
+    # sanitization is what makes the degrade policy safe, so it is not optional.
+    if vault is not None and (_privacy_enabled_for(session_id) or vault.known_placeholders()):
         stdout = _command_gateway.sanitize_output(stdout, vault)
         stderr = _command_gateway.sanitize_output(stderr, vault)
 
@@ -260,6 +289,12 @@ def execute_command(
     output.append(f"COMMAND  : {command}")
     output.append(f"EXIT CODE: {exit_code}")
     output.append(f"DURATION : {duration:.2f}s")
+    if gw.withheld:
+        # Not an error: the command ran. Telling the model which values stayed
+        # tokenized stops it from retrying the same shape forever.
+        output.append(f"PRIVACY  : {len(gw.withheld)} value(s) kept tokenized")
+        for note in gw.notes:
+            output.append(f"           - {note}")
     output.append("=" * 60)
     output.append("")
 
@@ -408,7 +443,7 @@ def run_workflow(
         params,
         privacy_gateway=privacy_gateway,
         privacy_vault=privacy_vault,
-        sanitize_output=_privacy_enabled_for(session_id),
+        enforce_exfil_policy=_privacy_enabled_for(session_id),
     )
 
 # ============================================================================
