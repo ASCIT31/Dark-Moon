@@ -1,0 +1,4 @@
+backup rotation notes
+db host: db01.corp
+db_password = Sup3rS3cretLupin
+admin contact: admin@lupin-corp.test

@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /~myfiles/
+Disallow: /includes/
+Disallow: /index.php?page=debug
