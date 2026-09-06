@@ -17,7 +17,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 _OPENCODE_DB = Path.home() / ".local" / "share" / "opencode" / "opencode-dev.db"
 
@@ -961,6 +961,7 @@ def finalize_campaign(
     report_markdown: Optional[str] = None,
     agents_dispatched: Optional[List[Dict[str, Any]]] = None,
     final_status: str = "completed",
+    rehydrate: Optional[Callable[[str], str]] = None,
 ) -> Dict[str, Any]:
     """
     Finalize a campaign and preserve the intended terminal status.
@@ -1020,10 +1021,20 @@ def finalize_campaign(
         # Auto-generate the report from the DB findings
         report_markdown = _generate_report_from_db(campaign_id, campaign, executive_summary)
 
+    # Restore real values before the local, CONFIDENTIAL report is written. Findings
+    # are stored with placeholders (the model only ever sees those), so a
+    # DB-generated report is full of IP_PRIVATE_001/DOMAIN_001/HOST_INTERNAL_001/...
+    # until here. Rehydrating at the single write point covers both the
+    # DB-generated body and the (unused) LLM-provided one.
+    if rehydrate is not None and report_markdown:
+        report_markdown = rehydrate(report_markdown)
+
     if report_markdown:
         target_id = campaign.get("target_id", "unknown")
         target = load_target(target_id)
         host = target.get("host", target_id) if target else target_id
+        if rehydrate is not None and host:
+            host = rehydrate(host)
         fname = f"pentest_report_{host}_{_today_compact()}-{_time_compact()}.md"
         REPORTS_DIR.mkdir(parents=True, exist_ok=True)
         (REPORTS_DIR / fname).write_text(report_markdown, encoding="utf-8")

@@ -80,6 +80,13 @@ _PIPELINE_OPS = ("||", "&&", "|", ";", "&")
 # to a third party. Whatever a substitution expands to is not analysable here, so
 # a placeholder sharing a segment with one is never resolved.
 _CMD_SUBST_RE = re.compile(r"\$\(|\$\{|`")
+# Tool output is frequently colourised (rich, impacket, nxc, kerbrute). An SGR
+# sequence such as "\x1b[1;92m" ends in a letter that glues to the next character,
+# so a value printed as "\x1b[1;92m192.168.56.10\x1b[0m" has no word boundary
+# before "192" and the \b-anchored category patterns miss it — the real value then
+# reaches the model. Strip ANSI (CSI sequences + OSC-8 hyperlinks) before
+# tokenizing so colourised output can never defeat sanitization.
+_ANSI_STRIP_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")
 # Flags that take a separate value; that value is never the destination host.
 _VALUE_FLAGS = {"-p", "-P", "-l", "-i", "-o", "-b", "-c", "-m", "-w", "-s", "-F", "-e", "-L", "-R", "-D"}
 
@@ -792,7 +799,10 @@ class CommandGateway:
         """
         if not text:
             return text
-        out = vault.register_credentials(text)
+        # Strip ANSI first: colour codes glue to values and defeat the \b-anchored
+        # category patterns (a coloured IP/host would otherwise leak to the model).
+        out = _ANSI_STRIP_RE.sub("", text)
+        out = vault.register_credentials(out)
         out = vault.tokenize(out)
         # Belt-and-braces pass for values the patterns cannot match: only the
         # register-only categories (credentials/usernames) or categories not

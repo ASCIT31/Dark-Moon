@@ -122,6 +122,102 @@ def test_output_sanitizes_value_first_seen_in_output(vault, gw):
     assert re.search(r"IP_PRIVATE_\d{3}", safe)
 
 
+def test_output_sanitizes_ansi_coloured_value(vault, gw):
+    # Regression: colourised tool output (rich/impacket/nxc) wraps values in SGR
+    # codes, e.g. "\x1b[1;92m192.168.56.10\x1b[0m". The trailing 'm' of the code
+    # glued to the digits used to defeat the \b-anchored IP pattern, leaking the
+    # real value to the model. ANSI must be stripped before tokenizing.
+    vault.tokenize(f"host {REAL_IP}")  # establish the mapping
+    leaky = f"target \x1b[1;92m{REAL_IP}\x1b[0m: invalid principal syntax"
+    safe = gw.sanitize_output(leaky, vault)
+    assert REAL_IP not in safe
+    assert "IP_PRIVATE_001" in safe
+    # OSC-8 hyperlink framing (rich file links) must not leak a fresh value either.
+    hyper = "\x1b]8;;file://x\x1b\\\x1b[1;92m10.10.10.77\x1b[0m\x1b]8;;\x1b\\ up"
+    safe2 = gw.sanitize_output(hyper, vault)
+    assert "10.10.10.77" not in safe2
+    assert re.search(r"IP_PRIVATE_\d{3}", safe2)
+
+
+@pytest.mark.parametrize(
+    "addr",
+    [
+        "fe80::a1b2:c3d4%eth0",          # link-local with zone id
+        "2001:db8::5",                    # global, compressed
+        "::1",                            # loopback
+        "fc00::1234",                     # unique local
+        "2001:0db8:85a3:0000:0000:8a2e:0370:7334",  # full form
+        "::ffff:192.168.1.10",            # IPv4-mapped
+    ],
+)
+def test_ipv6_is_tokenized(vault, addr):
+    # IPv6 is pervasive in AD/network work (mitm6, responder, impacket); it must
+    # never reach the model in the clear.
+    out = vault.tokenize(f"host {addr} reachable")
+    assert addr not in out
+    # the embedded v4 literal of a mapped address must not leak either
+    assert "192.168.1.10" not in out
+    assert re.search(r"IP_(PRIVATE|PUBLIC)_\d{3}", out)
+
+
+@pytest.mark.parametrize("code", ["std::vector<int>", "a::b", "12:34:56", "aa:bb:cc:dd:ee:ff"])
+def test_ipv6_regex_skips_code_and_mac(vault, code):
+    # C++ scope tokens, clock strings and MAC addresses must not be mistaken for
+    # IPv6 (over-tokenizing is safe, but this keeps tool output readable).
+    assert vault.tokenize(code) == code
+
+
+@pytest.mark.parametrize(
+    "dn",
+    [
+        "DC=evilcorp,DC=local",
+        "DC=ForestDnsZones,DC=evilcorp,DC=local",
+        "CN=Administrator,CN=Users,DC=evilcorp,DC=local",
+    ],
+)
+def test_ldap_dn_domain_is_tokenized(vault, dn):
+    # Regression: the AD domain leaks as an LDAP distinguished name
+    # ("DC=evilcorp,DC=local") which the dotted-FQDN pattern never matches. It is
+    # everywhere in LDAP/BloodHound output; once the model learns the labels it
+    # reconstructs the FQDN and uses it in commands.
+    out = vault.tokenize(dn)
+    assert "evilcorp" not in out
+    assert re.search(r"DOMAIN_\d{3}", out)
+
+
+def test_ldap_dn_rehydrates_exactly(vault):
+    # The report must restore the exact DN, not a dotted approximation.
+    tok = vault.tokenize("DC=evilcorp,DC=local")
+    ph = re.search(r"DOMAIN_\d{3}", tok).group(0)
+    assert vault.rehydrate(ph) == "DC=evilcorp,DC=local"
+
+
+def test_bulk_report_rehydration_restores_every_value(vault):
+    # The report-restitution mechanism used by finalize_campaign: a report the model
+    # authored entirely from placeholders must come back with EVERY real value
+    # restored (hosts, domains, IPs and secrets — the local report is confidential).
+    from src.privacy import PLACEHOLDER_ANY_RE
+
+    # tokenize as the run would: credentials via register_credentials, everything
+    # else via tokenize (exactly what CommandGateway.sanitize_output chains).
+    raw = (
+        "# Report — 192.168.56.10\n- DC: DC01.evilcorp.local\n"
+        "- Domain: DC=evilcorp,DC=local\n- password: Sup3rSecret!\n"
+    )
+    tokd = vault.tokenize(vault.register_credentials(raw))
+    assert "CRED_" in tokd and "Sup3rSecret!" not in tokd  # secret really tokenized
+
+    def _sub(m):
+        real = vault.rehydrate(m.group("ph"), allow_secret=True)
+        return real if real is not None else m.group(0)
+
+    restored = PLACEHOLDER_ANY_RE.sub(_sub, tokd)
+    assert "IP_PRIVATE_" not in restored and "DOMAIN_" not in restored
+    assert "HOST_INTERNAL_" not in restored and "CRED_" not in restored
+    for real in ("192.168.56.10", "DC01.evilcorp.local", "DC=evilcorp,DC=local", "Sup3rSecret!"):
+        assert real in restored
+
+
 # --- 5. an exfiltration sink never receives the real value ------------------
 # The gateway no longer refuses these commands (see GatewayPolicy). What it
 # guarantees is stronger and easier to verify: whatever the model wrote, the

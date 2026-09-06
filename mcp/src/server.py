@@ -25,6 +25,7 @@ from src.privacy import (
     GatewayDecision,
     resolve_categories,
     resolve_policy,
+    PLACEHOLDER_ANY_RE,
 )
 
 
@@ -190,6 +191,101 @@ def _privacy_socket_tokenize(text: str, session_id: Optional[str]) -> str:
         return original
     with _vault_lock:
         return _get_vault(session_id).tokenize_prompt(original)
+
+
+# ---------------------------------------------------------------------------
+# Global tool result/error sanitizer (issue #40 — output side, belt-and-braces)
+# ---------------------------------------------------------------------------
+# execute_command already re-tokenizes its own stdout/stderr, but a tool or
+# workflow that runs a library in-process (e.g. impacket) and RAISES — or that
+# returns text through any other path — would otherwise hand the model a real
+# value, e.g. a rehydrated IP embedded in an exception message such as
+# "target 192.168.56.10: invalid principal syntax". This middleware is the
+# catch-all: EVERY ToolResult and EVERY tool exception leaving the MCP is passed
+# through the session vault, so the model only ever sees placeholders regardless
+# of which code path produced the text.
+from fastmcp.server.middleware import Middleware  # noqa: E402
+from fastmcp.exceptions import ToolError  # noqa: E402
+
+
+def _sanitize_for_model(value: Any, session_id: Optional[str]) -> Any:
+    """Re-tokenize any real value in a tool result/error via the session vault.
+
+    Idempotent: values already turned into placeholders do not match any category
+    pattern, so re-running it over already-sanitized execute_command output is a
+    no-op. Never raises — sanitization must not turn a working tool into an error.
+    """
+    if not PRIVACY_ENABLED:
+        return value
+    try:
+        with _vault_lock:
+            vault = _get_vault(session_id)
+            if vault is None or not (
+                _privacy_enabled_for(session_id) or vault.known_placeholders()
+            ):
+                return value
+            return _command_gateway.sanitize_result(value, vault)
+    except Exception:  # noqa: BLE001 — sanitization must be fail-safe
+        return value
+
+
+class _PrivacySanitizerMiddleware(Middleware):
+    """Scrub every tool result and every tool exception before it reaches the LLM."""
+
+    async def on_call_tool(self, context, call_next):
+        args = getattr(context.message, "arguments", None)
+        session_id = args.get("session_id") if isinstance(args, dict) else None
+        try:
+            result = await call_next(context)
+        except ToolError as exc:
+            raise ToolError(_sanitize_for_model(str(exc), session_id)) from None
+        except Exception as exc:  # noqa: BLE001 — any tool exception must be scrubbed
+            raise ToolError(
+                _sanitize_for_model(f"{type(exc).__name__}: {exc}", session_id)
+            ) from None
+        try:
+            content = getattr(result, "content", None)
+            if isinstance(content, list):
+                for block in content:
+                    if getattr(block, "type", None) == "text" and isinstance(
+                        getattr(block, "text", None), str
+                    ):
+                        block.text = _sanitize_for_model(block.text, session_id)
+            sc = getattr(result, "structured_content", None)
+            if sc is not None:
+                result.structured_content = _sanitize_for_model(sc, session_id)
+        except Exception:  # noqa: BLE001 — never break a successful call
+            pass
+        return result
+
+
+mcp.add_middleware(_PrivacySanitizerMiddleware())
+
+
+def _rehydrate_report(text: Optional[str], session_id: Optional[str] = None) -> Optional[str]:
+    """Restore real values into a finished report/summary before it is written to
+    disk. The model only ever sees and emits placeholders, so a saved report would
+    otherwise read "Target: IP_PRIVATE_001" instead of the real address, and every
+    finding would reference tokens instead of the hosts/domains/credentials the
+    pentester needs. The report is local and CONFIDENTIAL, so secrets are restored
+    too. Uses the same per-session vault the launch prompt and tool calls shared.
+    """
+    if not text or not PRIVACY_ENABLED:
+        return text
+    try:
+        with _vault_lock:
+            vault = _get_vault(session_id)
+        if vault is None:
+            return text
+
+        def _sub(m: "re.Match") -> str:
+            ph = m.group("ph")
+            real = vault.rehydrate(ph, allow_secret=True)
+            return real if real is not None else ph
+
+        return PLACEHOLDER_ANY_RE.sub(_sub, text)
+    except Exception:  # noqa: BLE001 — never fail finalize over rehydration
+        return text
 
 
 @mcp.tool()
@@ -825,11 +921,19 @@ def dashboard_finalize_campaign(
                     campaign_id, camp, executive_summary
                 )
 
+    # Restore real values before the report is written to disk. The model authored
+    # everything from placeholders only; the local CONFIDENTIAL report must show the
+    # real hosts, domains, IPs and credentials the pentester needs. finalize_campaign
+    # regenerates the body from the (placeholder) DB findings, so the rehydration has
+    # to run at its single write point — hence the callback — not just here.
+    executive_summary = _rehydrate_report(executive_summary) or executive_summary
+
     return finalize_campaign(
         campaign_id=campaign_id,
         duration_seconds=duration_seconds,
         executive_summary=executive_summary,
         report_markdown=resolved_markdown,
+        rehydrate=_rehydrate_report,
     )
 
 

@@ -101,10 +101,42 @@ PLACEHOLDER_ANY_RE = re.compile(rf"(?P<ph>(?:{_PREFIXES})_\d{{3,}})\b")
 _URL_RE = re.compile(r"\bhttps?://[^\s\"'<>`|\\]+", re.IGNORECASE)
 _EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b")
 _IPV4_RE = re.compile(r"\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b")
+# IPv6 is pervasive in AD/network work (mitm6, responder, impacket, link-local
+# DC addresses). The classification path already understands IPv6 via ipaddress;
+# only detection was IPv4-only. Cover full, compressed (::), zone-scoped
+# (fe80::1%eth0) and IPv4-mapped forms. Hex-adjacency guards on both sides stop
+# false matches on things like "std::vector" or a bare "12:34:56" clock. A MAC
+# (six single-colon octets, no "::") does not match any alternative here.
+_IPV6_RE = re.compile(
+    r"(?<![0-9A-Fa-f:.%])(?:"
+    r"(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}"                                  # full
+    r"|(?:[0-9A-Fa-f]{1,4}:){1,7}:"                                              # trailing ::
+    r"|(?:[0-9A-Fa-f]{1,4}:){1,6}:[0-9A-Fa-f]{1,4}"
+    r"|(?:[0-9A-Fa-f]{1,4}:){1,5}(?::[0-9A-Fa-f]{1,4}){1,2}"
+    r"|(?:[0-9A-Fa-f]{1,4}:){1,4}(?::[0-9A-Fa-f]{1,4}){1,3}"
+    r"|(?:[0-9A-Fa-f]{1,4}:){1,3}(?::[0-9A-Fa-f]{1,4}){1,4}"
+    r"|(?:[0-9A-Fa-f]{1,4}:){1,2}(?::[0-9A-Fa-f]{1,4}){1,5}"
+    r"|[0-9A-Fa-f]{1,4}:(?::[0-9A-Fa-f]{1,4}){1,6}"
+    r"|:(?::[0-9A-Fa-f]{1,4}){1,7}"
+    r"|::(?:ffff(?::0{1,4})?:)?(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)"  # v4-mapped
+    r"|(?:[0-9A-Fa-f]{1,4}:){1,4}:(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)"
+    r")(?:%[0-9A-Za-z._\-]+)?(?![0-9A-Fa-f:.])"                                  # optional zone id
+)
+# A short hextet glued to "::" (e.g. "d::", "a::b", "ab::cd") is far more likely a
+# C++/Rust scope token than a real address; skip it. Real link-local/global
+# prefixes are 4 hex digits (fe80, 2001, fc00, ...) and are unaffected, as are
+# "::1" and "::ffff:...". Over-tokenizing is safe (never a leak); this only trims
+# obvious source-code noise.
+_SHORT_V6_ARTEFACT_RE = re.compile(r"[0-9A-Fa-f]{1,2}::[0-9A-Fa-f]{0,2}")
 # FQDN with at least one dot and a 2+ char TLD; label-safe.
 _DOMAIN_RE = re.compile(
     r"\b(?:[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}\b"
 )
+# LDAP distinguished-name domain, e.g. "DC=evilcorp,DC=local" or
+# "DC=ForestDnsZones,DC=evilcorp,DC=local". Pervasive in AD/LDAP/BloodHound output
+# and never dotted, so the FQDN pattern misses it. Matched as a whole so the model
+# sees one placeholder and the report rehydrates the exact DN.
+_LDAP_DN_RE = re.compile(r"\bDC=[A-Za-z0-9_\-]+(?:,\s*DC=[A-Za-z0-9_\-]+)+", re.IGNORECASE)
 # Absolute unix paths (>=2 segments) and Windows paths. Kept conservative.
 _PATH_RE = re.compile(r"(?<![\w./])(?:/[A-Za-z0-9._\-]+){2,}/?|[A-Za-z]:\\\\?(?:[^\s\"'<>|]+)")
 
@@ -174,8 +206,11 @@ _PROMPT_CRED_PAIR_RE = re.compile(
 
 
 def _is_private_ip(value: str) -> Optional[bool]:
+    # A link-local address can carry a zone id ("fe80::1%eth0"); strip it before
+    # parsing so scoped IPv6 is still classified (and always as private).
+    addr = value.split("%", 1)[0]
     try:
-        ip = ipaddress.ip_address(value)
+        ip = ipaddress.ip_address(addr)
     except ValueError:
         return None
     return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
@@ -376,6 +411,12 @@ class PrivacyVault:
 
         def sub_ip(m: re.Match) -> str:
             val = m.group(0)
+            base = val.split("%", 1)[0]
+            # "d::" in "std::vector" is a technically valid IPv6 but almost always
+            # source code, not an address. Skip a lone 1-2 hex-digit hextet + "::";
+            # real link-local/global prefixes (fe80, 2001, fc00, ...) are 4 digits.
+            if _SHORT_V6_ARTEFACT_RE.fullmatch(base):
+                return val
             priv = _is_private_ip(val)
             cat = Category.IP_PRIVATE if priv else Category.IP_PUBLIC
             if cat not in enabled:
@@ -396,6 +437,14 @@ class PrivacyVault:
         def sub_path(m: re.Match) -> str:
             return self.register(m.group(0), Category.PATH)
 
+        def sub_ldap_dn(m: re.Match) -> str:
+            # An LDAP distinguished name spells the domain out component by
+            # component ("DC=evilcorp,DC=local"), which the dotted-FQDN pattern
+            # never matches — the domain then leaks through every LDAP/BloodHound
+            # enumeration. Register the whole DC run as one DOMAIN value so the
+            # model sees a placeholder and the report rehydrates the exact DN.
+            return self.register(m.group(0), Category.DOMAIN)
+
         if Category.URL in enabled:
             text = _URL_RE.sub(sub_url, text)
         if Category.EMAIL in enabled:
@@ -408,8 +457,14 @@ class PrivacyVault:
         if Category.PATH in enabled:
             text = _PATH_RE.sub(sub_path, text)
         if enabled & {Category.IP_PRIVATE, Category.IP_PUBLIC}:
+            # IPv6 before IPv4: an IPv4-mapped IPv6 (::ffff:192.168.1.1) embeds a
+            # v4 literal, so the v6 pass must claim the whole address first.
+            text = _IPV6_RE.sub(sub_ip, text)
             text = _IPV4_RE.sub(sub_ip, text)
         if enabled & {Category.HOST_INTERNAL, Category.DOMAIN}:
+            # LDAP DN domain (DC=x,DC=y) before the dotted pass: it is not dotted
+            # and would otherwise slip straight through to the model.
+            text = _LDAP_DN_RE.sub(sub_ldap_dn, text)
             text = _DOMAIN_RE.sub(sub_domain, text)
         return text
 
