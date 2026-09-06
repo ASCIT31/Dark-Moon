@@ -129,6 +129,18 @@ PROVEOF
 )
 fi
 
+# Darkmoon MCP wiring (issue #40, section 3). By default the MCP runs as a
+# PERSISTENT streamable-http server started at boot (entrypoint), so opencode
+# connects to it as a remote MCP and the privacy plugin can reach its vault
+# before the first prompt. DARKMOON_MCP_TRANSPORT=stdio keeps the old per-session
+# local spawn.
+if [ "${DARKMOON_MCP_TRANSPORT:-http}" = "stdio" ]; then
+  MCP_DARKMOON='"darkmoon": { "type": "local", "command": ["/usr/local/bin/darkmoon-mcp"], "timeout": 36000000, "enabled": true }'
+else
+  _DM_MCP_URL="http://${DARKMOON_MCP_HOST:-127.0.0.1}:${DARKMOON_MCP_PORT:-8181}${DARKMOON_MCP_PATH:-/mcp}"
+  MCP_DARKMOON="\"darkmoon\": { \"type\": \"remote\", \"url\": \"${_DM_MCP_URL}\", \"enabled\": true }"
+fi
+
 cat > "$OPENCODE_CONFIG_FILE" <<EOF
 {
   "\$schema": "https://opencode.ai/config.json"${PROVIDER_BLOCK},
@@ -137,13 +149,10 @@ cat > "$OPENCODE_CONFIG_FILE" <<EOF
   "small_model": "$FINAL_MODEL",
 
   "mcp": {
-    "darkmoon": {
-      "type": "local",
-      "command": ["/usr/local/bin/darkmoon-mcp"],
-      "timeout": 36000000,
-      "enabled": true
-    }
+    ${MCP_DARKMOON}
   },
+
+  "plugin": ["file:///opt/darkmoon/plugins/darkmoon-privacy.ts"],
 
   "permission": { "*": "allow" },
 

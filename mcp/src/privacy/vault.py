@@ -25,6 +25,7 @@ import hmac
 import ipaddress
 import os
 import re
+import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -156,6 +157,21 @@ _CRED_FALSE_POSITIVES = frozenset({
     "xxxx", "****", "<password>", "$password", "password}",
 })
 
+# Launch-prompt credential pairs, e.g. `CREDS=j.doe:Password1!`,
+# `CREDS=EVILCORP\\admin:pw`, `LOGIN=user/pass`. The launch prompt reaches the
+# model before any tool call, so these must be tokenized up front (issue #40,
+# section 3). The user half is registered as USER and the secret half as CRED so
+# credentialed testing still works: the model sees `USER_001:CRED_001`, the
+# gateway rehydrates USER into a command normally and injects CRED only into a
+# target-bound command. `TOKEN=`/`PASSWORD=` single secrets are left to
+# register_credentials(); this pattern handles only the user:secret pair form.
+_PROMPT_CRED_PAIR_RE = re.compile(
+    r"(?i)(?<![\w-])(?:creds?|credentials?|login|auth)\s*[:=]\s*"
+    # user may be an email/UPN (user@domain) or DOMAIN\\user; it ends at the
+    # FIRST ':' or '/' separator, so an '@' in the user must not leak the secret.
+    r"(?P<user>[^\s:/\"',;|&]+)[:/](?P<secret>[^\s\"',;|&]{1,})"
+)
+
 
 def _is_private_ip(value: str) -> Optional[bool]:
     try:
@@ -191,6 +207,13 @@ class PrivacyVault:
     _by_hash: Dict[str, _Entry] = field(default_factory=dict, repr=False)
     _by_ph: Dict[str, _Entry] = field(default_factory=dict, repr=False)
     _counters: Dict[Category, int] = field(default_factory=dict, repr=False)
+    # The persistent-http MCP serves the pre-model tokenization socket (a daemon
+    # thread) and the tool-call handlers (the asyncio loop) from DIFFERENT threads
+    # against this one shared vault. The placeholder counter is a read-modify-write
+    # (`n = counter+1; counter = n`), so without a lock two concurrent registers
+    # could mint the SAME placeholder for two different values — a rehydration
+    # collision. This reentrant lock makes register()/purge() atomic.
+    _lock: "threading.RLock" = field(default_factory=threading.RLock, repr=False)
 
     def __post_init__(self) -> None:
         if _HAVE_FERNET:
@@ -207,11 +230,12 @@ class PrivacyVault:
 
     def purge(self) -> None:
         """Best-effort zeroization of the mapping."""
-        self._by_hash.clear()
-        self._by_ph.clear()
-        self._counters.clear()
-        self._key = b""
-        self._hmac_key = b""
+        with self._lock:
+            self._by_hash.clear()
+            self._by_ph.clear()
+            self._counters.clear()
+            self._key = b""
+            self._hmac_key = b""
 
     # -- crypto helpers ------------------------------------------------------
     def _fingerprint(self, value: str) -> str:
@@ -246,16 +270,20 @@ class PrivacyVault:
         if not value:
             return value
         fp = self._fingerprint(value)
-        existing = self._by_hash.get(fp)
-        if existing is not None:
-            return existing.placeholder
-        n = self._counters.get(category, 0) + 1
-        self._counters[category] = n
-        placeholder = f"{category.value}_{n:03d}"
-        entry = _Entry(placeholder=placeholder, ciphertext=self._encrypt(value), category=category)
-        self._by_hash[fp] = entry
-        self._by_ph[placeholder] = entry
-        return placeholder
+        # Atomic: the fingerprint lookup, counter bump and inserts must not
+        # interleave with a concurrent register() from another thread, or two
+        # different values could be minted the same placeholder (see _lock).
+        with self._lock:
+            existing = self._by_hash.get(fp)
+            if existing is not None:
+                return existing.placeholder
+            n = self._counters.get(category, 0) + 1
+            self._counters[category] = n
+            placeholder = f"{category.value}_{n:03d}"
+            entry = _Entry(placeholder=placeholder, ciphertext=self._encrypt(value), category=category)
+            self._by_hash[fp] = entry
+            self._by_ph[placeholder] = entry
+            return placeholder
 
     def register_credentials(self, text: str) -> str:
         """Tokenize plain credentials found in ``text`` as ``CRED_NNN``.
@@ -282,6 +310,41 @@ class PrivacyVault:
                 return m.group(0).replace(secret, self.register(secret, Category.CRED))
 
             text = pattern.sub(sub, text)
+        return text
+
+    def tokenize_prompt(self, text: str) -> str:
+        """Tokenize a launch prompt before it ever reaches the model.
+
+        Issue #40, section 3: `TARGET`/`CREDS`/`SCOPE`/`TOKEN` supplied on the
+        command line reach the model verbatim because the gateway only acts on
+        tool calls. This applies the SAME machinery to the initial prompt — no
+        value is hard-coded, everything is registered through the existing
+        register()/register_credentials()/tokenize() paths, so the placeholders
+        are identical to the ones the gateway rehydrates during the run and
+        restores into the local report.
+
+        Order matters:
+          1. credential *pairs* (`CREDS=user:pass`) -> USER + CRED, so the user
+             half is not later mis-detected as a DOMAIN and the secret half is
+             never left in clear;
+          2. single-secret credentials (`TOKEN=`, `-p`, `key: value`) -> CRED;
+          3. the general tokenizer (IP / URL / DOMAIN / PATH / EMAIL).
+        """
+        if not text:
+            return text
+
+        def _pair(m: "re.Match") -> str:
+            user, secret = m.group("user"), m.group("secret")
+            out = m.group(0)
+            if user and not PLACEHOLDER_RE.fullmatch(user) and user.lower() not in _CRED_FALSE_POSITIVES:
+                out = out.replace(user, self.register(user, Category.USER), 1)
+            if secret and not PLACEHOLDER_RE.fullmatch(secret) and secret.lower() not in _CRED_FALSE_POSITIVES:
+                out = out.replace(secret, self.register(secret, Category.CRED))
+            return out
+
+        text = _PROMPT_CRED_PAIR_RE.sub(_pair, text)
+        text = self.register_credentials(text)
+        text = self.tokenize(text)
         return text
 
     def _categorize_host(self, host: str) -> Category:

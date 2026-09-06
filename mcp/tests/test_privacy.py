@@ -366,3 +366,87 @@ def test_server_default_vault_tokenizes_url_domain_and_path():
 def test_vault_dataclass_default_matches_shared_default():
     # A bare vault (no explicit categories) uses the shared single-source default.
     assert PrivacyVault(session_id="bare").enabled_categories == DEFAULT_CATEGORIES
+
+
+# --- 8. launch prompt is tokenized before the model (issue #40, section 3) ---
+def _prompt_vault():
+    return PrivacyVault(session_id="prompt", enabled_categories=resolve_categories(None))
+
+
+def test_prompt_tokenization_leaks_nothing():
+    v = _prompt_vault()
+    prompt = ('TARGET: 192.168.56.10, 192.168.56.20 PROGRAM="Active Directory" '
+              'CREDS=j.doe:Password1! SCOPE=10.0.0.0/24 '
+              'https://portal.corp.local:8443 admin@corp.local TOKEN=ghp_abcdEFGH1234567890')
+    out = v.tokenize_prompt(prompt)
+    for leaked in ("192.168.56.10", "192.168.56.20", "j.doe", "Password1!",
+                   "10.0.0.0", "portal.corp.local", "admin@corp.local",
+                   "ghp_abcdEFGH1234567890"):
+        assert leaked not in out, f"launch prompt leaked {leaked!r} to the model"
+
+
+def test_prompt_creds_split_into_user_and_cred():
+    v = _prompt_vault()
+    out = v.tokenize_prompt("CREDS=j.doe:Password1!")
+    assert re.search(r"USER_\d{3}:CRED_\d{3}", out), out
+    # USER rehydrates like a normal value; CRED is a secret (target-bound only).
+    user_ph = re.search(r"USER_\d{3}", out).group(0)
+    cred_ph = re.search(r"CRED_\d{3}", out).group(0)
+    assert v.rehydrate(user_ph) == "j.doe"                 # USER is not a secret
+    assert v.rehydrate(cred_ph) is None                    # CRED withheld by default
+    assert v.rehydrate(cred_ph, allow_secret=True) == "Password1!"  # local report only
+
+
+def test_prompt_shares_vault_so_tool_calls_and_report_resolve(gw):
+    """The placeholders minted for the prompt must be the same ones the gateway
+    rehydrates for a later tool call and the report renderer restores locally."""
+    v = _prompt_vault()
+    out = v.tokenize_prompt("TARGET: 192.168.56.10 CREDS=j.doe:Password1!")
+    ip_ph = re.search(r"IP_PRIVATE_\d{3}", out).group(0)
+    # a follow-up scan the model writes with that placeholder rehydrates locally
+    res = gw.process_command(f"nmap -sV {ip_ph}", v)
+    assert res.allowed and "192.168.56.10" in res.command
+    # and the report renderer (local, allow_secret) restores the real target+cred
+    assert v.rehydrate(ip_ph) == "192.168.56.10"
+
+
+def test_prompt_tokenization_is_deterministic_across_calls():
+    v = _prompt_vault()
+    a = v.tokenize_prompt("scan 192.168.56.10")
+    b = v.tokenize_prompt("again 192.168.56.10")
+    assert a.split("scan ")[1] == b.split("again ")[1]  # same placeholder both times
+
+
+# --- 9. adversarial regressions (issue #40 §3 hardening) ---------------------
+def test_prompt_creds_with_email_or_upn_user_never_leaks():
+    """A CREDS pair whose user half is an email/UPN (contains '@') must still
+    tokenize BOTH halves — the '@' must not break the pair and leak the secret."""
+    for creds, secret in [
+        ("CREDS=user@corp.com:Secret1", "Secret1"),
+        ("CREDS=svc-acct@corp.local/Adm1n!", "Adm1n!"),
+        ("CREDS=EVILCORP\\admin:P@ssw0rd", "P@ssw0rd"),
+    ]:
+        v = _prompt_vault()
+        out = v.tokenize_prompt(creds)
+        assert secret not in out, f"secret leaked: {creds!r} -> {out!r}"
+        assert re.search(r"(USER_\d{3})[:/](CRED_\d{3})", out), out
+
+
+def test_register_is_thread_safe_no_placeholder_collision():
+    """Concurrent register() from multiple threads must never mint the same
+    placeholder for two different values (the counter is a read-modify-write)."""
+    import threading
+    v = PrivacyVault(session_id="concurrent")
+
+    def work(base):
+        for i in range(200):
+            v.register(f"10.{base}.{i // 256}.{i % 256}", Category.IP_PRIVATE)
+
+    threads = [threading.Thread(target=work, args=(b,)) for b in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    phs = v.known_placeholders()
+    assert len(phs) == len(set(phs)), "placeholder collision under concurrency"
+    assert len(phs) == 800

@@ -141,6 +141,29 @@ while read -r path; do
 done &
 
 #######################################
+# Persistent Darkmoon MCP (issue #40, section 3)
+#######################################
+# Start the darkmoon MCP as a persistent streamable-http server BEFORE opencode,
+# so its per-process vault AND the pre-model tokenization socket are up before any
+# session. opencode connects to it as a remote MCP (apply-settings.sh writes the
+# matching config), which lets the privacy plugin tokenize the launch prompt — and
+# the session-title call that precedes the first model turn — with no wait. Set
+# DARKMOON_MCP_TRANSPORT=stdio to fall back to per-session stdio spawning.
+if [ "${DARKMOON_MCP_TRANSPORT:-http}" != "stdio" ]; then
+  export DARKMOON_MCP_TRANSPORT="${DARKMOON_MCP_TRANSPORT:-http}"
+  export DARKMOON_MCP_HOST="${DARKMOON_MCP_HOST:-127.0.0.1}"
+  export DARKMOON_MCP_PORT="${DARKMOON_MCP_PORT:-8181}"
+  export DARKMOON_MCP_PATH="${DARKMOON_MCP_PATH:-/mcp}"
+  # Persistent MCP = one long-lived vault shared by every session; give it a long
+  # TTL so placeholders minted for a launch prompt still rehydrate into a report
+  # generated much later in a long campaign (the vault is in-memory and local-only,
+  # and resets on container restart).
+  export DARKMOON_PRIVACY_TTL="${DARKMOON_PRIVACY_TTL:-604800}"
+  log "Starting persistent Darkmoon MCP (http) on ${DARKMOON_MCP_HOST}:${DARKMOON_MCP_PORT}${DARKMOON_MCP_PATH}"
+  /usr/local/bin/darkmoon-mcp >/tmp/darkmoon-mcp-boot.log 2>&1 &
+fi
+
+#######################################
 # Start main process
 #######################################
 log "Starting main process: $*"

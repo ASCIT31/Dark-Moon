@@ -76,6 +76,12 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir -p /opt/darkmoon/default-agents
 COPY conf/agents/ /opt/darkmoon/default-agents/
 
+# Darkmoon privacy plugin (issue #40, section 3): pre-model prompt tokenization.
+# A stable file:// opencode plugin (uses only the public `chat.message` hook +
+# Bun fetch to the MCP's local unix socket) — no opencode core patching, so an
+# opencode fork sync cannot break it. Registered in opencode.json by apply-settings.sh.
+COPY conf/plugins/ /opt/darkmoon/plugins/
+
 # ------------------------------------------------------------
 # Darkmoon MCP Server (embedded, CLEAN)
 # ------------------------------------------------------------

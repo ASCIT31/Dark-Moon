@@ -10,6 +10,7 @@ Architecture:
 """
 
 import os
+import threading
 import uuid
 from typing import Optional, Dict, Any
 from fastmcp import FastMCP
@@ -60,6 +61,11 @@ workflow_registry = WorkflowRegistry(docker_client)
 PRIVACY_ENABLED = os.getenv("DARKMOON_PRIVACY", "1").lower() not in ("0", "false", "no", "off")
 _command_gateway = CommandGateway()
 _vaults: Dict[str, PrivacyVault] = {}
+# The pre-model tokenization endpoint (prompt_socket) runs in a daemon thread, so
+# vault access it triggers is serialized against the stdio tool handlers with this
+# lock. In practice they never overlap (the launch prompt is tokenized before the
+# model can issue its first tool call), but the lock makes it correct regardless.
+_vault_lock = threading.RLock()
 
 
 def _privacy_policy():
@@ -89,14 +95,21 @@ def _resolve_categories():
 
 
 def _get_vault(session_id: Optional[str]) -> PrivacyVault:
-    """Return (creating if needed) the per-session privacy vault."""
+    """Return (creating if needed) the per-session privacy vault.
+
+    Locked because the tokenization socket (a daemon thread) and the tool-call
+    handlers (the asyncio loop) can call this concurrently for the same session
+    on the persistent-http MCP; without it two vaults could be created for one
+    session and one thread's mappings would be lost.
+    """
     sid = session_id or SESSION_ID
-    vault = _vaults.get(sid)
-    if vault is None or vault.is_expired():
-        ttl = int(os.getenv("DARKMOON_PRIVACY_TTL", str(6 * 3600)))
-        vault = PrivacyVault(session_id=sid, ttl_seconds=ttl, enabled_categories=_resolve_categories())
-        _vaults[sid] = vault
-    return vault
+    with _vault_lock:
+        vault = _vaults.get(sid)
+        if vault is None or vault.is_expired():
+            ttl = int(os.getenv("DARKMOON_PRIVACY_TTL", str(6 * 3600)))
+            vault = PrivacyVault(session_id=sid, ttl_seconds=ttl, enabled_categories=_resolve_categories())
+            _vaults[sid] = vault
+        return vault
 
 
 # ============================================================================
@@ -122,6 +135,62 @@ def get_session() -> Dict[str, str]:
     return {
         "session_id": SESSION_ID
     }
+
+@mcp.tool()
+def tokenize_prompt(text: str, session_id: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Tokenize a launch prompt BEFORE it reaches the model.
+
+    The Darkmoon privacy boundary normally acts only on tool calls and their
+    output. The initial campaign prompt (TARGET / CREDS / SCOPE / TOKEN / IP /
+    port) is sent to the model first, so without this it would reach the model in
+    clear (issue #40, section 3). This applies the SAME per-session vault the
+    tool calls use, so every placeholder is identical to the ones the gateway
+    rehydrates during the run and restores into the local report — no value is
+    ever hard-coded.
+
+    Intended caller: the Darkmoon OpenCode privacy plugin, which rewrites the
+    outgoing user message with the returned `tokenized` text before the model
+    sees it. Safe to call repeatedly (deterministic per session).
+
+    Args:
+        text: the raw prompt text to tokenize.
+        session_id: privacy vault session id; defaults to the server session,
+                    i.e. the exact vault execute_command / run_workflow use.
+
+    Returns:
+        {"tokenized": <text with placeholders>, "session_id": <sid>,
+         "changed": <bool>, "stats": {<category>: <count>}}
+    """
+    original = text or ""
+    if not PRIVACY_ENABLED or not _privacy_enabled_for(session_id):
+        return {"tokenized": original, "session_id": session_id or SESSION_ID,
+                "changed": False, "stats": {}}
+    with _vault_lock:
+        vault = _get_vault(session_id)
+        tokenized = vault.tokenize_prompt(original)
+        stats = vault.stats()
+    return {
+        "tokenized": tokenized,
+        "session_id": vault.session_id,
+        "changed": tokenized != original,
+        "stats": stats,
+    }
+
+
+def _privacy_socket_tokenize(text: str, session_id: Optional[str]) -> str:
+    """Callback for the local pre-model tokenization socket (prompt_socket).
+
+    Shares the exact per-session vault used by execute_command / run_workflow and
+    by the report renderer, so a placeholder minted for the launch prompt is the
+    same one rehydrated during the run and restored into the local report.
+    """
+    original = text or ""
+    if not PRIVACY_ENABLED or not _privacy_enabled_for(session_id):
+        return original
+    with _vault_lock:
+        return _get_vault(session_id).tokenize_prompt(original)
+
 
 @mcp.tool()
 def health_check() -> Dict[str, Any]:
@@ -779,6 +848,21 @@ def main():
     print(f"Default timeout: {docker_client.default_timeout}s")
     print()
 
+    # Pre-model tokenization endpoint (issue #40, section 3): a local unix socket
+    # the Darkmoon opencode plugin POSTs the launch prompt to, so TARGET/CREDS/
+    # SCOPE reach the model already tokenized. Started FIRST, before the toolbox
+    # health check, so it is up even if the toolbox is momentarily unreachable.
+    # Best-effort; never blocks startup.
+    if PRIVACY_ENABLED:
+        try:
+            from src.prompt_socket import start as _start_privacy_socket, DEFAULT_SOCKET_PATH
+            if _start_privacy_socket(_privacy_socket_tokenize) is not None:
+                print(f"Pre-model prompt tokenization socket: {DEFAULT_SOCKET_PATH}")
+                print()
+        except Exception as _exc:  # noqa: BLE001
+            print(f"[WARNING] prompt tokenization socket unavailable: {_exc.__class__.__name__}")
+            print()
+
     # Perform initial health check
     print("Performing initial health check...")
     health = health_checker.check()
@@ -819,8 +903,22 @@ def main():
     print("Architecture: Executor + Dynamic Workflow Registry")
     print("=" * 60)
 
-    # Run the server
-    mcp.run()
+    # Run the server. Default transport is stdio (opencode `type: local`, one MCP
+    # process spawned per session). Set DARKMOON_MCP_TRANSPORT=http to run as a
+    # PERSISTENT streamable-http server instead (opencode `type: remote`): started
+    # once at boot, its per-process vault — and the pre-model tokenization socket
+    # above — are up before any prompt, so the plugin can tokenize the launch
+    # prompt (and the session-title call that precedes the main request) without
+    # waiting for a per-session MCP to spawn. See issue #40, section 3.
+    transport = os.getenv("DARKMOON_MCP_TRANSPORT", "stdio").strip().lower()
+    if transport in ("http", "streamable-http", "sse"):
+        host = os.getenv("DARKMOON_MCP_HOST", "127.0.0.1")
+        port = int(os.getenv("DARKMOON_MCP_PORT", "8181"))
+        path = os.getenv("DARKMOON_MCP_PATH", "/mcp")
+        print(f"Transport: {transport} on http://{host}:{port}{path}")
+        mcp.run(transport=transport, host=host, port=port, path=path)
+    else:
+        mcp.run()
 
 
 if __name__ == "__main__":
