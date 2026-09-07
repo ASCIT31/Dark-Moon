@@ -1056,6 +1056,7 @@ The orchestrator coordinates specialized sub-agents such as:
 * Flask / Python
 * ASP.NET
 * GraphQL
+* LLM / AI inference endpoints (OpenAI-compatible, Ollama, vLLM, TGI)
 * Go
 * Kubernetes
 * Active Directory
@@ -1230,6 +1231,7 @@ Examples:
 | ------------------ | --------------- |
 | WordPress          | wordpress       |
 | GraphQL endpoint   | graphql         |
+| LLM / AI endpoint  | llm             |
 | NodeJS / Express   | nodejs          |
 | Flask / Django     | flask           |
 | ASP.NET            | aspnet          |

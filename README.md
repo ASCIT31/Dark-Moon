@@ -150,6 +150,7 @@ DarkMoon dynamically selects and dispatches specialized agents depending on the 
 | WordPress, Drupal, Joomla, Magento, PrestaShop, Moodle | CMS-specific agent |
 | PHP, Node.js, Flask, ASP.NET, Spring Boot, Ruby on Rails, Go | Stack-specific agent |
 | GraphQL | GraphQL agent |
+| LLM / AI inference endpoint (OpenAI-compatible, Ollama, vLLM, TGI) | LLM agent |
 | Active Directory | AD agent |
 | Kubernetes | Kubernetes agent |
 | AWS, Azure, GCP | Cloud-provider agent |
