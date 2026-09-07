@@ -30,6 +30,7 @@ class GenericExecutor:
             "wafw00f",
             "sqlmap",
             "arjun",
+            "garak",
             "finalrecon",
             "lightpanda",
             "bash",

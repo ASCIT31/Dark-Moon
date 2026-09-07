@@ -395,6 +395,13 @@ cat > "$OPENCODE_CONFIG_FILE" <<EOF
       "prompt_file": "/root/.opencode/agents/graphql.md"
     },
 
+    "llm": {
+      "model": "$FINAL_MODEL",
+      "mcp": ["darkmoon"],
+      "secondary": true,
+      "prompt_file": "/root/.opencode/agents/llm.md"
+    },
+
     "golang": {
       "model": "$FINAL_MODEL",
       "mcp": ["darkmoon"],

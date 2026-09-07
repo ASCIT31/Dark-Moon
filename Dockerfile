@@ -226,9 +226,11 @@ RUN wget -qO /usr/local/bin/7z2john.pl https://raw.githubusercontent.com/openwal
 # ------------------------------------------------------------
 # firmwalker — automated firmware filesystem secret hunter (firmware agent)
 # ------------------------------------------------------------
-RUN git clone --depth 1 https://github.com/craigz28/firmwalker.git /opt/firmwalker \
+RUN (git clone --depth 1 https://github.com/craigz28/firmwalker.git /opt/firmwalker \
+      || git clone --depth 1 https://github.com/hotelzululima/firmwalker.git /opt/firmwalker) \
  && ln -sf /opt/firmwalker/firmwalker.sh /usr/local/bin/firmwalker \
- && chmod +x /opt/firmwalker/firmwalker.sh
+ && chmod +x /opt/firmwalker/firmwalker.sh \
+ || echo "[WARN] firmwalker unavailable (upstream craigz28 repo removed); continuing without it"
 # ------------------------------------------------------------
 # sasquatch — vendor-patched unsquashfs for the non-standard LZMA/XZ SquashFS
 # images shipped by embedded vendors (firmware agent).

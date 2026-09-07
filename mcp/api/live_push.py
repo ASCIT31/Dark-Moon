@@ -13,6 +13,7 @@ Flow during a live pentest:
 Each call writes JSON to disk immediately so the API serves fresh data.
 """
 
+import re
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -1035,6 +1036,9 @@ def finalize_campaign(
         host = target.get("host", target_id) if target else target_id
         if rehydrate is not None and host:
             host = rehydrate(host)
+        # filename-safe slug: a rehydrated host may be a URL (http://h:port) with
+        # "/" and ":" that would break the report path. The report body keeps real values.
+        host = re.sub(r"[^A-Za-z0-9._-]", "_", str(host)).strip("_")[:80] or "target"
         fname = f"pentest_report_{host}_{_today_compact()}-{_time_compact()}.md"
         REPORTS_DIR.mkdir(parents=True, exist_ok=True)
         (REPORTS_DIR / fname).write_text(report_markdown, encoding="utf-8")
