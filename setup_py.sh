@@ -237,7 +237,7 @@ msg "Installation azure-cli (Entra ID / Azure agents) …"
 msg "Installation garak (LLM vulnerability scanner) …"
 "$PIP_BIN" install --no-cache-dir --prefer-binary torch --index-url https://download.pytorch.org/whl/cpu \
   || warn "cpu torch install failed; garak may pull the default torch build"
-if "$PIP_BIN" install --no-cache-dir garak; then
+if "$PIP_BIN" install --no-cache-dir 'garak==0.16.0'; then
   cat >"$BIN_OUT/garak" <<'EOF'
 #!/bin/sh
 exec /opt/darkmoon/python/bin/garak "$@"
