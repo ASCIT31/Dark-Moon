@@ -6,7 +6,7 @@
 
 ### The open-source AI penetration testing platform that runs a full pentest on its own, and never leaks your data
 
-**Point DarkMoon at an authorized target. 50 specialist AI agents reason, chain real exploits across web, cloud, Active Directory and Kubernetes, and return proof for every finding. Self-hosted, and the model only ever sees `IP_PRIVATE_001`, never your real IPs, hosts or credentials.**
+**Point DarkMoon at an authorized target. 50 specialist AI agents reason, chain real exploits across web, cloud, Active Directory, Kubernetes and AI/LLM endpoints, and return proof for every finding. Self-hosted, and the model only ever sees `IP_PRIVATE_001`, never your real IPs, hosts or credentials.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub stars](https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=social&label=Star)](https://github.com/ASCIT31/Dark-Moon)
@@ -36,7 +36,8 @@ It does not replace the pentester. It clears the repetitive part of an assessmen
 
 ## Why DarkMoon?
 
-- 🌐 **Beyond the web** — one agentic system across web, APIs, Active Directory, Kubernetes, cloud (AWS, Azure, GCP), CI/CD, databases and IoT firmware, chained end to end
+- 🌐 **Beyond the web** — one agentic system across web, APIs, Active Directory, Kubernetes, cloud (AWS, Azure, GCP), CI/CD, databases, IoT firmware and AI/LLM inference endpoints, chained end to end
+- 🧠 **Pentests your AI too** — a dedicated LLM agent probes AI/LLM inference endpoints (OpenAI-compatible, Ollama, vLLM, TGI) for the OWASP LLM Top 10: prompt injection, jailbreaks, system-prompt leakage and unsafe output handling, with garak-backed probes and proof for every finding
 - 🕶️ **Your data never reaches the LLM** — reversible local tokenization turns real IPs, hostnames, URLs, credentials and paths into deterministic placeholders (`IP_PRIVATE_001`, ...), rehydrated locally only at the moment a tool runs and masked back out of every result. Runs fully on a local model. And it never costs you a command: when a value is headed somewhere it must not go, the command still runs and the far end receives the placeholder instead. This is the part no cloud competitor has.
 - 🧾 **Proof, not scores** — every finding ships with the exact command and raw output, reproducible, so there is nothing to trust blindly and almost nothing to triage
 - 🔧 **50 specialist agents, 50+ offensive tools** — Nuclei, NetExec, BloodHound, sqlmap, Impacket, Naabu, httpx, ffuf and more, orchestrated over MCP
