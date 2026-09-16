@@ -7,7 +7,8 @@
 > can be wired into CI/CD, ticketing, chat and reporting automations like any
 > other step.
 
-- **Package:** `n8n-nodes-darkmoon` (v0.2.0)
+- **Package:** `n8n-nodes-darkmoon` (v0.2.0) — **live on npm**, installable via n8n Community Nodes: `n8n-nodes-darkmoon`
+- **npm:** <https://www.npmjs.com/package/n8n-nodes-darkmoon>
 - **Repository:** <https://github.com/ASCIT31/n8n-nodes-darkmoon>
 - **License:** MIT
 
