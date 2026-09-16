@@ -4,15 +4,15 @@
 
 # DarkMoon
 
-### The open-source AI penetration testing platform that runs a full pentest on its own, and never leaks your data
+### Open-source autonomous AI pentest platform that also ships tested remediation as human-reviewed PRs
 
-**Point DarkMoon at an authorized target. 50 specialist AI agents reason, chain real exploits across web, cloud, Active Directory, Kubernetes and AI/LLM endpoints, and return proof for every finding. Self-hosted, and the model only ever sees `IP_PRIVATE_001`, never your real IPs, hosts or credentials.**
+**Point DarkMoon at an authorized target. It runs the whole pentest on its own, returns proof for every finding, and can hand back the fix as a human-reviewed pull request, retested against the exploit. Self-hosted, and it runs on a local model so your real IPs, hosts and credentials never reach the LLM.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub stars](https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=social&label=Star)](https://github.com/ASCIT31/Dark-Moon)
-[![Benchmark: 57 vulns on OWASP Juice Shop](https://img.shields.io/badge/benchmark-57%20real%20vulns%20on%20Juice%20Shop-critical)](https://github.com/ASCIT31/Darkmoon-Benchmarks)
+[![Remediation benchmark: 42 of 57 fixed end-to-end](https://img.shields.io/badge/remediation-42%20of%2057%20fixed%20end--to--end-brightgreen)](https://dark-moon.org/remediation-benchmark/)
 
-[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**▶️ Watch the 60s demo**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO) · [**🚀 Quickstart**](#quick-start) · [**📊 57-vuln benchmark**](https://github.com/ASCIT31/Darkmoon-Benchmarks)
+[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**▶️ Watch the demo**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO) · [**🚀 Quick Start**](#quick-start) · [**🧾 Remediation benchmark**](https://dark-moon.org/remediation-benchmark/)
 
 **As featured in** [Help Net Security](https://www.helpnetsecurity.com/2026/06/29/darkmoon-open-source-ai-pentesting-platform/) · [Cyber Security News](https://cybersecuritynews.com/darkmoon-penetration-testing-platform/) · [DevOps.com](https://devops.com/why-ci-cd-security-testing-is-going-autonomous-and-why-it-should-stay-local/) · [SecurityBrief](https://securitybrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [LinuxLinks](https://www.linuxlinks.com/darkmoon-ai-powered-autonomous-penetration-testing-platform/) · [IT Brief](https://itbrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [ChannelLife](https://channellife.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting)
 
@@ -23,6 +23,43 @@
 **▶️ Watch DarkMoon run a full autonomous penetration test**
 
 </div>
+
+---
+
+## Three reasons DarkMoon is different
+
+**1. Truly open source.** GPLv3, self-hosted, every agent's methodology is plain Markdown you can read, diff and fork. Nothing hidden, no closed core for the engine.
+
+**2. It doesn't just find, it fixes.** Every finding flows _finding → sandbox-validated fix → **human-reviewed pull request, retested against the original exploit**_, and is never auto-merged. On our OWASP Juice Shop demonstration, **42 of 57 findings were fixed end-to-end with a clean live exploit-retest** (a fix only counts when the original exploit is re-run and confirmed closed). See the [remediation benchmark](https://dark-moon.org/remediation-benchmark/) and the [57 open PRs on ASCIT31/juice-shop](https://github.com/ASCIT31/juice-shop/pulls).
+
+**3. Local/private LLM, data never reaches the model.** Run DarkMoon on a local model (**Ollama, llama.cpp**) behind the **Privacy Gateway**: your infrastructure values (IPs, hosts, emails, credentials) are tokenized locally before the model sees them; it reasons on placeholders like `IP_PRIVATE_001` and real values are rehydrated only locally. Defense in depth, not an absolute guarantee.
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/ASCIT31/Dark-Moon.git
+cd Dark-Moon
+./install.sh
+```
+
+`install.sh` configures your LLM provider interactively (no need to edit `docker-compose.yml`) and builds the full stack:
+
+```bash
+./install.sh           # skip form if .opencode.env already configured
+./install.sh --init    # force reconfiguration (cloud or local model)
+./install.sh --help    # show usage
+```
+
+Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local models** (Ollama, llama.cpp). Then run your first assessment and watch it live:
+
+```bash
+./darkmoon.sh "TARGET: example.com"
+./darkmoon.sh --log <session_id>
+```
+
+**Prerequisites:** Docker & Docker Compose, and an LLM API key (or a local model). GPU setup, environment variables and the full flags reference live in the [Full Documentation](docs/full.md).
 
 ---
 
@@ -73,58 +110,6 @@ Reproduce it and compare tools yourself: **[ASCIT31/Darkmoon-Benchmarks](https:/
 | Open source | ✅ GPL-3.0 | ✅ | ✅ | ✅ |
 
 *Compiled from public repos/docs (2026-08); corrections welcome via PR.*
-
-## Quick Start
-
-### Prerequisites
-
-- Docker & Docker Compose
-- An LLM API key (OpenRouter, Anthropic, OpenAI, or local models)
-
-> **Note:** GPU configuration, NVIDIA driver troubleshooting, and advanced environment setup are covered in the [Full Documentation, GPU Troubleshooting](docs/full.md#ii2--darkmoon--gpu-troubleshooting-guide-official).
-
-### Installation
-
-**1. Clone the repository**
-
-```bash
-git clone https://github.com/ASCIT31/Dark-Moon.git
-cd Dark-Moon
-```
-
-**2. Configure your LLM provider**
-
-`install.sh` handles provider configuration interactively, no need to edit `docker-compose.yml`:
-
-```bash
-./install.sh           # skip form if .opencode.env already configured
-./install.sh --init    # force reconfiguration (cloud or local model)
-./install.sh --help    # show usage
-```
-
-Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local models** (Ollama, llama.cpp).
-
-> **Note:** For full details on environment variables and local model setup, see the [Full Documentation, Environment Variables](docs/full.md#ii3-configuration-of-environment-variables).
-
-**3. Build and launch**
-
-```bash
-./install.sh  # Clean install with full stack reset
-```
-
-**4. Run your first assessment**
-
-```bash
-./darkmoon.sh "TARGET: example.com"
-```
-
-**5. Monitor in real-time**
-
-```bash
-./darkmoon.sh --log <session_id>
-```
-
-> **Note:** Real-time session logs display every command executed by the MCP server. See [Full Documentation, Session Logs](docs/full.md#ii7e-step-1--start-an-assessment) for details.
 
 ---
 
