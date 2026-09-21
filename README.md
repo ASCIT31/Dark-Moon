@@ -30,32 +30,39 @@
 
 <div align="center">
 
-## See DarkMoon in action
+## See DarkMoon in action, live in your terminal
+
+The open-source engine is a CLI tool. You launch an assessment from the command line and watch every agent, command and finding stream past in real time.
 
 </div>
 
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/pics/dashboard.png" alt="DarkMoon dashboard: projects, targets, campaigns and vulnerabilities by severity" />
-<p align="center"><b>Live dashboard.</b> Projects, targets and campaigns at a glance, with every finding bucketed by severity.</p>
+<img src="docs/pics/start-assesment.png" alt="Launching a DarkMoon assessment from the command line with a single TARGET line" />
+<p align="center"><b>Kick off a run from the CLI.</b> One <code>TARGET</code> line and DarkMoon takes over the whole assessment.</p>
 </td>
 <td width="50%" valign="top">
-<img src="docs/pics/vulnerability-1.png" alt="A proven finding: admin account compromise via weak password, CVSS 9.8, status EXPLOITED" />
-<p align="center"><b>Proof, not scores.</b> Each finding carries CVSS, MITRE ATT&CK, ISO 27001 mapping and an <code>EXPLOITED</code> status backed by a real exploit.</p>
+<img src="docs/pics/sub-agent-1.png" alt="A DarkMoon sub-agent state machine in the terminal detecting CVE-2019-9978 and moving straight to exploitation" />
+<p align="center"><b>Autonomous agents reason and exploit, live in your terminal.</b> Here a sub-agent flags CVE-2019-9978 and pivots straight to exploitation.</p>
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/pics/markdown-report-1.png" alt="Structured vulnerability assessment report with management summary, exportable to Markdown and PDF" />
-<p align="center"><b>Reports that read themselves.</b> A management summary in plain language plus full technical detail, exportable to Markdown and PDF.</p>
+<img src="docs/pics/enumeration.png" alt="DarkMoon recon and environment model summary printed in the terminal" />
+<p align="center"><b>Recon and environment model.</b> DarkMoon fingerprints the stack and confirms the attack surface before it strikes.</p>
 </td>
 <td width="50%" valign="top">
-<img src="docs/pics/infra-map-2.png" alt="Interactive infrastructure map of the attack surface with per-node vulnerabilities" />
-<p align="center"><b>Attack surface map.</b> An interactive graph of nodes, connections and per-node vulnerabilities across the whole target.</p>
+<img src="docs/pics/log.png" alt="Live MCP output stream in the terminal with timestamped commands and raw responses" />
+<p align="center"><b>Live MCP stream.</b> Every command the agent runs and its raw output, timestamped, with <code>./darkmoon.sh --log &lt;session&gt;</code>.</p>
 </td>
 </tr>
 </table>
+
+<div align="center">
+<img src="docs/pics/matrix.png" alt="Signal detection matrix in the terminal mapping detected technologies to the agents DarkMoon dispatches" width="80%" />
+<p><b>Signal to agent dispatch.</b> DarkMoon decides which specialist agents to deploy from exactly what it detects on the target.</p>
+</div>
 
 <div align="center">
 
@@ -122,11 +129,6 @@ Built for **security teams**, **DevSecOps engineers**, **red teamers** and **eth
 > **Pro tier feature.** The open-source engine finds and proves vulnerabilities. Automated remediation into pull requests is a **paid Pro-only** capability.
 
 In the paid Pro tier, every finding flows _finding → sandbox-validated fix → **human-reviewed pull request, retested against the original exploit**_, and is never auto-merged. On our OWASP Juice Shop demonstration, the Pro remediation agent **fixed 42 of 57 findings end-to-end with a clean live exploit-retest** (a fix only counts when the original exploit is re-run and confirmed closed). See the [remediation benchmark](https://dark-moon.org/remediation-benchmark/), the [remediation agent docs](docs/remediation-agent.md) and the [57 open PRs on ASCIT31/juice-shop](https://github.com/ASCIT31/juice-shop/pulls).
-
-<div align="center">
-<img src="docs/pics/scheduler.png" alt="Campaign scheduler: recurring automated pentest campaigns with focus, severity and recurrence" width="85%" />
-<p><b>Schedule it once, run it forever.</b> Recurring automated campaigns with FOCUS, severity and recurrence built in.</p>
-</div>
 
 ---
 
