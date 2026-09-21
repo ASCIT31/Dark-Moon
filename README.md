@@ -16,7 +16,7 @@
 <a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/badge/Autonomous%20AI-Pentesting-DCEAF4?style=for-the-badge&labelColor=0A2472" alt="Autonomous AI pentesting"></a>
 </p>
 
-[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**▶️ Watch the demo**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO) · [**🚀 Quick Start**](#quick-start) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🧾 Remediation (Pro)**](https://dark-moon.org/remediation-benchmark/)
+[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**🚀 Quick Start**](#quick-start) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🔒 Darkmoon Pro**](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) · [**▶️ Watch the demo (Pro)**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO)
 
 </div>
 
@@ -30,9 +30,9 @@
 
 <div align="center">
 
-## See DarkMoon in action, live in your terminal
+## See the open source engine (CLI)
 
-The open-source engine is a CLI tool. You launch an assessment from the command line and watch every agent, command and finding stream past in real time.
+The open source Darkmoon is a command line tool. This is what you get when you clone the repo. You launch an assessment from the command line and watch every agent, command and finding stream past in real time.
 
 </div>
 
@@ -62,15 +62,6 @@ The open-source engine is a CLI tool. You launch an assessment from the command 
 <div align="center">
 <img src="docs/pics/matrix.png" alt="Signal detection matrix in the terminal mapping detected technologies to the agents DarkMoon dispatches" width="80%" />
 <p><b>Signal to agent dispatch.</b> DarkMoon decides which specialist agents to deploy from exactly what it detects on the target.</p>
-</div>
-
-<div align="center">
-
-<a href="https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO">
-  <img src="docs/pics/darkmoon-youtube.png" alt="Watch DarkMoon run a full autonomous penetration test" width="70%" />
-</a>
-
-**▶️ Watch DarkMoon run a full autonomous penetration test**
 
 **As featured in** [Help Net Security](https://www.helpnetsecurity.com/2026/06/29/darkmoon-open-source-ai-pentesting-platform/) · [Cyber Security News](https://cybersecuritynews.com/darkmoon-penetration-testing-platform/) · [DevOps.com](https://devops.com/why-ci-cd-security-testing-is-going-autonomous-and-why-it-should-stay-local/) · [SecurityBrief](https://securitybrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [LinuxLinks](https://www.linuxlinks.com/darkmoon-ai-powered-autonomous-penetration-testing-platform/) · [IT Brief](https://itbrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [ChannelLife](https://channellife.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting)
 
@@ -124,11 +115,60 @@ Built for **security teams**, **DevSecOps engineers**, **red teamers** and **eth
 
 ---
 
-## From finding to fix, the Pro way
+## 🔒 Darkmoon Pro — paid edition: web dashboard and automated remediation
 
-> **Pro tier feature.** The open-source engine finds and proves vulnerabilities. Automated remediation into pull requests is a **paid Pro-only** capability.
+> 🔒 **These are Darkmoon Pro features (paid).** The open source edition is the CLI shown above; the web dashboard and the automated remediation to pull requests are not in the open source build.
+
+The screenshots below are the **paid Darkmoon Pro** web dashboard. They are **not** part of the open source repository you clone. The open source edition is the command line tool shown in the section above.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/pics/dashboard.png" alt="Darkmoon Pro web dashboard showing projects, targets, campaigns and vulnerabilities by severity" />
+<p align="center"><b>Pro: live web dashboard.</b> Projects, targets and campaigns at a glance, with every finding bucketed by severity.</p>
+</td>
+<td width="50%" valign="top">
+<img src="docs/pics/vulnerability-1.png" alt="Darkmoon Pro finding detail with CVSS, MITRE ATT&CK and ISO 27001 mapping and EXPLOITED status" />
+<p align="center"><b>Pro: findings with CVSS and ATT&CK mapping.</b> Each finding carries CVSS, MITRE ATT&CK and ISO 27001 mapping with an <code>EXPLOITED</code> status backed by a real exploit.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/pics/markdown-report-1.png" alt="Darkmoon Pro structured web report with management summary, exportable to Markdown and PDF" />
+<p align="center"><b>Pro: exportable web reports.</b> A management summary in plain language plus full technical detail, exportable to Markdown and PDF.</p>
+</td>
+<td width="50%" valign="top">
+<img src="docs/pics/infra-map-2.png" alt="Darkmoon Pro interactive infrastructure map of the attack surface with per-node vulnerabilities" />
+<p align="center"><b>Pro: interactive attack-surface map.</b> A graph of nodes, connections and per-node vulnerabilities across the whole target.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/pics/scheduler.png" alt="Darkmoon Pro campaign scheduler for recurring automated pentest campaigns with focus, severity and recurrence" />
+<p align="center"><b>Pro: scheduled recurring runs.</b> Recurring automated campaigns with FOCUS, severity and recurrence built into the web dashboard.</p>
+</td>
+<td width="50%" valign="top">
+<img src="docs/pics/campaign.png" alt="Darkmoon Pro campaign view listing the 57 vulnerabilities with severity and status" />
+<p align="center"><b>Pro: campaign view.</b> Every vulnerability in a campaign with its severity and confirmation status.</p>
+</td>
+</tr>
+</table>
+
+### 🔒 Pro: from finding to fix (automated remediation, paid)
+
+> 🔒 **Paid Pro feature.** The open source engine finds and proves vulnerabilities. Automated remediation into pull requests is available only in Darkmoon Pro.
 
 In the paid Pro tier, every finding flows _finding → sandbox-validated fix → **human-reviewed pull request, retested against the original exploit**_, and is never auto-merged. On our OWASP Juice Shop demonstration, the Pro remediation agent **fixed 42 of 57 findings end-to-end with a clean live exploit-retest** (a fix only counts when the original exploit is re-run and confirmed closed). See the [remediation benchmark](https://dark-moon.org/remediation-benchmark/), the [remediation agent docs](docs/remediation-agent.md) and the [57 open PRs on ASCIT31/juice-shop](https://github.com/ASCIT31/juice-shop/pulls).
+
+<div align="center">
+
+<a href="https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO">
+  <img src="docs/pics/darkmoon-youtube.png" alt="Watch the demo of the Darkmoon Pro web dashboard running a full autonomous penetration test" width="70%" />
+</a>
+
+**▶️ Watch the demo (shows the Darkmoon Pro web dashboard)**
+
+</div>
 
 ---
 
@@ -357,6 +397,6 @@ This project is licensed under the **GNU General Public License v3.0**. See [LIC
 
 🔒 Open Source · 🤖 AI-Powered · 🇫🇷 Made in France
 
-[⭐ Star us on GitHub](https://github.com/ASCIT31/Dark-Moon) · [📖 Full Documentation](docs/full.md) · [▶️ Watch the Demo](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO)
+[⭐ Star us on GitHub](https://github.com/ASCIT31/Dark-Moon) · [📖 Full Documentation](docs/full.md) · [▶️ Watch the Demo (Pro dashboard)](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO)
 
 </div>
