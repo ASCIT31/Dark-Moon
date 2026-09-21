@@ -1,38 +1,73 @@
 <div align="center">
 
-![DarkMoon Logo](docs/pics/logo_blue.png)
+<a href="https://github.com/ASCIT31/Dark-Moon">
+  <img src="docs/pics/hero.png" alt="DarkMoon — autonomous AI penetration testing on a local model" width="100%" />
+</a>
 
 # DarkMoon
 
 ### Open-source autonomous AI penetration testing platform that finds and proves every vulnerability with a real exploit, on a local model
 
-**DarkMoon brings autonomous AI security testing to your own infrastructure. Point DarkMoon at an authorized target. It runs the whole pentest on its own and returns proof for every finding. Self-hosted, and it runs on a local model so your real IPs, hosts and credentials never reach the LLM. The paid Pro tier can additionally hand back the fix as a human-reviewed pull request, retested against the exploit.**
+<p>
+<a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=for-the-badge&logo=github&label=Star&color=2667FF&labelColor=0A2472" alt="GitHub stars"></a>
+<a href="https://github.com/ASCIT31/Dark-Moon/releases"><img src="https://img.shields.io/github/v/release/ASCIT31/Dark-Moon?style=for-the-badge&label=Release&color=2667FF&labelColor=0A2472" alt="Latest release"></a>
+<a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-2667FF?style=for-the-badge&labelColor=0A2472" alt="License GPLv3"></a>
+<a href="#quick-start"><img src="https://img.shields.io/badge/Runs%20on-Local%20LLM-87BFFF?style=for-the-badge&labelColor=0A2472" alt="Made with local LLM"></a>
+<a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/badge/Autonomous%20AI-Pentesting-DCEAF4?style=for-the-badge&labelColor=0A2472" alt="Autonomous AI pentesting"></a>
+</p>
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![GitHub stars](https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=social&label=Star)](https://github.com/ASCIT31/Dark-Moon)
-[![Pro remediation benchmark: 42 of 57 fixed end-to-end](https://img.shields.io/badge/Pro%20remediation-42%20of%2057%20fixed%20end--to--end-brightgreen)](https://dark-moon.org/remediation-benchmark/)
+[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**▶️ Watch the demo**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO) · [**🚀 Quick Start**](#quick-start) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🧾 Remediation (Pro)**](https://dark-moon.org/remediation-benchmark/)
 
-[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**▶️ Watch the demo**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO) · [**🚀 Quick Start**](#quick-start) · [**🧾 Remediation benchmark (Pro)**](https://dark-moon.org/remediation-benchmark/)
+</div>
 
-**As featured in** [Help Net Security](https://www.helpnetsecurity.com/2026/06/29/darkmoon-open-source-ai-pentesting-platform/) · [Cyber Security News](https://cybersecuritynews.com/darkmoon-penetration-testing-platform/) · [DevOps.com](https://devops.com/why-ci-cd-security-testing-is-going-autonomous-and-why-it-should-stay-local/) · [SecurityBrief](https://securitybrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [LinuxLinks](https://www.linuxlinks.com/darkmoon-ai-powered-autonomous-penetration-testing-platform/) · [IT Brief](https://itbrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [ChannelLife](https://channellife.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting)
+**DarkMoon is autonomous AI penetration testing for your own infrastructure.** Point it at an authorized target and it runs the whole assessment on its own, then returns proof for every finding.
+
+- 🟢 **Truly open source.** GPLv3 and self-hosted, every agent's methodology is plain Markdown you can read, diff and fork.
+- 🎯 **Finds AND proves.** Each vulnerability ships with the exact command, the raw output and a working exploit, so there is almost nothing to triage.
+- 🔒 **Runs on a local LLM + Privacy Gateway.** The gateway tokenizes your real IPs, hosts and credentials locally, so the model reasons on placeholders while real values stay on your perimeter.
+
+---
+
+<div align="center">
+
+## See DarkMoon in action
+
+</div>
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/pics/dashboard.png" alt="DarkMoon dashboard: projects, targets, campaigns and vulnerabilities by severity" />
+<p align="center"><b>Live dashboard.</b> Projects, targets and campaigns at a glance, with every finding bucketed by severity.</p>
+</td>
+<td width="50%" valign="top">
+<img src="docs/pics/vulnerability-1.png" alt="A proven finding: admin account compromise via weak password, CVSS 9.8, status EXPLOITED" />
+<p align="center"><b>Proof, not scores.</b> Each finding carries CVSS, MITRE ATT&CK, ISO 27001 mapping and an <code>EXPLOITED</code> status backed by a real exploit.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/pics/markdown-report-1.png" alt="Structured vulnerability assessment report with management summary, exportable to Markdown and PDF" />
+<p align="center"><b>Reports that read themselves.</b> A management summary in plain language plus full technical detail, exportable to Markdown and PDF.</p>
+</td>
+<td width="50%" valign="top">
+<img src="docs/pics/infra-map-2.png" alt="Interactive infrastructure map of the attack surface with per-node vulnerabilities" />
+<p align="center"><b>Attack surface map.</b> An interactive graph of nodes, connections and per-node vulnerabilities across the whole target.</p>
+</td>
+</tr>
+</table>
+
+<div align="center">
 
 <a href="https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO">
-  <img src="docs/pics/darkmoon-youtube.png" alt="Watch DarkMoon run a full autonomous penetration test" />
+  <img src="docs/pics/darkmoon-youtube.png" alt="Watch DarkMoon run a full autonomous penetration test" width="70%" />
 </a>
 
 **▶️ Watch DarkMoon run a full autonomous penetration test**
 
+**As featured in** [Help Net Security](https://www.helpnetsecurity.com/2026/06/29/darkmoon-open-source-ai-pentesting-platform/) · [Cyber Security News](https://cybersecuritynews.com/darkmoon-penetration-testing-platform/) · [DevOps.com](https://devops.com/why-ci-cd-security-testing-is-going-autonomous-and-why-it-should-stay-local/) · [SecurityBrief](https://securitybrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [LinuxLinks](https://www.linuxlinks.com/darkmoon-ai-powered-autonomous-penetration-testing-platform/) · [IT Brief](https://itbrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [ChannelLife](https://channellife.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting)
+
 </div>
-
----
-
-## Three reasons DarkMoon is different
-
-**1. Truly open source.** GPLv3, self-hosted, every agent's methodology is plain Markdown you can read, diff and fork. Nothing hidden, no closed core for the engine.
-
-**2. It doesn't just find, it can also fix (paid Pro tier).** In the paid Pro tier, every finding flows _finding → sandbox-validated fix → **human-reviewed pull request, retested against the original exploit**_, and is never auto-merged. On our OWASP Juice Shop demonstration, the Pro remediation agent **fixed 42 of 57 findings end-to-end with a clean live exploit-retest** (a fix only counts when the original exploit is re-run and confirmed closed). See the [remediation benchmark](https://dark-moon.org/remediation-benchmark/) and the [57 open PRs on ASCIT31/juice-shop](https://github.com/ASCIT31/juice-shop/pulls).
-
-**3. Local/private LLM, data never reaches the model.** Run DarkMoon on a local model (**Ollama, llama.cpp**) behind the **Privacy Gateway**: your infrastructure values (IPs, hosts, emails, credentials) are tokenized locally before the model sees them; it reasons on placeholders like `IP_PRIVATE_001` and real values are rehydrated only locally. Defense in depth, not an absolute guarantee.
 
 ---
 
@@ -63,26 +98,43 @@ Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local mode
 
 ---
 
+## Feature grid
+
+| | |
+|---|---|
+| 🧠 **50 specialist agents** | One agentic system reasons, plans and dispatches specialist agents across every surface it discovers. |
+| 🌐 **Every surface** | Web, APIs, Active Directory, Kubernetes, cloud (AWS, Azure, GCP), CI/CD, databases, IoT firmware and AI/LLM endpoints, chained end to end. |
+| 🔒 **Privacy Gateway** | Reversible local tokenization turns real IPs, hosts, URLs and credentials into deterministic placeholders, rehydrated only locally at the moment a tool runs. |
+| 🏠 **Local model** | Run the whole assessment on a local LLM (Ollama, llama.cpp) so your infrastructure values stay on your own perimeter. |
+| 🧾 **Proof, not scores** | Every finding ships with the exact command, raw output and a reproducible exploit. |
+| 🛡️ **Security by design** | The AI never runs a command directly, every action flows through a controlled, logged MCP interface. |
+| 🤖 **Pentests your AI too** | A dedicated LLM agent probes AI/LLM inference endpoints for the OWASP LLM Top 10 with garak-backed probes. |
+| ♾️ **CI/CD native** | Trigger a pentest in the pipeline and get findings back as artifacts. |
+| 🔌 **MCP + n8n** | Orchestrate 50+ offensive tools over MCP, and drive DarkMoon from an [n8n workflow](docs/n8n-integration.md). |
+| 🔧 **Fix it (Pro)** | The paid Pro tier turns findings into human-reviewed pull requests, retested against the original exploit. |
+
+Built for **security teams**, **DevSecOps engineers**, **red teamers** and **ethical hacking** professionals.
+
+---
+
+## From finding to fix, the Pro way
+
+> **Pro tier feature.** The open-source engine finds and proves vulnerabilities. Automated remediation into pull requests is a **paid Pro-only** capability.
+
+In the paid Pro tier, every finding flows _finding → sandbox-validated fix → **human-reviewed pull request, retested against the original exploit**_, and is never auto-merged. On our OWASP Juice Shop demonstration, the Pro remediation agent **fixed 42 of 57 findings end-to-end with a clean live exploit-retest** (a fix only counts when the original exploit is re-run and confirmed closed). See the [remediation benchmark](https://dark-moon.org/remediation-benchmark/), the [remediation agent docs](docs/remediation-agent.md) and the [57 open PRs on ASCIT31/juice-shop](https://github.com/ASCIT31/juice-shop/pulls).
+
+<div align="center">
+<img src="docs/pics/scheduler.png" alt="Campaign scheduler: recurring automated pentest campaigns with focus, severity and recurrence" width="85%" />
+<p><b>Schedule it once, run it forever.</b> Recurring automated campaigns with FOCUS, severity and recurrence built in.</p>
+</div>
+
+---
+
 ## What is DarkMoon?
 
 DarkMoon is an **open-source AI penetration testing** platform. Point it at a target you are authorized to test, and it runs the whole assessment on its own: it reasons, plans, and dispatches **50 specialist agents** that execute real offensive operations through a controlled MCP layer, then reports every vulnerability with the exact command, the raw output and the proof behind it.
 
 It does not replace the pentester. It clears the repetitive part of an assessment with evidence, so your experts spend their time on judgment, not toil.
-
----
-
-## Why DarkMoon?
-
-- 🌐 **Beyond the web** — one agentic system across web, APIs, Active Directory, Kubernetes, cloud (AWS, Azure, GCP), CI/CD, databases, IoT firmware and AI/LLM inference endpoints, chained end to end
-- 🧠 **Pentests your AI too** — a dedicated LLM agent probes AI/LLM inference endpoints (OpenAI-compatible, Ollama, vLLM, TGI) for the OWASP LLM Top 10: prompt injection, jailbreaks, system-prompt leakage and unsafe output handling, with garak-backed probes and proof for every finding
-- 🕶️ **Your data never reaches the LLM** — reversible local tokenization turns real IPs, hostnames, URLs, credentials and paths into deterministic placeholders (`IP_PRIVATE_001`, ...), rehydrated locally only at the moment a tool runs and masked back out of every result. Runs fully on a local model. And it never costs you a command: when a value is headed somewhere it must not go, the command still runs and the far end receives the placeholder instead. This is the part no cloud competitor has.
-- 🧾 **Proof, not scores** — every finding ships with the exact command and raw output, reproducible, so there is nothing to trust blindly and almost nothing to triage
-- 🔧 **50 specialist agents, 50+ offensive tools** — Nuclei, NetExec, BloodHound, sqlmap, Impacket, Naabu, httpx, ffuf and more, orchestrated over MCP
-- 🛡️ **Security by design** — the AI never runs a command directly; every action flows through a controlled, logged MCP interface
-- ♾️ **CI/CD native** — trigger a pentest in the pipeline and get findings as artifacts
-- 📖 **Nothing hidden** — GPLv3, self-hosted, each agent's methodology is plain Markdown you can read, diff and fork
-
-Built for **security teams**, **DevSecOps engineers**, **red teamers** and **ethical hacking** professionals.
 
 ---
 
