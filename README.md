@@ -4,9 +4,9 @@
 
 # DarkMoon
 
-### Open-source autonomous AI pentest platform that finds and proves every vulnerability with a real exploit, on a local model
+### Open-source autonomous AI penetration testing platform that finds and proves every vulnerability with a real exploit, on a local model
 
-**Point DarkMoon at an authorized target. It runs the whole pentest on its own and returns proof for every finding. Self-hosted, and it runs on a local model so your real IPs, hosts and credentials never reach the LLM. The paid Pro tier can additionally hand back the fix as a human-reviewed pull request, retested against the exploit.**
+**DarkMoon brings autonomous AI security testing to your own infrastructure. Point DarkMoon at an authorized target. It runs the whole pentest on its own and returns proof for every finding. Self-hosted, and it runs on a local model so your real IPs, hosts and credentials never reach the LLM. The paid Pro tier can additionally hand back the fix as a human-reviewed pull request, retested against the exploit.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub stars](https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=social&label=Star)](https://github.com/ASCIT31/Dark-Moon)
