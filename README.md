@@ -4,15 +4,15 @@
 
 # DarkMoon
 
-### Open-source autonomous AI pentest platform that also ships tested remediation as human-reviewed PRs
+### Open-source autonomous AI pentest platform that finds and proves every vulnerability with a real exploit, on a local model
 
-**Point DarkMoon at an authorized target. It runs the whole pentest on its own, returns proof for every finding, and can hand back the fix as a human-reviewed pull request, retested against the exploit. Self-hosted, and it runs on a local model so your real IPs, hosts and credentials never reach the LLM.**
+**Point DarkMoon at an authorized target. It runs the whole pentest on its own and returns proof for every finding. Self-hosted, and it runs on a local model so your real IPs, hosts and credentials never reach the LLM. The paid Pro tier can additionally hand back the fix as a human-reviewed pull request, retested against the exploit.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub stars](https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=social&label=Star)](https://github.com/ASCIT31/Dark-Moon)
-[![Remediation benchmark: 42 of 57 fixed end-to-end](https://img.shields.io/badge/remediation-42%20of%2057%20fixed%20end--to--end-brightgreen)](https://dark-moon.org/remediation-benchmark/)
+[![Pro remediation benchmark: 42 of 57 fixed end-to-end](https://img.shields.io/badge/Pro%20remediation-42%20of%2057%20fixed%20end--to--end-brightgreen)](https://dark-moon.org/remediation-benchmark/)
 
-[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**▶️ Watch the demo**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO) · [**🚀 Quick Start**](#quick-start) · [**🧾 Remediation benchmark**](https://dark-moon.org/remediation-benchmark/)
+[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**▶️ Watch the demo**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO) · [**🚀 Quick Start**](#quick-start) · [**🧾 Remediation benchmark (Pro)**](https://dark-moon.org/remediation-benchmark/)
 
 **As featured in** [Help Net Security](https://www.helpnetsecurity.com/2026/06/29/darkmoon-open-source-ai-pentesting-platform/) · [Cyber Security News](https://cybersecuritynews.com/darkmoon-penetration-testing-platform/) · [DevOps.com](https://devops.com/why-ci-cd-security-testing-is-going-autonomous-and-why-it-should-stay-local/) · [SecurityBrief](https://securitybrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [LinuxLinks](https://www.linuxlinks.com/darkmoon-ai-powered-autonomous-penetration-testing-platform/) · [IT Brief](https://itbrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [ChannelLife](https://channellife.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting)
 
@@ -30,7 +30,7 @@
 
 **1. Truly open source.** GPLv3, self-hosted, every agent's methodology is plain Markdown you can read, diff and fork. Nothing hidden, no closed core for the engine.
 
-**2. It doesn't just find, it fixes.** Every finding flows _finding → sandbox-validated fix → **human-reviewed pull request, retested against the original exploit**_, and is never auto-merged. On our OWASP Juice Shop demonstration, **42 of 57 findings were fixed end-to-end with a clean live exploit-retest** (a fix only counts when the original exploit is re-run and confirmed closed). See the [remediation benchmark](https://dark-moon.org/remediation-benchmark/) and the [57 open PRs on ASCIT31/juice-shop](https://github.com/ASCIT31/juice-shop/pulls).
+**2. It doesn't just find, it can also fix (paid Pro tier).** In the paid Pro tier, every finding flows _finding → sandbox-validated fix → **human-reviewed pull request, retested against the original exploit**_, and is never auto-merged. On our OWASP Juice Shop demonstration, the Pro remediation agent **fixed 42 of 57 findings end-to-end with a clean live exploit-retest** (a fix only counts when the original exploit is re-run and confirmed closed). See the [remediation benchmark](https://dark-moon.org/remediation-benchmark/) and the [57 open PRs on ASCIT31/juice-shop](https://github.com/ASCIT31/juice-shop/pulls).
 
 **3. Local/private LLM, data never reaches the model.** Run DarkMoon on a local model (**Ollama, llama.cpp**) behind the **Privacy Gateway**: your infrastructure values (IPs, hosts, emails, credentials) are tokenized locally before the model sees them; it reasons on placeholders like `IP_PRIVATE_001` and real values are rehydrated only locally. Defense in depth, not an absolute guarantee.
 
