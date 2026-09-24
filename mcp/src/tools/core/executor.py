@@ -36,6 +36,7 @@ class GenericExecutor:
             "bash",
             "cat",
             "chmod",
+            "ls",
             "node",
             "npm",
             "npx",
@@ -48,6 +49,9 @@ class GenericExecutor:
             "subfinder",
             "waybackurls",
             "katana",
+            # Banner grab / gRPC
+            "zgrab2",
+            "grpcurl",
             # DNS
             "dig",
             "nslookup",
@@ -136,6 +140,9 @@ class GenericExecutor:
             "kubectl",
             "kubeletctl",
             "kubescape",
+            "kube-bench",
+            "kubectl-who-can",
+            "rbac-police",
             # Cloud / platform / data CLIs (agents expansion: cloud, IaC, DB, cache)
             "aws",
             "az",
