@@ -725,6 +725,33 @@ The Opus-class models above are 355B–1T-parameter MoE. Figures assume the list
 
 [Back to Summary](#summary)
 
+### Prompt caching best practices (`.opencode.env`)
+
+Prompt caching is a **provider-side** feature. On Darkmoon's long autonomous runs it cuts input cost by **50-90%** by not re-billing the invariant context each turn — but it only fires when the provider is declared with its **native** SDK, so `.opencode.env` decides whether you pay full price or the cached price.
+
+**Golden rule — for Claude, route through the native `anthropic` provider, never a `local` / OpenAI-compatible one.** Caching hinges on `cache_control`, which opencode emits in Anthropic-native form only when the provider id is `anthropic`. Declaring a custom / `local` provider (`@ai-sdk/openai-compatible`) — even pointed at `api.anthropic.com` — sends the marker in OpenAI form, which Anthropic's OpenAI-compat endpoint ignores, so **caching silently drops to 0%** (full input price).
+
+Recommended `.opencode.env` for Anthropic (any Claude model — caching is tied to the provider, not the model):
+
+```env
+# Native Anthropic provider -> prompt caching ON
+OPENCODE_LOCAL_MODE=false
+ANTHROPIC_BASE_URL=https://api.anthropic.com
+ANTHROPIC_MODEL=claude-sonnet-5        # or claude-opus-..., etc.
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+| Backend | Caching | How to configure |
+| --- | --- | --- |
+| Anthropic (Claude) | yes | native `anthropic` provider: `ANTHROPIC_BASE_URL` + `ANTHROPIC_MODEL` |
+| OpenAI | yes (automatic) | server-side, nothing to set |
+| On-prem Anthropic-native gateway | yes | declare as `anthropic`: point `ANTHROPIC_BASE_URL` at the gateway |
+| `local` / OpenAI-compatible -> Anthropic compat endpoint | no | avoid — caching disabled; use the native `anthropic` provider |
+| Generic OpenAI-compatible gateway (vLLM, proxy) | usually no | only if the backend itself implements caching |
+
+> [!TIP]
+> Verify on the Anthropic Console **Usage -> Prompt caching** page — cache-read / cache-write tokens should be non-zero. `apply-settings.sh` also logs a warning when it detects a `local` provider pointed at an Anthropic endpoint.
+
 ## II.4. Automatic generation of OpenCode files
 
 On first launch, Darkmoon :
