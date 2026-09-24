@@ -57,6 +57,14 @@ if [ "$USE_LOCAL" = true ]; then
   FINAL_MODEL="${OPENCODE_LOCAL_PROVIDER_ID}/${OPENCODE_LOCAL_MODEL}"
   log "Using local provider: ${OPENCODE_LOCAL_PROVIDER_NAME} → model: ${FINAL_MODEL}"
   log "Base URL: ${OPENCODE_LOCAL_BASE_URL}"
+  # Cache-health guard: an openai-compatible local provider pointed at an Anthropic
+  # endpoint silently disables prompt caching (the cache_control marker is sent in
+  # OpenAI form, which Anthropic's OpenAI-compat endpoint ignores -> up to 50-90%
+  # higher input cost). Warn and point at the native-provider fix.
+  case "${OPENCODE_LOCAL_BASE_URL}" in
+    *anthropic*)
+      log "WARNING: local provider targets an Anthropic endpoint via the OpenAI-compatible SDK -- Anthropic prompt caching is DISABLED. For caching, use the native anthropic provider: set OPENCODE_LOCAL_MODE=false + ANTHROPIC_BASE_URL + ANTHROPIC_MODEL." ;;
+  esac
 elif [ "$USE_ANTHROPIC" = true ]; then
   # On-prem Anthropic-compatible: opencode routes via ANTHROPIC_BASE_URL + ANTHROPIC_API_KEY (env)
   FINAL_MODEL="anthropic/${ANTHROPIC_MODEL}"
