@@ -10,7 +10,7 @@ A platform that allows you to conduct a complete penetration testing campaign
 > **Reading your results — analyst validation recommended.**
 > DarkMoon runs **autonomous, AI-driven** assessments tuned for **maximum coverage**, so nothing slips through. As with any security scanner, this wide net means a share of findings are **candidates that deserve a human check** before action — severity and exploitability are best confirmed by an analyst.
 >
-> Every finding carries its **full evidence** — raw requests & responses, payloads and logs — across the **report, the dashboard and the PDF export**. Triage findings against that evidence before remediation: the **`EXPLOITED`** status marks findings backed by a reproducible proof of exploitation, while **`Confirmed`** findings benefit from a quick analyst review. That step turns broad automated coverage into **reliable, defensible conclusions**.
+> Every finding carries its **full evidence** — raw requests & responses, payloads and logs — in the local Markdown report (the web **dashboard** and **PDF export** are **Pro**). Triage findings against that evidence before acting: each finding is qualified **`EXPLOITED`** / **`CONFIRMED`** / **`UNCONFIRMED`** by the agent's adversarial self-review rubric. This status is **agent-asserted, not machine-verified** — DarkMoon does not automatically prove exploitation — so confirm severity and exploitability against the evidence yourself. That step turns broad automated coverage into **reliable, defensible conclusions**.
 
 # Summary
 
@@ -727,9 +727,9 @@ The Opus-class models above are 355B–1T-parameter MoE. Figures assume the list
 
 ### Prompt caching best practices (`.opencode.env`)
 
-Prompt caching is a **provider-side** feature. On Darkmoon's long autonomous runs it cuts input cost by **50-90%** by not re-billing the invariant context each turn — but it only fires when the provider is declared with its **native** SDK, so `.opencode.env` decides whether you pay full price or the cached price.
+Prompt caching is a **provider-side** feature. On Darkmoon's long autonomous runs the invariant context (system prompt, playbook, tool definitions) repeats every turn, so caching lets the provider bill that stable prefix at its cheaper cache-read rate instead of re-charging it in full each turn — but it only fires when the provider is declared with its **native** SDK, so `.opencode.env` decides whether you pay the full input price or the cached price. DarkMoon publishes **no reduction figure**: the actual saving depends entirely on your provider's pricing, your workload and how stable the prefix stays.
 
-**Golden rule — for Claude, route through the native `anthropic` provider, never a `local` / OpenAI-compatible one.** Caching hinges on `cache_control`, which opencode emits in Anthropic-native form only when the provider id is `anthropic`. Declaring a custom / `local` provider (`@ai-sdk/openai-compatible`) — even pointed at `api.anthropic.com` — sends the marker in OpenAI form, which Anthropic's OpenAI-compat endpoint ignores, so **caching silently drops to 0%** (full input price).
+**Golden rule — for Claude, route through the native `anthropic` provider, never a `local` / OpenAI-compatible one.** Caching hinges on `cache_control`, which opencode emits in Anthropic-native form only when the provider id is `anthropic`. Declaring a custom / `local` provider (`@ai-sdk/openai-compatible`) — even pointed at `api.anthropic.com` — sends the marker in OpenAI form, which Anthropic's OpenAI-compat endpoint ignores, so **caching is silently disabled** (you pay the full input price).
 
 Recommended `.opencode.env` for Anthropic (any Claude model — caching is tied to the provider, not the model):
 
@@ -751,6 +751,9 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 > [!TIP]
 > Verify on the Anthropic Console **Usage -> Prompt caching** page — cache-read / cache-write tokens should be non-zero. `apply-settings.sh` also logs a warning when it detects a `local` provider pointed at an Anthropic endpoint.
+
+> [!NOTE]
+> **Safety & invalidation.** Caching is purely a provider-side billing and latency optimization — it never changes prompts, tool execution, findings or report content. It keys on a **byte-identical prompt prefix**, so any change to that prefix (editing the system prompt/playbook, or a per-turn value such as the date sitting inside it) invalidates the cache and forces a fresh, full-price write on the next turn.
 
 ## II.4. Automatic generation of OpenCode files
 

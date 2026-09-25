@@ -32,6 +32,12 @@ Base URL (e.g. `http://darkmoon.internal:8000`), a dashboard username and passwo
 the node logs in at run time (`POST /api/v1/auth/login`) to obtain a short-lived
 JWT. Use the credential's **Test** button to verify.
 
+> **Requires DarkMoon Pro.** The REST **Dashboard API** (`/api/v1/*`), its
+> authentication, the remediation → pull-request engine and the PDF export are
+> **Pro** components — they are not part of the open-source engine. The community
+> (open source) edition runs as **CLI + MCP + local JSON + Markdown report** and
+> has no REST API for this node to connect to.
+
 ## Operations
 
 | Operation | What it does |

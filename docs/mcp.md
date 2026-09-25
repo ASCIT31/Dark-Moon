@@ -56,6 +56,21 @@ Il expose :
 
 ## 4. Outils MCP exposés
 
+L'édition **Community (open source)** expose exactement **13 outils MCP**. Ils
+couvrent la session, la confidentialité, le diagnostic, l'exécution, les workflows
+et l'écriture locale des résultats.
+
+### 4.0 Session & confidentialité
+
+- `get_session`
+- `tokenize_prompt`
+
+`get_session` renvoie l'identifiant de session courant (vault partagé).
+`tokenize_prompt` tokenise un texte **avant** qu'il n'atteigne le modèle, via le
+même vault de session (voir la tokenisation pré-modèle du prompt de lancement).
+
+---
+
 ### 4.1 Santé & diagnostic
 
 - `health_check`
@@ -84,6 +99,28 @@ Caractéristiques :
 - `run_workflow`
 
 Les workflows sont découverts **automatiquement** au runtime.
+
+---
+
+### 4.4 Écriture locale des résultats (chemin JSON open source)
+
+- `dashboard_init_campaign`
+- `dashboard_push_finding`
+- `dashboard_push_infra_node`
+- `dashboard_finalize_campaign`
+
+Ces outils écrivent la campagne, les findings et l'arbre d'infrastructure dans un
+**stockage JSON local** puis génèrent le **rapport Markdown**. Malgré le préfixe
+`dashboard_*`, c'est le **chemin d'écriture local open source** : il n'existe **pas
+d'interface web (GUI) dans l'édition Community**. Le tableau de bord web (API REST
++ Angular), l'export PDF, la remédiation → PR et la génération de PR sont des
+fonctionnalités **Pro** et ne sont pas fournies par le moteur open source.
+
+> Récapitulatif des 13 outils MCP OSS : `get_session`, `tokenize_prompt`,
+> `health_check`, `check_tool`, `diagnose`, `execute_command`,
+> `list_allowed_tools`, `list_workflows`, `run_workflow`,
+> `dashboard_init_campaign`, `dashboard_push_finding`,
+> `dashboard_push_infra_node`, `dashboard_finalize_campaign`.
 
 ---
 
