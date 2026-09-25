@@ -6,7 +6,7 @@
 
 # DarkMoon
 
-### Open-source autonomous AI penetration testing platform that finds and proves every vulnerability with a real exploit, on a local model
+### Open-source autonomous AI penetration testing platform that finds and qualifies every finding as EXPLOITED / CONFIRMED / UNCONFIRMED with an adversarial rubric
 
 <p>
 <a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=for-the-badge&logo=github&label=Star&color=2667FF&labelColor=0A2472" alt="GitHub stars"></a>
@@ -23,7 +23,7 @@
 **DarkMoon is autonomous AI penetration testing for your own infrastructure.** Point it at an authorized target and it runs the whole assessment on its own, then returns proof for every finding.
 
 - 🟢 **Truly open source.** GPLv3 and self-hosted, every agent's methodology is plain Markdown you can read, diff and fork.
-- 🎯 **Finds AND proves.** Each vulnerability ships with the exact command, the raw output and a working exploit, so there is almost nothing to triage.
+- 🎯 **Finds AND proves.** Each vulnerability ships with the exact command and raw output (exploitation is agent-asserted; the Pro remediation retest is the machine-verified step), so there is almost nothing to triage.
 - 🔒 **Runs on a local LLM + Privacy Gateway.** The gateway tokenizes your real IPs, hosts and credentials locally, so the model reasons on placeholders while real values stay on your perimeter.
 - 🧩 **Everywhere you build.** Run it from GitHub, GitLab, Jenkins, VS Code, JetBrains, n8n, Grafana or Splunk — the open-source edition works with the CLI-based ones. [See the integrations ↓](#-darkmoon-everywhere)
 
@@ -109,7 +109,7 @@ Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local mode
 | 🛡️ **Security by design** | The AI never runs a command directly, every action flows through a controlled, logged MCP interface. |
 | 🤖 **Pentests your AI too** | A dedicated LLM agent probes AI/LLM inference endpoints for the OWASP LLM Top 10 with garak-backed probes. |
 | ♾️ **CI/CD native** | Trigger a pentest in the pipeline and get findings back as artifacts. |
-| 🔌 **MCP + n8n** | Orchestrate 140+ offensive tools over MCP, and drive DarkMoon from an [n8n workflow](docs/n8n-integration.md). |
+| 🔌 **MCP** | Orchestrate 140+ offensive tools over MCP. |
 | 🔧 **Fix it (Pro)** | The paid Pro tier turns findings into human-reviewed pull requests, retested against the original exploit. |
 
 Built for **security teams**, **DevSecOps engineers**, **red teamers** and **ethical hacking** professionals.
@@ -183,7 +183,7 @@ The screenshots below are the **paid Darkmoon Pro** web dashboard. They are **no
 
 > 🔒 **Paid Pro feature.** The open source engine finds and proves vulnerabilities. Automated remediation into pull requests is available only in Darkmoon Pro.
 
-In the paid Pro tier, every finding flows _finding → sandbox-validated fix → **human-reviewed pull request, retested against the original exploit**_, and is never auto-merged. On our OWASP Juice Shop demonstration, the Pro remediation agent **fixed 42 of 57 findings end-to-end with a clean live exploit-retest** (a fix only counts when the original exploit is re-run and confirmed closed). See the [remediation benchmark](https://dark-moon.org/remediation-benchmark/), the [remediation agent docs](docs/remediation-agent.md) and the [57 open PRs on ASCIT31/juice-shop](https://github.com/ASCIT31/juice-shop/pulls).
+In the paid Pro tier, every finding flows _finding → sandbox-validated fix → **human-reviewed pull request, retested against the original exploit**_, and is never auto-merged. On our OWASP Juice Shop demo run, the Pro remediation agent **fixed findings end-to-end with a clean live exploit-retest** (a fix only counts when the original exploit is re-run and confirmed closed). See the [remediation benchmark](https://dark-moon.org/remediation-benchmark/), the [remediation agent docs](docs/remediation-agent.md) and the [57 open PRs on ASCIT31/juice-shop](https://github.com/ASCIT31/juice-shop/pulls).
 
 <div align="center">
 
@@ -368,10 +368,10 @@ DarkMoon's [Full Documentation](docs/full.md) covers everything you need to oper
 | **Architecture** | Deployment diagrams, security boundaries, execution flow | [Architecture](docs/full.md#iv-architecture) |
 | **Toolbox** | Complete tool list, adding tools, Docker image internals | [Toolbox](docs/full.md#vi-toolbox) |
 | **MCP Workflows** | Workflow structure, creating custom workflows, best practices | [MCP Workflows](docs/full.md#vii-mcp-workflows) |
-| **Available Tools List** | Full table of 50+ tools with paths and sources | [Tools List](docs/full.md#vi10-toolbox-list) |
+| **Available Tools List** | Full table of 142 security tools with paths and sources | [Tools List](docs/full.md#vi10-toolbox-list) |
 | **Training Labs** | Recommended vulnerable labs to train DarkMoon | [Pentester Labs](docs/full.md#vi11-bonus-pentester-lab-to-train-darkmoon) |
 | **Remediation Agent** (Pro) | Findings → sandbox-validated fix → pull request for human review (never merged) | [Remediation Agent](docs/remediation-agent.md) |
-| **n8n Integration** | Community node to trigger a pentest, pull findings and review fix PRs from an n8n workflow | [n8n Node](docs/n8n-integration.md) |
+| **n8n (Pro)** | Community node to trigger a pentest, pull findings and review fix PRs from an n8n workflow | [n8n Node](docs/n8n-integration.md) |
 
 ---
 
