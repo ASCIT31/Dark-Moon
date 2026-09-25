@@ -25,6 +25,7 @@
 - 🟢 **Truly open source.** GPLv3 and self-hosted, every agent's methodology is plain Markdown you can read, diff and fork.
 - 🎯 **Finds AND proves.** Each vulnerability ships with the exact command, the raw output and a working exploit, so there is almost nothing to triage.
 - 🔒 **Runs on a local LLM + Privacy Gateway.** The gateway tokenizes your real IPs, hosts and credentials locally, so the model reasons on placeholders while real values stay on your perimeter.
+- 🧩 **Everywhere you build.** Run it from GitHub, GitLab, Jenkins, VS Code, JetBrains, n8n, Grafana or Splunk — the open-source edition works with the CLI-based ones. [See the integrations ↓](#-darkmoon-everywhere)
 
 ---
 
