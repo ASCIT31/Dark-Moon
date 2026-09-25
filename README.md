@@ -6,7 +6,7 @@
 
 # DarkMoon
 
-### Open-source autonomous AI penetration testing platform that finds and qualifies every finding as EXPLOITED / CONFIRMED / UNCONFIRMED with an adversarial rubric
+### Open-source autonomous AI penetration testing — finds, exploits and qualifies every vulnerability on your own infrastructure
 
 <p>
 <a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=for-the-badge&logo=github&label=Star&color=2667FF&labelColor=0A2472" alt="GitHub stars"></a>
@@ -20,7 +20,7 @@
 
 </div>
 
-**DarkMoon is autonomous AI penetration testing for your own infrastructure.** Point it at an authorized target and it runs the whole assessment on its own, then returns proof for every finding.
+**DarkMoon is autonomous AI penetration testing for your own infrastructure.** Point it at an authorized target and it runs the whole assessment on its own, then documents every finding with the exact command and raw output.
 
 - 🟢 **Truly open source.** GPLv3 and self-hosted, every agent's methodology is plain Markdown you can read, diff and fork.
 - 🎯 **Finds AND proves.** Each vulnerability ships with the exact command and raw output (exploitation is agent-asserted; the Pro remediation retest is the machine-verified step), so there is almost nothing to triage.
@@ -105,7 +105,7 @@ Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local mode
 | 🌐 **Every surface** | Web, APIs, Active Directory, Kubernetes, cloud (AWS, Azure, GCP), CI/CD, databases, IoT firmware and AI/LLM endpoints, chained end to end. |
 | 🔒 **Privacy Gateway** | Reversible local tokenization turns real IPs, hosts, URLs and credentials into deterministic placeholders, rehydrated only locally at the moment a tool runs. |
 | 🏠 **Local model** | Run the whole assessment on a local LLM (Ollama, llama.cpp) so your infrastructure values stay on your own perimeter. |
-| 🧾 **Proof, not scores** | Every finding ships with the exact command, raw output and a reproducible exploit. |
+| 🧾 **Evidence, not scores** | Every finding ships with the exact command and raw output; the Pro retest re-runs the exploit to confirm a fix. |
 | 🛡️ **Security by design** | The AI never runs a command directly, every action flows through a controlled, logged MCP interface. |
 | 🤖 **Pentests your AI too** | A dedicated LLM agent probes AI/LLM inference endpoints for the OWASP LLM Top 10 with garak-backed probes. |
 | ♾️ **CI/CD native** | Trigger a pentest in the pipeline and get findings back as artifacts. |
