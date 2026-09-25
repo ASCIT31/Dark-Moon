@@ -173,8 +173,10 @@ RUN sed -i 's|http://archive.ubuntu.com|http://fr.archive.ubuntu.com|g' /etc/apt
     #   AMD     -> Mesa rusticl/clover: works through /dev/dri without the multi-GB
     #              ROCm stack. Machines with full ROCm keep using it via /dev/kfd.
     #   Intel   -> NEO compute runtime for Arc and recent integrated graphics.
+    #              intel-opencl-icd is x86-only, so it is installed conditionally
+    #              below (amd64 only) — arm64 / Apple Silicon builds skip it and
+    #              fall back to mesa + pocl instead of failing the apt step.
     mesa-opencl-icd \
-    intel-opencl-icd \
     \
     # CPU OpenCL backend (last-resort fallback, always present)
     pocl-opencl-icd \
@@ -205,6 +207,11 @@ RUN sed -i 's|http://archive.ubuntu.com|http://fr.archive.ubuntu.com|g' /etc/apt
     netcat-openbsd \
     nfs-common \
     file \
+    # Intel NEO OpenCL runtime is x86-only: install it only on amd64 so the
+    # build works natively on arm64 / Apple Silicon (fixes #44).
+ && if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+      apt-get install -y --no-install-recommends intel-opencl-icd; \
+    fi \
  && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
