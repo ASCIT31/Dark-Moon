@@ -16,7 +16,7 @@
 <a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/badge/Autonomous%20AI-Pentesting-DCEAF4?style=for-the-badge&labelColor=0A2472" alt="Autonomous AI pentesting"></a>
 </p>
 
-[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**🚀 Quick Start**](#quick-start) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🔒 Darkmoon Pro**](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) · [**▶️ Watch the demo (Pro)**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO)
+[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**🚀 Quick Start**](#quick-start) · [**🧩 Integrations**](#-darkmoon-everywhere) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🔒 Darkmoon Pro**](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) · [**▶️ Watch the demo (Pro)**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO)
 
 </div>
 
@@ -108,10 +108,34 @@ Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local mode
 | 🛡️ **Security by design** | The AI never runs a command directly, every action flows through a controlled, logged MCP interface. |
 | 🤖 **Pentests your AI too** | A dedicated LLM agent probes AI/LLM inference endpoints for the OWASP LLM Top 10 with garak-backed probes. |
 | ♾️ **CI/CD native** | Trigger a pentest in the pipeline and get findings back as artifacts. |
-| 🔌 **MCP + n8n** | Orchestrate 50+ offensive tools over MCP, and drive DarkMoon from an [n8n workflow](docs/n8n-integration.md). |
+| 🔌 **MCP + n8n** | Orchestrate 140+ offensive tools over MCP, and drive DarkMoon from an [n8n workflow](docs/n8n-integration.md). |
 | 🔧 **Fix it (Pro)** | The paid Pro tier turns findings into human-reviewed pull requests, retested against the original exploit. |
 
 Built for **security teams**, **DevSecOps engineers**, **red teamers** and **ethical hacking** professionals.
+
+---
+
+## 🧩 DarkMoon everywhere
+
+<p align="center">
+  <img src="docs/pics/integrations.svg" alt="DarkMoon integrations: GitHub, GitLab, Jenkins, VS Code, JetBrains, n8n, Grafana, Splunk — Community + Pro" width="100%" />
+</p>
+
+Run DarkMoon where you already build — in CI/CD, your IDE, automation and SecOps. Integrations marked **OSS + Pro** work with the open-source edition (local CLI + JSON); the Pro-only ones consume the [DarkMoon Pro](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) REST API (live dashboard, remediation→PR).
+
+| Platform | Get it | Works with |
+|---|---|---|
+| **GitHub Actions** | [GitHub Marketplace](https://github.com/marketplace/actions/darkmoon-pentest) | OSS + Pro |
+| **GitLab CI/CD** | [CI/CD Catalog](https://gitlab.com/explore/catalog/Dark-Moon-X/darkmoon-scan) | OSS + Pro |
+| **Jenkins** | [Plugin `.hpi` (Releases)](https://github.com/ASCIT31/darkmoon-jenkins/releases) | OSS + Pro |
+| **VS Code** | [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Darkmoon.darkmoon-vscode) | OSS + Pro |
+| **JetBrains** | [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34497-darkmoon) | OSS + Pro |
+| **n8n** | [npm `n8n-nodes-darkmoon`](https://www.npmjs.com/package/n8n-nodes-darkmoon) | Pro |
+| **Grafana** | [Self-host (Releases)](https://github.com/ASCIT31/darkmoon-grafana/releases) | Pro |
+| **Splunk** | [App (Releases)](https://github.com/ASCIT31/darkmoon-splunk/releases) — Splunkbase pending | OSS + Pro |
+| **SDK / CLI** | [npm `@darkmoon_ai/client`](https://www.npmjs.com/package/@darkmoon_ai/client) | OSS + Pro |
+
+Every integration emits **safe metadata only** (severity, status, MITRE, ids) — never evidence, secrets or tokens. Full guides on [docs.dark-moon.org](https://docs.dark-moon.org); source under [ASCIT31](https://github.com/ASCIT31).
 
 ---
 
@@ -304,7 +328,7 @@ Key flags include `FOCUS`, `EXCLUDE`, `CREDS`, `TOKEN`, `NOISE`, `SEVERITY`, `FO
 
 ## Integrated Toolbox
 
-DarkMoon ships with a purpose-built Docker image containing **50+ security tools** compiled and optimized in a multi-stage build:
+DarkMoon ships with a purpose-built Docker image containing **140+ security tools** compiled and optimized in a multi-stage build:
 
 | Category | Tools (examples) |
 |---|---|
