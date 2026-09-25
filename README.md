@@ -182,14 +182,14 @@ It does not replace the pentester. It clears the repetitive part of an assessmen
 
 ## 📊 Benchmark: 57 real vulnerabilities on OWASP Juice Shop
 
-Real, reproducible **black-box** run against OWASP Juice Shop on a **local LLM** (nothing leaves your infrastructure):
+Real, reproducible **black-box** run against OWASP Juice Shop with a **cloud frontier model (Anthropic Claude)**. DarkMoon also runs **fully local** (Ollama / llama.cpp) behind the Privacy Gateway — so nothing leaves your infrastructure; local-model coverage depends on the model you run.
 
 | Metric | Result |
 |---|---|
 | Vulnerabilities found | **57** (8 critical / 24 high / 21 medium / 4 low) |
 | Wall-clock time | **28.5 min** |
-| Proof-of-exploitation | per finding |
-| LLM | local (Ollama / llama.cpp) |
+| Proof-of-exploitation | command + raw output per finding |
+| LLM | Anthropic Claude (cloud frontier); local models supported |
 
 Reproduce it and compare tools yourself: **[ASCIT31/Darkmoon-Benchmarks](https://github.com/ASCIT31/Darkmoon-Benchmarks)**.
 

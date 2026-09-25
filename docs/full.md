@@ -1780,7 +1780,7 @@ You are an autonomous AI cybersecurity agent.
 
 ### V.3.b List of Agents
 
-Darkmoon now ships a **`pentest` orchestrator** plus **33 specialist sub-agents**. The orchestrator fingerprints the target, then dispatches the matching specialist(s) and chains their findings. Web/CMS agents auto-dispatch on stack detection; cloud / IaC / identity / CI-CD / data / firmware agents are **credential- or artifact-gated** (dispatched only on a positive artifact — a leaked key, an exposed API/port, a firmware image — never on inference).
+Darkmoon now ships a **`pentest` orchestrator** plus **50 specialist sub-agents**. The orchestrator fingerprints the target, then dispatches the matching specialist(s) and chains their findings. Web/CMS agents auto-dispatch on stack detection; cloud / IaC / identity / CI-CD / data / firmware agents are **credential- or artifact-gated** (dispatched only on a positive artifact — a leaked key, an exposed API/port, a firmware image — never on inference).
 
 **Orchestrator**
 - `pentest` — signal-detection FSM: recon, stack fingerprinting, dispatch, cascade, and server-side reporting. Also covers the network plane (FTP/SSH/SMTP/SNMP/TELNET…).
