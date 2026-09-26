@@ -163,8 +163,8 @@ The screenshots below are the **paid Darkmoon Pro** web dashboard. They are **no
 <p align="center"><b>Pro: exportable web reports.</b> A management summary in plain language plus full technical detail, exportable to Markdown and PDF.</p>
 </td>
 <td width="50%" valign="top">
-<img src="docs/pics/infra-map-2.png" alt="Darkmoon Pro interactive infrastructure map of the attack surface with per-node vulnerabilities" />
-<p align="center"><b>Pro: interactive attack-surface map.</b> A graph of nodes, connections and per-node vulnerabilities across the whole target.</p>
+<img src="docs/pics/infra-orbital.gif" alt="Darkmoon Pro orbital attack-surface map: an animated infrastructure graph with exposure rings, per-node vulnerability badges and the MITRE attack path racing from the internet-facing entry to the database" />
+<p align="center"><b>Pro: orbital attack-surface map.</b> A live 3D graph of nodes, connections and per-node vulnerabilities, with the MITRE attack path walked across the whole target. Renders in the browser and in VR.</p>
 </td>
 </tr>
 <tr>
