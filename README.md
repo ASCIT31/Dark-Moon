@@ -164,7 +164,7 @@ The screenshots below are the **paid Darkmoon Pro** web dashboard. They are **no
 </td>
 <td width="50%" valign="top">
 <img src="docs/pics/infra-orbital.gif" alt="Darkmoon Pro orbital attack-surface map: an animated infrastructure graph with exposure rings, per-node vulnerability badges and the MITRE attack path racing from the internet-facing entry to the database" />
-<p align="center"><b>Pro: orbital attack-surface map.</b> A live 3D graph of nodes, connections and per-node vulnerabilities, with the MITRE attack path walked across the whole target. Renders in the browser and in VR.</p>
+<p align="center"><b>Pro: orbital attack-surface map.</b> A live 3D graph of nodes, connections and per-node vulnerabilities, with the MITRE attack path walked across the whole target, and **every finding linked to its proposed remediation as a reviewed pull request**. Renders in the browser and in VR.</p>
 </td>
 </tr>
 <tr>
