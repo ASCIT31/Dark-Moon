@@ -195,6 +195,32 @@ In the paid Pro tier, every finding flows _finding → sandbox-validated fix →
 
 </div>
 
+### 🔒 Pro: deploy on any cloud in one click — no box, no marketplace
+
+> 🔒 **Paid Pro feature.** The open source edition is the CLI shown above. One-click cloud provisioning ships with Darkmoon Pro (a valid Pro license key is required) and is not part of the open source build.
+
+<div align="center">
+
+<a href="https://github.com/ASCIT31/darkmoon-cloud-deploy/blob/master/docs/aws.md"><img src="https://www.vectorlogo.zone/logos/amazon_aws/amazon_aws-icon.svg" alt="AWS" height="42" /></a>&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="https://github.com/ASCIT31/darkmoon-cloud-deploy/blob/master/docs/gcp.md"><img src="https://www.vectorlogo.zone/logos/google_cloud/google_cloud-icon.svg" alt="Google Cloud" height="42" /></a>&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="https://github.com/ASCIT31/darkmoon-cloud-deploy/blob/master/docs/azure.md"><img src="https://www.vectorlogo.zone/logos/microsoft_azure/microsoft_azure-icon.svg" alt="Azure" height="42" /></a>&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="https://github.com/ASCIT31/darkmoon-cloud-deploy/blob/master/docs/ovh.md"><img src="https://cdn.simpleicons.org/ovh/123F6D" alt="OVHcloud" height="36" /></a>
+
+</div>
+
+<p align="center">"Do you sell a hardware box?" <b>No.</b> One command turns any cloud VM into a dedicated Darkmoon <b>Pro</b> appliance in your own tenancy — it creates the machine, opens the dashboard port and installs everything for you. <b>No proprietary hardware, no cloud marketplace, no lock-in</b> — the same packaged Docker images run on every cloud and on your own bare metal.</p>
+
+```bash
+# one command, from your cloud's browser shell (AWS / GCP / Azure / OVH)
+curl -fsSL https://portal.dark-moon.org/deploy | bash -s -- aws --license <KEY> --api-key <LLM_KEY>
+```
+
+<div align="center">
+
+**[Cloud deployment guide →](https://github.com/ASCIT31/darkmoon-cloud-deploy)** · [Docs](https://docs.dark-moon.org/#cloud-deployment) · [Appliance](https://dark-moon.org/appliance)
+
+</div>
+
 ---
 
 ## What is DarkMoon?
