@@ -141,6 +141,17 @@ while read -r path; do
 done &
 
 #######################################
+# Growth signals (local, privacy-first, opt-out)
+#######################################
+# Both the MCP server (writer, api/growth.py) and opencode + the growth CTA plugin
+# (reader/displayer) run in THIS container, so they share one growth state dir.
+# Pin it under the persisted opencode share (bind-mounted to ./darkmoon-settings)
+# so the "shown once" state survives container restarts. Exported before both the
+# MCP boot and opencode below, so both inherit it. Honours DARKMOON_NO_TELEMETRY.
+export DARKMOON_GROWTH_DIR="${DARKMOON_GROWTH_DIR:-/root/.local/share/opencode/.darkmoon-growth}"
+mkdir -p "$DARKMOON_GROWTH_DIR" 2>/dev/null || true
+
+#######################################
 # Persistent Darkmoon MCP (issue #40, section 3)
 #######################################
 # Start the darkmoon MCP as a persistent streamable-http server BEFORE opencode,

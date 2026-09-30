@@ -1046,6 +1046,22 @@ def finalize_campaign(
 
     save_campaign(campaign)
 
+    # Growth signals (local, privacy-first, opt-out). This records only the
+    # milestone *type* + timestamps/counts — never a target, host, finding or
+    # campaign id — and powers the one-time Community star CTA. Fully guarded:
+    # a growth error must never affect finalize. Honours DARKMOON_NO_TELEMETRY.
+    try:
+        if normalized_status == "completed":
+            from api import growth
+            growth.record_milestone("campaign_finalized")
+            _stats = campaign.get("stats", {}) or {}
+            if int(_stats.get("exploited", 0) or 0) > 0 or int(_stats.get("confirmed", 0) or 0) > 0:
+                growth.record_milestone("validated_finding")
+            if campaign.get("report_path"):
+                growth.record_milestone("report_generated")
+    except Exception:
+        pass
+
     return {
         "campaign_id": campaign_id,
         "status": normalized_status,
