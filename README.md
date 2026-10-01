@@ -16,7 +16,7 @@
 <a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/badge/Autonomous%20AI-Pentesting-DCEAF4?style=for-the-badge&labelColor=0A2472" alt="Autonomous AI pentesting"></a>
 </p>
 
-[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**🚀 Quick Start**](#quick-start) · [**🧩 Integrations**](#-darkmoon-everywhere) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🔒 Darkmoon Pro**](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) · [**▶️ Watch the demo (Pro)**](https://youtu.be/zQE95bVLZgM)
+[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**🚀 Quick Start**](#quick-start) · [**🧩 Integrations**](#-darkmoon-everywhere) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🔒 Darkmoon Pro**](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) · [**▶️ Install & Run (OSS)**](https://youtu.be/3Qv1luvW99E) · [**▶️ Demo (Pro)**](https://youtu.be/zQE95bVLZgM)
 
 </div>
 
@@ -119,7 +119,7 @@ Built for **security teams**, **DevSecOps engineers**, **red teamers** and **eth
 ## 🧩 DarkMoon everywhere
 
 <p align="center">
-  <img src="docs/pics/integrations.svg" alt="DarkMoon integrations: GitHub, GitLab, Jenkins, VS Code, JetBrains, n8n, Grafana, Splunk — Community + Pro" width="100%" />
+  <img src="docs/pics/integrations.svg" alt="DarkMoon integrations: GitHub, GitLab, Jenkins, VS Code, JetBrains, n8n, Grafana, Splunk — OSS + Pro" width="100%" />
 </p>
 
 Run DarkMoon where you already build — in CI/CD, your IDE, automation and SecOps. Integrations marked **OSS + Pro** work with the open-source edition (local CLI + JSON); the Pro-only ones consume the [DarkMoon Pro](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) REST API (live dashboard, remediation→PR).
