@@ -16,7 +16,7 @@
 <a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/badge/Autonomous%20AI-Pentesting-DCEAF4?style=for-the-badge&labelColor=0A2472" alt="Autonomous AI pentesting"></a>
 </p>
 
-[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**🚀 Quick Start**](#quick-start) · [**🧩 Integrations**](#-darkmoon-everywhere) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🔒 Darkmoon Pro**](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) · [**▶️ Watch the demo (Pro)**](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO)
+[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**🚀 Quick Start**](#quick-start) · [**🧩 Integrations**](#-darkmoon-everywhere) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🔒 Darkmoon Pro**](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) · [**▶️ Watch the demo (Pro)**](https://youtu.be/zQE95bVLZgM)
 
 </div>
 
@@ -124,17 +124,17 @@ Built for **security teams**, **DevSecOps engineers**, **red teamers** and **eth
 
 Run DarkMoon where you already build — in CI/CD, your IDE, automation and SecOps. Integrations marked **OSS + Pro** work with the open-source edition (local CLI + JSON); the Pro-only ones consume the [DarkMoon Pro](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) REST API (live dashboard, remediation→PR).
 
-| Platform | What it does | Get it | Edition |
-|---|---|---|---|
-| **GitHub Actions** | Fail the pipeline on findings by severity | [GitHub Marketplace](https://github.com/marketplace/actions/darkmoon-pentest) | OSS + Pro |
-| **GitLab CI/CD** | Findings as Code Quality + SAST reports | [CI/CD Catalog](https://gitlab.com/explore/catalog/Dark-Moon-X/darkmoon-scan) | OSS + Pro |
-| **Jenkins** | Findings as Warnings-NG issues in the build | [Plugin `.hpi` (Releases)](https://github.com/ASCIT31/darkmoon-jenkins/releases) | OSS + Pro |
-| **VS Code** | Browse and launch assessments from the editor | [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Darkmoon.darkmoon-vscode) | OSS + Pro |
-| **JetBrains** | Findings in an IDE tool window | [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34497-darkmoon) | OSS + Pro |
-| **n8n** | Automate campaigns, retests and alerts | [npm `n8n-nodes-darkmoon`](https://www.npmjs.com/package/n8n-nodes-darkmoon) | Pro |
-| **Grafana** | Security-posture dashboards | [Self-host (Releases)](https://github.com/ASCIT31/darkmoon-grafana/releases) | Pro |
-| **Splunk** | SOC ingestion (HEC) + "Send to Darkmoon" alert action | [App (Releases)](https://github.com/ASCIT31/darkmoon-splunk/releases) — Splunkbase pending | OSS + Pro |
-| **SDK / CLI** | Build your own integration on the shared contract | [npm `@darkmoon_ai/client`](https://www.npmjs.com/package/@darkmoon_ai/client) | OSS + Pro |
+| Platform | What it does | Get it | Edition | Tutorial |
+|---|---|---|---|---|
+| **GitHub Actions** | Fail the pipeline on findings by severity | [GitHub Marketplace](https://github.com/marketplace/actions/darkmoon-pentest) | OSS + Pro | [▶ Watch](https://youtu.be/e67klNk79vg) |
+| **GitLab CI/CD** | Findings as Code Quality + SAST reports | [CI/CD Catalog](https://gitlab.com/explore/catalog/Dark-Moon-X/darkmoon-scan) | OSS + Pro | [▶ Watch](https://youtu.be/ui7NHD41cMM) |
+| **Jenkins** | Findings as Warnings-NG issues in the build | [Plugin `.hpi` (Releases)](https://github.com/ASCIT31/darkmoon-jenkins/releases) | OSS + Pro | [▶ Watch](https://youtu.be/G0TgyGpVLZ8) |
+| **VS Code** | Browse and launch assessments from the editor | [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Darkmoon.darkmoon-vscode) | OSS + Pro | [▶ Watch](https://youtu.be/GY7YOnYpteQ) |
+| **JetBrains** | Findings in an IDE tool window | [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34497-darkmoon) | OSS + Pro | [▶ Watch](https://youtu.be/obUUrbTN3Jg) |
+| **n8n** | Automate campaigns, retests and alerts | [npm `n8n-nodes-darkmoon`](https://www.npmjs.com/package/n8n-nodes-darkmoon) | Pro | [▶ Watch](https://youtu.be/3htg8kh7Dr8) |
+| **Grafana** | Security-posture dashboards | [Self-host (Releases)](https://github.com/ASCIT31/darkmoon-grafana/releases) | Pro | [▶ Watch](https://youtu.be/L7K-y0HPudk) |
+| **Splunk** | SOC ingestion (HEC) + "Send to Darkmoon" alert action | [App (Releases)](https://github.com/ASCIT31/darkmoon-splunk/releases) — Splunkbase pending | OSS + Pro | [▶ Watch](https://youtu.be/8w2i8nEBdQQ) |
+| **SDK / CLI** | Build your own integration on the shared contract | [npm `@darkmoon_ai/client`](https://www.npmjs.com/package/@darkmoon_ai/client) | OSS + Pro | [▶ Watch](https://youtu.be/jMIMvV8yEK8) |
 
 Every integration emits **safe metadata only** (severity, status, MITRE, ids) — never evidence, secrets or tokens. Full guides on [docs.dark-moon.org](https://docs.dark-moon.org); source under [ASCIT31](https://github.com/ASCIT31).
 
@@ -187,7 +187,7 @@ In the paid Pro tier, every finding flows _finding → sandbox-validated fix →
 
 <div align="center">
 
-<a href="https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO">
+<a href="https://youtu.be/zQE95bVLZgM">
   <img src="docs/pics/darkmoon-youtube.png" alt="Watch the demo of the Darkmoon Pro web dashboard running a full autonomous penetration test" width="70%" />
 </a>
 
@@ -448,6 +448,6 @@ This project is licensed under the **GNU General Public License v3.0**. See [LIC
 
 🔒 Open Source · 🤖 AI-Powered · 🇫🇷 Made in France
 
-[⭐ Star us on GitHub](https://github.com/ASCIT31/Dark-Moon) · [📖 Full Documentation](docs/full.md) · [▶️ Watch the Demo (Pro dashboard)](https://youtu.be/1bFRVuMkZzY?si=peKxwuxzbXBnb2zO)
+[⭐ Star us on GitHub](https://github.com/ASCIT31/Dark-Moon) · [📖 Full Documentation](docs/full.md) · [▶️ Watch the Demo (Pro dashboard)](https://youtu.be/zQE95bVLZgM)
 
 </div>
