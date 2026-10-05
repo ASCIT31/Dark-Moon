@@ -10,28 +10,36 @@ or under pytest — it only reads files, no MCP import / heavy deps required.
 """
 import re
 import pathlib
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]  # mcp/tests -> mcp -> repo root
+sys.path.insert(0, str(ROOT / "mcp"))
+from src.tools.core.allowlist import EXECUTOR_ALLOWED_TOOLS  # noqa: E402
+
 EXECUTOR = ROOT / "mcp" / "src" / "tools" / "core" / "executor.py"
+WORKFLOW_BASE = ROOT / "mcp" / "src" / "tools" / "workflows" / "base.py"
 SETUP_SCRIPTS = ["setup.sh", "setup_py.sh", "setup_ruby.sh"]
+WORKFLOW_INTERNAL_TOOLS = {
+    "mkdir", "echo", "cat", "rm", "chmod", "touch", "ls", "cp", "mv",
+}
 
 
 def allowed_tools():
-    """Parse the allowed_tools set literal from executor.py (no import needed)."""
+    """Return executor allowed_tools without importing Docker dependencies."""
     s = EXECUTOR.read_text(encoding="utf-8")
-    i = s.index("allowed_tools")
-    j = s.index("{", i)
-    depth = 0
-    k = j
-    while k < len(s):
-        if s[k] == "{":
-            depth += 1
-        elif s[k] == "}":
-            depth -= 1
-            if depth == 0:
-                break
-        k += 1
-    return set(re.findall(r'"([^"]+)"', s[j:k + 1]))
+    assert "from src.tools.core.allowlist import EXECUTOR_ALLOWED_TOOLS" in s
+    assert "self.allowed_tools = set(EXECUTOR_ALLOWED_TOOLS)" in s
+    return set(EXECUTOR_ALLOWED_TOOLS)
+
+
+def workflow_allowed_tools():
+    """Return workflow BaseWorkflow ALLOWED_TOOLS without importing docker deps."""
+    s = WORKFLOW_BASE.read_text(encoding="utf-8")
+    assert "from src.tools.core.allowlist import EXECUTOR_ALLOWED_TOOLS" in s
+    assert "ALLOWED_TOOLS = set(EXECUTOR_ALLOWED_TOOLS) | WORKFLOW_INTERNAL_TOOLS" in s
+    internal_block = re.findall(r'WORKFLOW_INTERNAL_TOOLS = \{([^}]+)\}', s, re.S)[0]
+    internal = set(re.findall(r'"([^"]+)"', internal_block))
+    return set(EXECUTOR_ALLOWED_TOOLS) | internal
 
 
 def toolbox_wrappers():
@@ -58,6 +66,17 @@ def test_all_toolbox_wrappers_are_whitelisted():
     assert not missing, (
         "Toolbox tools installed but NOT in executor allowed_tools (agents that "
         "call them get 'not in allowed list'): " + ", ".join(missing)
+    )
+
+
+def test_workflow_allowlist_stays_synced_with_executor():
+    expected = allowed_tools() | WORKFLOW_INTERNAL_TOOLS
+    actual = workflow_allowed_tools()
+    missing = sorted(expected - actual)
+    extra = sorted(actual - expected)
+    assert not missing and not extra, (
+        "Workflow ALLOWED_TOOLS drifted from executor allowed_tools plus "
+        f"internal shell helpers; missing={missing}, extra={extra}"
     )
 
 
