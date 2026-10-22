@@ -95,6 +95,17 @@ PY
   rm -rf "$sb"
 fi
 
+# ---- runtime CVE check present, identical, in every PHP-family agent (PHP2Shell lab, 2026-10)
+echo "[php-runtime-cves] PHP RUNTIME CVE CHECK block in the PHP-family agents"
+ref=""
+for a in php wordpress drupal joomla magento moodle prestashop; do
+  f="$AGENTS_DIR/$a.md"
+  blk=$(sed -n '/darkmoon:php-runtime-cves BEGIN/,/darkmoon:php-runtime-cves END/p' "$f" 2>/dev/null | md5sum | cut -d' ' -f1)
+  if ! grep -q 'CVE-2026-109618' "$f" 2>/dev/null; then bad "$a.md has no PHP runtime CVE check"
+  elif [ -n "$ref" ] && [ "$blk" != "$ref" ]; then bad "$a.md runtime CVE block drifted (re-run tools/agent-build/php_runtime_cves.py)"
+  else ok "$a.md runtime CVE check present"; ref=${ref:-$blk}; fi
+done
+
 echo
 if [ "$fail" -eq 0 ]; then echo "RESULT: PASS — no regression in $(basename "$REPO")."; exit 0
 else echo "RESULT: FAIL — $fail invariant(s) broken in $(basename "$REPO")."; exit 1; fi
