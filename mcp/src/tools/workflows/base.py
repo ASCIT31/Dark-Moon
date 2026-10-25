@@ -3,22 +3,21 @@ import logging
 import shlex
 from typing import List, Optional, Dict, Any, Tuple
 from src.docker_client import DarkmoonDockerClient
+from src.tools.core.allowlist import EXECUTOR_ALLOWED_TOOLS
 
 
 # Configure logging for workflows
 logger = logging.getLogger(__name__)
 
 
-# Allowed tools whitelist (synced with GenericExecutor)
-ALLOWED_TOOLS = {
-    "naabu", "masscan", "httpx", "nuclei", "ffuf", "dirb", "wafw00f",
-    "sqlmap", "arjun", "finalrecon", "subfinder", "waybackurls", "katana",
-    "dig", "nslookup", "curl", "wget", "ping", "netexec", "crackmapexec",
-    "bloodhound-python", "impacket-smbclient", "kubectl", "kubeletctl",
-    "kubescape", "jq", "grep", "awk", "sed",
-    # Internal commands allowed in workflows
+# Workflow steps share the GenericExecutor toolbox allowlist, with a small set of
+# shell helpers needed for file setup/cleanup inside composed workflow commands.
+# Keeping this derived from EXECUTOR_ALLOWED_TOOLS prevents workflows from
+# drifting away from the tools the MCP executor actually permits.
+WORKFLOW_INTERNAL_TOOLS = {
     "mkdir", "echo", "cat", "rm", "chmod", "touch", "ls", "cp", "mv",
 }
+ALLOWED_TOOLS = set(EXECUTOR_ALLOWED_TOOLS) | WORKFLOW_INTERNAL_TOOLS
 
 # Dangerous patterns to block
 BLOCKED_PATTERNS = [
