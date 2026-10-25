@@ -106,6 +106,34 @@ for a in php wordpress drupal joomla magento moodle prestashop; do
   else ok "$a.md runtime CVE check present"; ref=${ref:-$blk}; fi
 done
 
+# ---- targeted vuln sweep block: present in exactly the profiled agents, absent
+#      elsewhere, and each copy carries a complete TECH PROFILE (signal-driven
+#      nuclei/vulnx dispatch, 2026-10). Re-run tools/agent-build/targeted_vuln_scan.py on drift.
+echo "[targeted-vuln-sweep] signal-driven scanner block in the profiled agents"
+if python3 - "$AGENTS_DIR" "$HERE/agent-build/targeted_vuln_scan.py" <<'PY'
+import sys, os, importlib.util
+agents_dir, inj = sys.argv[1], sys.argv[2]
+spec = importlib.util.spec_from_file_location("tvs", inj)
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+expected = set(m.TECH_PROFILES)
+present = set()
+incomplete = []
+for f in os.listdir(agents_dir):
+    if not f.endswith(".md"):
+        continue
+    t = open(os.path.join(agents_dir, f), encoding="utf-8").read()
+    if m.BEGIN in t:
+        a = f[:-3]; present.add(a)
+        blk = t.split(m.BEGIN, 1)[1].split(m.END, 1)[0]
+        if "nuclei tags :" not in blk or "vulnx query :" not in blk or "SIGNAL-DRIVEN" not in blk:
+            incomplete.append(a)
+missing = sorted(expected - present); extra = sorted(present - expected)
+print("MISSING:%s EXTRA:%s INCOMPLETE:%s" % (missing, extra, sorted(incomplete)))
+sys.exit(1 if (missing or extra or incomplete) else 0)
+PY
+then ok "targeted-vuln-sweep present+complete in all profiled agents, absent elsewhere"
+else bad "targeted-vuln-sweep drift (re-run tools/agent-build/targeted_vuln_scan.py)"; fi
+
 echo
 if [ "$fail" -eq 0 ]; then echo "RESULT: PASS — no regression in $(basename "$REPO")."; exit 0
 else echo "RESULT: FAIL — $fail invariant(s) broken in $(basename "$REPO")."; exit 1; fi
