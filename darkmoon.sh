@@ -116,6 +116,36 @@ else
   # Arguments positionnels = prompt one-shot. opencode exige la
   # sous-commande `run`, sinon il interprète la chaîne comme un cwd
   # et échoue avec "Failed to change directory to /<prompt>".
+  #
+  # Guard (ASCIT31/Dark-Moon-Front-API#39): a head-less one-shot run cannot use
+  # opencode's free tier (opencode/big-pickle), the no-provider fallback written
+  # by apply-settings.sh. opencode refuses it with "OpenCode's free tier can only
+  # be used from within OpenCode", which reads as a cryptic failure. Detect that
+  # model up front and say what to configure instead.
+  _dm_model="$("${DC[@]}" exec -T "$SERVICE" python3 -c 'import json,os
+p="/root/.config/opencode/opencode.json"
+if not os.path.exists(p): p=os.path.expanduser("~/.config/opencode/opencode.json")
+try:
+    print(json.load(open(p)).get("model",""))
+except Exception:
+    print("")' 2>/dev/null | tr -d "[:space:]")"
+  case "$_dm_model" in
+    opencode/*)
+      {
+        echo ""
+        echo "❌ No LLM provider is configured, so Darkmoon fell back to opencode's free"
+        echo "   tier (model: ${_dm_model}). That tier CANNOT run head-less: opencode refuses"
+        echo "   it with \"OpenCode's free tier can only be used from within OpenCode\"."
+        echo ""
+        echo "   Configure a real model, then re-run your campaign:"
+        echo "   • Interactive:   ./install.sh --init"
+        echo "   • Cloud  (e.g.): sudo ./install.sh --provider anthropic --model claude-opus-4-6 --api-key sk-ant-..."
+        echo "   • Local  (e.g.): sudo ./install.sh --local --local-engine ollama --local-url http://HOST:11434/v1 --local-model <model>"
+        echo ""
+      } >&2
+      exit 3
+      ;;
+  esac
   exec "${DC[@]}" exec "${TTY_FLAGS[@]}" "$SERVICE" \
     bash -lc 'app="$1"; shift; exec "$app" run "$@"' bash "$APP_BIN" "$@"
 fi
