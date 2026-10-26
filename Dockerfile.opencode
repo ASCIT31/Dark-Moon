@@ -3,7 +3,7 @@
 # =========================
 # Pinned to opencode's packageManager (root package.json: bun@1.3.14); the
 # upstream build hard-fails on an older bun. Track after each fork sync.
-FROM oven/bun:1.3.14 AS builder
+FROM oven/bun:1.3.11 AS builder
 
 WORKDIR /app
 
@@ -30,17 +30,18 @@ RUN n=0; until bun install; do \
 # for full rationale): upstream moved the TUI to @opencode-ai/tui and rewrote
 # installation/index.ts + cli/ui.ts (Effect). The old full-file overrides are stale
 # and break the build. Minimal, resilient footprint instead:
-#   1) Logo    -> pure-data module rendered by packages/tui/src/component/logo.tsx.
+#   1) Logo    -> overwrite the single data module packages/opencode/src/cli/logo.ts.
 #   2) Version -> OPENCODE_VERSION env (script resolver is env-first -> InstallationVersion).
 COPY conf/tui/logo.ts \
-     /app/packages/tui/src/logo.ts
+     /app/packages/opencode/src/cli/logo.ts
 
-ENV OPENCODE_VERSION=opencode-darkmoon-1.2.0
+ENV OPENCODE_VERSION=opencode-darkmoon-1.3.0
 
-# Brand the non-TTY (headless/piped) banner too: ui.ts logo() uses a hardcoded
-# "opencode" wordmark when stdout is not a TTY. Point it at our DARK MOON logo.ts
-# (already imported as `glyphs`), so headless output matches the TTY logo.
-RUN sed -i 's|for (const row of wordmark) {|for (const row of glyphs.left.map((l, i) => l + "  " + (glyphs.right[i] ?? ""))) {|' packages/opencode/src/cli/ui.ts
+# No sed needed: cli/ui.ts (head-less banner) and cli/cmd/tui/component/logo.tsx
+# (TUI) both import the single logo module we replaced above, so the DARK MOON
+# art renders in both. The old sed on cli/ui.ts's "wordmark" loop is obsolete
+# since the 2026-10 fork resync (upstream merged packages/tui into packages/opencode).
+# Guarded by tools/opencode-branding-test.sh after each image build.
 
 ENV BUN_INSTALL_CACHE_DIR=/tmp/bun-cache
 RUN rm -rf ~/.bun /tmp/bun-cache

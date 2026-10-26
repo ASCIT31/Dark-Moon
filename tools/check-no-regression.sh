@@ -134,6 +134,20 @@ PY
 then ok "targeted-vuln-sweep present+complete in all profiled agents, absent elsewhere"
 else bad "targeted-vuln-sweep drift (re-run tools/agent-build/targeted_vuln_scan.py)"; fi
 
+# ---- opencode branding: Dockerfile.opencode injects the unified logo module and
+#      drops the obsolete cli/ui.ts sed (2026-10 fork resync to 77b3b467, upstream
+#      merged packages/tui into packages/opencode). Runtime proof is
+#      tools/opencode-branding-test.sh (needs a built binary); this is the static guard.
+echo "[opencode-branding] Dockerfile.opencode logo injection"
+DF="$REPO/Dockerfile.opencode"
+if [ -f "$DF" ]; then
+  grep -q 'packages/opencode/src/cli/logo.ts' "$DF" && ok "logo COPY targets unified cli/logo.ts" || bad "logo COPY not -> packages/opencode/src/cli/logo.ts (fork-layout drift)"
+  grep -q 'packages/tui/src/logo.ts' "$DF" && bad "stale packages/tui/src/logo.ts COPY present (pre-resync path)" || ok "no stale packages/tui path"
+  grep -q 'for (const row of wordmark)' "$DF" && bad "obsolete cli/ui.ts wordmark sed present" || ok "no obsolete ui.ts wordmark sed"
+  grep -qE 'OPENCODE_VERSION=opencode-darkmoon-' "$DF" && ok "OPENCODE_VERSION darkmoon-branded" || bad "OPENCODE_VERSION not darkmoon-branded"
+else bad "Dockerfile.opencode not found"; fi
+[ -x "$REPO/tools/opencode-branding-test.sh" ] && ok "tools/opencode-branding-test.sh present" || bad "tools/opencode-branding-test.sh missing/not executable"
+
 echo
 if [ "$fail" -eq 0 ]; then echo "RESULT: PASS — no regression in $(basename "$REPO")."; exit 0
 else echo "RESULT: FAIL — $fail invariant(s) broken in $(basename "$REPO")."; exit 1; fi
