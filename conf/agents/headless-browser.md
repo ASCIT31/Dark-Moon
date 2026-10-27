@@ -204,7 +204,10 @@ EXECUTION STRUCTURE:
 darkmoon_execute_command(command="bash -c 'node -e \"<FULL PLAYWRIGHT SCRIPT>\"'")
 
 MANDATORY PLAYWRIGHT INSTRUMENTATION:
-- chromium.launch({ headless: true, args: ['--no-sandbox','--ignore-certificate-errors'] })
+- chromium.launch({ headless: true, args: ['--no-sandbox','--ignore-certificate-errors','--disable-dev-shm-usage','--single-process','--no-zygote','--disable-gpu'] })
+  (the memory/process flags are MANDATORY in the container: Chromium otherwise spawns
+   many processes and exhausts /dev/shm and the 512-PID limit, which OOM-kills the whole
+   run. Keep exactly ONE browser open at a time and `browser.close()` in `finally`.)
 - page.on('dialog')
 - page.on('console')
 - network interception
@@ -234,7 +237,7 @@ FORBIDDEN Playwright patterns (block forever):
   ❌ Any await without timeout on network calls
 
 MANDATORY script structure — always use this pattern:
-  const browser = await chromium.launch({headless:true, args:['--no-sandbox']});
+  const browser = await chromium.launch({headless:true, args:['--no-sandbox','--disable-dev-shm-usage','--single-process','--no-zygote','--disable-gpu']});
   try {
     const page = await browser.newPage();
     page.setDefaultTimeout(8000);          // global fallback timeout 8s

@@ -23,6 +23,45 @@ from typing import Any, Callable, Dict, List, Optional
 _OPENCODE_DB = Path.home() / ".local" / "share" / "opencode" / "opencode-dev.db"
 
 
+def _run_campaign_frag(fallback: str) -> str:
+    """Per-RUN campaign key.
+
+    The MCP ``SESSION_ID`` (what ``get_session()`` returns) is generated ONCE per
+    long-lived MCP server process, so every ``opencode run`` served by the same
+    process would otherwise resolve to the same ``camp_<day>_<session_id>`` and a
+    second campaign on the same day/server would silently merge into the first
+    (empty new project, findings landing in the previous campaign).
+
+    A campaign == one ``opencode run`` == one ROOT opencode session (``parent_id``
+    IS NULL). We key the campaign on the *latest* root session instead: unique per
+    run, stable for the whole run (sub-agents open CHILD sessions, never new roots),
+    and shared by the orchestrator and all its sub-agents — so idempotent reuse and
+    sub-agent merge are preserved. Falls back to the passed ``session_id`` when the
+    opencode DB is unavailable (never worse than before).
+    """
+    if not _OPENCODE_DB.exists():
+        return fallback
+    try:
+        conn = sqlite3.connect(str(_OPENCODE_DB), timeout=2)
+        try:
+            cur = conn.execute(
+                "SELECT id FROM session WHERE parent_id IS NULL "
+                "ORDER BY time_created DESC LIMIT 1"
+            )
+            row = cur.fetchone()
+        finally:
+            conn.close()
+        if row and row[0]:
+            clean = str(row[0]).replace("ses_", "").replace("-", "")
+            if len(clean) >= 8:
+                return clean[:8]
+            if clean:
+                return clean
+    except Exception:
+        pass
+    return fallback
+
+
 def _is_subagent_session(session_id: str) -> bool:
     """Return True if this session is a sub-agent (has a parent_id in opencode DB).
 
@@ -516,13 +555,14 @@ def init_live_campaign(
             "status": "subagent_merged_into_parent",
         }
 
-    campaign_id = f"camp_{today}_{session_id}"
+    run_frag = _run_campaign_frag(session_id)
+    campaign_id = f"camp_{today}_{run_frag}"
 
     campaign = {
         "id": campaign_id,
         "project_id": project_id,
         "target_id": target_id,
-        "session_id": session_id,
+        "session_id": run_frag,
         "is_subagent": is_subagent,
         "date": now,
         "duration_seconds": 0,
