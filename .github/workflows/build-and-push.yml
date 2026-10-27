@@ -1,0 +1,53 @@
+name: Build & Push Darkmoon
+
+# NOTE: This workflow lives in the public core (ASCIT31/Dark-Moon) as the single
+# source of truth, and is inherited by the deploy mirror (ASCIT31/Dark-Moon-prod)
+# on every sync. The build job is HARD-GATED to the prod repository: in the public
+# repo it is always skipped (no runner is grabbed, no docker purge, nothing runs),
+# and the public repo holds zero secrets. Only Dark-Moon-prod actually deploys.
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      build_opencode:
+        description: 'Build & Push opencode-darkmoon (x86)'
+        type: boolean
+        default: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-opencode:
+    name: Build & Push opencode-darkmoon (x86)
+    runs-on: runner-ovh-prod
+    # Deploy ONLY from the prod mirror. The public core never triggers the pipeline.
+    if: ${{ github.repository == 'ASCIT31/Dark-Moon-prod' && (github.event_name == 'push' || inputs.build_opencode == true) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Purge Docker
+        run: |
+          docker rm -f $(docker ps -aq) 2>/dev/null || true
+          docker rmi -f $(docker images -aq) 2>/dev/null || true
+          docker volume rm $(docker volume ls -q) 2>/dev/null || true
+          docker network rm $(docker network ls -q | grep -v -E '^(bridge|host|none)$') 2>/dev/null || true
+          docker builder prune -a -f 2>/dev/null || true
+
+      - name: Build & Push opencode image
+        run: |
+          mkdir -p /tmp/docker-config
+          echo '{"credsStore":""}' > /tmp/docker-config/config.json
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker --config /tmp/docker-config login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+          docker build -f Dockerfile.opencode \
+            -t ascit/${{ secrets.OPENCODE_IMAGE_NAME }}:latest \
+            -t ascit/${{ secrets.OPENCODE_IMAGE_NAME }}:${{ github.sha }} \
+            .
+          docker --config /tmp/docker-config push ascit/${{ secrets.OPENCODE_IMAGE_NAME }}:latest
+          docker --config /tmp/docker-config push ascit/${{ secrets.OPENCODE_IMAGE_NAME }}:${{ github.sha }}
