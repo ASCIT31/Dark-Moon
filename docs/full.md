@@ -549,6 +549,8 @@ Base URL [http://localhost:8080/v1]: http://localhost:8001/v1
 Model name (e.g. glm-4.6:32b): Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf
 ```
 
+**OpenAI-compatible gateways:** choose `[2] Local model`, then `[3] Custom URL` to configure an OpenAI Chat Completions-compatible endpoint reachable from the `opencode` container. This also works with gateway services such as self-hosted LiteLLM or OrcaRouter; Darkmoon uses the same generic OpenAI-compatible provider rather than adding a vendor-specific integration or endorsement. Enter the gateway's base URL and the model name it serves, and provide an API key if that endpoint requires one. Routing, failover, caching, and billing remain gateway-side features.
+
 **On-prem Anthropic-compatible example:**
 
 Use this when you host a model behind an endpoint that speaks the **Anthropic Messages API** (`/v1/messages`) at a custom URL — e.g. an internal Claude gateway or proxy. This differs from option `[2]`, which targets **OpenAI-compatible** endpoints (`/v1/chat/completions`).
