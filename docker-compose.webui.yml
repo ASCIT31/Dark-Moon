@@ -1,0 +1,33 @@
+name: darkmoon-stack
+
+services:
+
+  webui:
+    build:
+      context: .
+      dockerfile: webui/Dockerfile
+    image: ascit/darkmoon-webui:local
+    container_name: darkmoon-webui
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DARKMOON_REPO=/repo
+      - DARKMOON_DATA_DIR=/repo/darkmoon-settings
+      - DARKMOON_REPORTS_DIR=/repo/reports
+      - DARKMOON_SESSIONS_DIR=/repo/sessions
+      - DARKMOON_OPENCODE_CONTAINER=opencode
+      - DARKMOON_TOOLBOX_CONTAINER=darkmoon
+    volumes:
+      # The whole checkout: the Web UI reads the agent prompts, the MCP
+      # allowlist and the campaign JSON store, and writes .opencode.env.
+      - ./:/repo:rw
+      # Drives the engine: starts assessments inside the opencode container.
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

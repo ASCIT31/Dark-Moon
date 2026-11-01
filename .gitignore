@@ -23,3 +23,8 @@ desktop.ini
 .idea/
 *.swp
 *~
+
+# DarkMoon Web UI
+webui/.venv/
+webui/__pycache__/
+webui/**/__pycache__/

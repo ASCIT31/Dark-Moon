@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DarkMoon — Web UI</title>
+<link rel="stylesheet" href="/static/style.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌑</text></svg>" />
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-moon">🌑</span>
+      <div>
+        <div class="brand-name">DarkMoon</div>
+        <div class="brand-sub">Autonomous AI Pentest</div>
+      </div>
+    </div>
+    <nav id="nav">
+      <button class="nav-item active" data-view="overview"><span>◉</span> Overview</button>
+      <button class="nav-item" data-view="launch"><span>▶</span> New assessment</button>
+      <button class="nav-item" data-view="live"><span>●</span> Live console</button>
+      <button class="nav-item" data-view="campaigns"><span>◇</span> Campaigns</button>
+      <button class="nav-item" data-view="findings"><span>⚠</span> Findings</button>
+      <button class="nav-item" data-view="infra"><span>⬡</span> Infrastructure</button>
+      <button class="nav-item" data-view="reports"><span>▤</span> Reports</button>
+      <button class="nav-item" data-view="sessions"><span>☰</span> Sessions</button>
+      <button class="nav-item" data-view="agents"><span>✦</span> Agents</button>
+      <button class="nav-item" data-view="tools"><span>⌘</span> MCP tools</button>
+      <button class="nav-item" data-view="settings"><span>⚙</span> Settings</button>
+    </nav>
+    <div class="sidebar-foot">
+      <div id="stack-state" class="stack-state">checking…</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h1 id="view-title">Overview</h1>
+      <div class="topbar-right">
+        <span id="pill-docker" class="pill">docker</span>
+        <span id="pill-mcp" class="pill">mcp</span>
+        <span id="pill-provider" class="pill">llm</span>
+        <button class="btn ghost" id="btn-refresh">↻ Refresh</button>
+      </div>
+    </header>
+
+    <section class="view" id="view-overview">
+      <div class="grid stat-grid" id="stat-grid"></div>
+      <div class="grid two">
+        <div class="card">
+          <h2>Severity breakdown</h2>
+          <div id="sev-chart" class="sev-chart"></div>
+        </div>
+        <div class="card">
+          <h2>Recent campaigns</h2>
+          <div id="recent-campaigns" class="list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Recent reports</h2>
+        <div id="recent-reports" class="list"></div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-launch">
+      <div class="card launch-card">
+        <h2>Launch an assessment</h2>
+        <p class="hint">The orchestrator agent (<code>pentest</code>) takes over: recon, agent dispatch, exploitation and reporting. Only target infrastructure you are authorized to test.</p>
+        <div class="form-grid">
+          <label>Target <span class="req">*</span>
+            <input id="f-target" placeholder="example.com or http://10.0.0.5:3000" />
+          </label>
+          <label>Program / client name
+            <input id="f-program" placeholder="Acme Corp" />
+          </label>
+          <label>Focus
+            <input id="f-focus" placeholder="sqli,xss,idor,authz" />
+          </label>
+          <label>Noise level
+            <select id="f-noise">
+              <option value="low">low</option>
+              <option value="moderate" selected>moderate</option>
+              <option value="high">high</option>
+            </select>
+          </label>
+          <label>Report format
+            <select id="f-format">
+              <option value="h1" selected>h1 (full report)</option>
+              <option value="executive">executive</option>
+              <option value="technical">technical</option>
+            </select>
+          </label>
+          <label class="wide">
+            Scope
+            <input id="f-scope" placeholder="10.0.0.0/24, api.example.com" />
+            <span class="field-hint">Paste a bug-bounty program brief → <button type="button" class="link" id="btn-scope-ai">✨ AI scope generator</button></span>
+          </label>
+          <label class="wide">Credentials (tokenised locally by the privacy gateway)
+            <input id="f-creds" placeholder="user:pass" />
+          </label>
+          <label class="wide">Notes / methodology
+            <input id="f-note" placeholder="ISO 27001 / NIST SP 800-115" />
+          </label>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btn-launch">▶ Start assessment</button>
+          <button class="btn ghost" id="btn-cancel" disabled>■ Stop</button>
+          <span id="launch-status" class="launch-status"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI scope generator modal -->
+    <div class="modal hidden" id="scope-ai-modal">
+      <div class="modal-backdrop" id="scope-ai-backdrop"></div>
+      <div class="modal-card">
+        <header>
+          <h2>✨ AI scope generator</h2>
+          <button class="btn ghost mini" id="scope-ai-close">✕</button>
+        </header>
+        <p class="hint">Paste a bug-bounty program brief (HackerOne, Bugcrowd, Intigriti or any
+          platform text). The configured LLM extracts a structured scope JSON — in-scope assets,
+          out-of-scope rules, reward table, rate limits, safe-harbour flags and exclusions.</p>
+        <textarea id="scope-ai-brief" rows="14"
+          placeholder="Paste the program brief here&#10;&#10;Example:&#10;1win — HackerOne program&#10;In scope: all 1win-owned apps, 1win.com, 1wintoken.com&#10;Out of scope: third-party vendors, DoS, social engineering&#10;Rewards: RCE 3000, XSS 150, account takeover 1500&#10;Rate limit: 5 req/sec, 5 concurrent&#10;Safe harbour: Gold Standard"></textarea>
+        <div class="modal-actions">
+          <button class="btn ghost" id="scope-ai-example">Load example</button>
+          <span id="scope-ai-status" class="launch-status"></span>
+          <button class="btn primary" id="scope-ai-run">✨ Generate scope JSON</button>
+        </div>
+        <pre id="scope-ai-output" class="markdown hidden">—</pre>
+        <div id="scope-ai-actions" class="modal-actions hidden">
+          <span class="hint">Review the JSON, then load it into the launch form.</span>
+          <button class="btn primary" id="scope-ai-use">✓ Use this scope</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="view hidden" id="view-live">
+      <div class="card console-card">
+        <div class="console-head">
+          <h2>Live console</h2>
+          <div class="console-meta">
+            <button class="btn mini" id="btn-mcp-stream">start MCP stream</button>
+            <select id="job-select" class="mini-select"></select>
+            <span id="console-status" class="tag">idle</span>
+            <button class="btn ghost mini" id="btn-stop">stop</button>
+          </div>
+        </div>
+        <div id="console" class="console"></div>
+        <div class="console-events">
+          <h3>Event feed</h3>
+          <div id="event-feed" class="events"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-campaigns">
+      <div class="card">
+        <h2>Campaigns</h2>
+        <div id="campaigns-table" class="table-wrap"></div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-findings">
+      <div class="card">
+        <div class="card-head">
+          <h2>Findings</h2>
+          <div class="filters">
+            <input id="f-q" placeholder="search…" />
+            <select id="f-sev"><option value="all">all severities</option></select>
+            <select id="f-campaign"><option value="all">all campaigns</option></select>
+          </div>
+        </div>
+        <div id="findings-table" class="table-wrap"></div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-infra">
+      <div class="card">
+        <div class="card-head">
+          <h2>Infrastructure</h2>
+          <select id="infra-campaign"><option value="">select a campaign…</option></select>
+        </div>
+        <div id="infra-graph" class="infra-graph"></div>
+        <div id="infra-list" class="table-wrap"></div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-reports">
+      <div class="card">
+        <h2>Reports</h2>
+        <div id="reports-list" class="list"></div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-sessions">
+      <div class="card">
+        <h2>Session logs</h2>
+        <div id="sessions-list" class="list"></div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-agents">
+      <div class="card">
+        <div class="card-head">
+          <h2>Specialist agents</h2>
+          <span id="agents-count" class="hint"></span>
+        </div>
+        <div id="agents-grid" class="agents-grid"></div>
+      </div>
+      <div class="card hidden" id="agent-detail">
+        <h2 id="agent-detail-title">Agent</h2>
+        <pre id="agent-detail-body" class="markdown"></pre>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-tools">
+      <div class="grid two">
+        <div class="card">
+          <h2>Allowed offensive tools <span id="tools-count" class="hint"></span></h2>
+          <div id="tools-list" class="chips"></div>
+        </div>
+        <div class="card">
+          <h2>Workflows</h2>
+          <div id="workflows-list" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-settings">
+      <div class="grid two">
+        <div class="card">
+          <h2>LLM provider</h2>
+          <p class="hint">Written to <code>.opencode.env</code>. Restart the stack to apply.</p>
+          <div class="form-grid">
+            <label>Mode
+              <select id="s-mode">
+                <option value="cloud">Cloud provider (OpenRouter-compatible)</option>
+                <option value="local">Local model (Ollama / llama.cpp)</option>
+                <option value="anthropic">On-prem Anthropic-compatible endpoint</option>
+              </select>
+            </label>
+            <label>Provider id
+              <input id="s-provider" placeholder="anthropic" />
+            </label>
+            <label>Model
+              <input id="s-model" placeholder="claude-opus-4-6" />
+            </label>
+            <label>API key
+              <input id="s-key" type="password" placeholder="sk-…" />
+            </label>
+            <label class="wide">Base URL (local / on-prem)
+              <input id="s-baseurl" placeholder="http://host.docker.internal:11434/v1" />
+            </label>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="btn-save-env">Save provider</button>
+            <span id="env-status" class="launch-status"></span>
+          </div>
+          <h3>Current configuration</h3>
+          <pre id="env-current" class="markdown"></pre>
+        </div>
+        <div class="card">
+          <h2>Stack</h2>
+          <div class="actions">
+            <button class="btn" data-stack="up">Start</button>
+            <button class="btn" data-stack="restart">Restart</button>
+            <button class="btn" data-stack="down">Stop</button>
+            <button class="btn ghost" data-stack="logs">Logs</button>
+          </div>
+          <pre id="stack-output" class="markdown">—</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="drawer hidden" id="drawer">
+  <div class="drawer-head">
+    <h2 id="drawer-title">Detail</h2>
+    <button class="btn ghost mini" id="drawer-close">✕</button>
+  </div>
+  <div id="drawer-body" class="drawer-body"></div>
+</div>
+<div class="overlay hidden" id="overlay"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
