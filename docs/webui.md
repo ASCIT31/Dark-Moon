@@ -85,7 +85,7 @@ to take effect — the settings page says so too.
 
 In the **New assessment** view, next to the *Scope* field, click **✨ AI scope
 generator**. Paste a bug-bounty program brief (HackerOne, Bugcrowd, Intigriti or
-any platform text) and the configured LLM extracts a structured JSON scope:
+any platform text) and the configured LLM extracts a structured scope JSON:
 
 ```json
 {
@@ -103,9 +103,59 @@ Click **✓ Use this scope** and the assets land in the launch form's *Scope* fi
 and the exclusions in *Notes*, ready to run. The modal ships with a worked
 1win/HackerOne example.
 
+**Scope is validated against the source brief.** A model asked to summarise a
+policy occasionally widens the scope — inventing `*.example.com` from
+`app.example.com`. Widening is the dangerous direction: it would authorise
+scanning assets the program never granted. Every generated host must therefore
+be traceable to a host that literally appears in the pasted brief; anything
+invented is dropped and listed back in the UI so the reviewer sees it.
+
 It talks to whatever you configured in Settings — cloud, local (Ollama / LM Studio)
 or on-prem Anthropic-compatible — over the OpenAI-compatible API, so it works with
 any provider. If the model is unavailable it reports the error instead of hanging.
+
+### MiniMax MCP (optional)
+
+Settings → **MiniMax MCP** registers the official MiniMax M Plan MCP server
+inside the engine, giving every agent two extra tools:
+
+* `web_search` — live web search
+* `understand_image` — image understanding
+
+It needs an M Plan key (`sk-cp-…`) from
+[platform.minimax.io](https://platform.minimax.io/user-center/payment/token-plan).
+Leave the key empty to keep it disabled.
+
+The server is launched as `uvx minimax-coding-plan-mcp`; the `uv` tool runner is
+installed in the engine image and the package is pre-warmed at build time so the
+first MCP handshake does not have to download ~40 wheels. The spawn environment is
+pinned (`PATH`, `HOME`, `UV_CACHE_DIR`, `UV_TOOL_DIR`) because `uv tool run`
+otherwise hangs when it cannot see its cache and tool directories.
+
+### Using OpenRouter with an Anthropic-compatible model
+
+Settings → *Mode* = **On-prem Anthropic-compatible endpoint** also works with
+OpenRouter's Anthropic Messages API, which is handy for models that are only
+served there:
+
+| Field | Value |
+|---|---|
+| Base URL | `https://openrouter.ai/api/v1` |
+| Model | e.g. `minimax/minimax-m3.1-flash` |
+| API key | your `sk-or-v1-…` key |
+
+The engine then talks to `https://openrouter.ai/api/v1/messages` with the
+Anthropic protocol. Note the base URL must already end in `/v1` — opencode
+appends `/messages` to it directly.
+
+### Secret redaction
+
+The live console, the session logs and the report viewer mask credentials before
+they reach the browser. An agent that runs `env` or `cat .env` prints the
+engine's provider keys straight into the output, and the console is served over
+SSE without authentication — so `*_API_KEY`, `*_SECRET`, `*_PASSWORD`,
+`*_TOKEN` assignments and bare `sk-…` / `sk-or-v1-…` / `sk-cp-…` /
+`ghp_…` / JWT-shaped values are redacted on the way out.
 
 ## API
 

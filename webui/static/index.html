@@ -264,6 +264,25 @@
           <pre id="env-current" class="markdown"></pre>
         </div>
         <div class="card">
+          <h2>MiniMax MCP <span class="hint">optional</span></h2>
+          <p class="hint">Registers the official MiniMax M Plan MCP server inside the engine, giving
+            every agent two extra tools: <code>web_search</code> (live web search) and
+            <code>understand_image</code> (image analysis). Needs an M Plan key. Leave the key empty
+            to keep it disabled.</p>
+          <div class="form-grid">
+            <label>MiniMax API key
+              <input id="s-minimax-key" type="password" placeholder="sk-cp-…" />
+            </label>
+            <label>MiniMax API host
+              <input id="s-minimax-host" placeholder="https://api.minimax.io" />
+            </label>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="btn-save-minimax">Save MiniMax MCP</button>
+            <span id="minimax-status" class="launch-status"></span>
+          </div>
+        </div>
+        <div class="card">
           <h2>Stack</h2>
           <div class="actions">
             <button class="btn" data-stack="up">Start</button>

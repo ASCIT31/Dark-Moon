@@ -194,12 +194,17 @@ $("#scope-ai-run").addEventListener("click", async () => {
       out.textContent = (r.raw || "").slice(-1500) || "(no raw output)";
       return;
     }
-const text = JSON.stringify(r.scope, null, 2);
+    const text = JSON.stringify(r.scope, null, 2);
     out.textContent = text;
     out.dataset.scope = text;
     out.classList.remove("hidden");
     $("#scope-ai-actions").classList.remove("hidden");
     status.textContent = `✓ generated with ${r.model || "configured model"} — review and click "Use this scope"`;
+    if (r.dropped && r.dropped.length) {
+      // The validator removed hosts the model invented — never present in the
+      // brief. Surface them so the reviewer knows they were not silently lost.
+      status.textContent += ` — ${r.dropped.length} entr${r.dropped.length === 1 ? "y" : "ies"} dropped (not in the brief): ${r.dropped.join(", ")}`;
+    }
   } catch (e) {
     status.textContent = "✗ " + e.message;
   }
@@ -585,6 +590,7 @@ async function loadSettings() {
   if (cfg.OPENCODE_LOCAL_MODE) { $("#s-mode").value = "local"; $("#s-baseurl").value = cfg.OPENCODE_LOCAL_BASE_URL || ""; $("#s-model").value = cfg.OPENCODE_LOCAL_MODEL || ""; $("#s-provider").value = cfg.OPENCODE_LOCAL_PROVIDER_ID || "ollama"; }
   else if (cfg.ANTHROPIC_BASE_URL) { $("#s-mode").value = "anthropic"; $("#s-baseurl").value = cfg.ANTHROPIC_BASE_URL; $("#s-model").value = cfg.ANTHROPIC_MODEL || ""; }
   else if (cfg.OPENROUTER_PROVIDER) { $("#s-mode").value = "cloud"; $("#s-provider").value = cfg.OPENROUTER_PROVIDER; $("#s-model").value = cfg.OPENCODE_MODEL || ""; }
+  if (cfg.MINIMAX_API_HOST) $("#s-minimax-host").value = cfg.MINIMAX_API_HOST;
 }
 
 $("#btn-save-env").addEventListener("click", async () => {
@@ -595,6 +601,8 @@ $("#btn-save-env").addEventListener("click", async () => {
     provider_id: $("#s-provider").value.trim() || "ollama",
   };
   try {
+    // The server preserves the stored MiniMax key when the body omits it, so
+    // saving a provider never silently disables the MCP.
     const r = await api("/api/env", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     $("#env-status").textContent = r.applied
       ? "✓ saved and applied to the running engine"
@@ -612,6 +620,44 @@ $$("[data-stack]").forEach((b) => b.addEventListener("click", async () => {
     refreshStatus();
   } catch (e) { $("#stack-output").textContent = "✗ " + e.message; }
 }));
+
+/* ------------------------------------------------- MiniMax MCP settings */
+// Saves the MiniMax M Plan MCP key alongside the provider config. The provider
+// block is re-sent unchanged so saving the MCP key never drops the model.
+$("#btn-save-minimax").addEventListener("click", async () => {
+  const status = $("#minimax-status");
+  const key = $("#s-minimax-key").value.trim();
+  const host = $("#s-minimax-host").value.trim();
+  if (!key) {
+    status.textContent = "⚠ enter a MiniMax API key (or use the provider panel to remove it)";
+    return;
+  }
+  const env = await api("/api/env");
+  const cfg = env.configured || {};
+  const body = {
+    mode: $("#s-mode").value,
+    provider: $("#s-provider").value.trim(),
+    model: $("#s-model").value.trim(),
+    api_key: $("#s-key").value.trim(),
+    base_url: $("#s-baseurl").value.trim(),
+    provider_id: $("#s-provider").value.trim() || "ollama",
+    minimax_api_key: key,
+    minimax_api_host: host || "https://api.minimax.io",
+  };
+  // The masked provider key cannot be re-sent as-is; keep the stored one.
+  if (!body.api_key && cfg.OPENROUTER_API_KEY) body.api_key = cfg.OPENROUTER_API_KEY;
+  if (!body.api_key && cfg.ANTHROPIC_API_KEY) body.api_key = cfg.ANTHROPIC_API_KEY;
+  if (!body.api_key && cfg.OPENCODE_LOCAL_API_KEY) body.api_key = cfg.OPENCODE_LOCAL_API_KEY;  try {
+    const r = await api("/api/env", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+    });
+    status.textContent = r.applied
+      ? "✓ saved — MiniMax MCP registered (web_search + understand_image)"
+      : "✓ saved — restart the engine to apply";
+    $("#s-minimax-key").value = "";
+    loadSettings();
+  } catch (e) { status.textContent = "✗ " + e.message; }
+});
 
 /* ------------------------------------------------------------------ drawer */
 function openDrawer(title, html) {

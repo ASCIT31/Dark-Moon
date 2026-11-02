@@ -41,6 +41,7 @@ import shutil
 import sqlite3
 import subprocess
 import tempfile
+import threading
 import time
 import uuid
 from collections import Counter, OrderedDict
@@ -386,6 +387,9 @@ class Job:
 
 JOBS: "OrderedDict[str, Job]" = OrderedDict()
 
+# Short-lived cache for GET /api/status (see status()).
+_STATUS_CACHE: Optional[tuple] = None
+
 _SESSION_RE = re.compile(r"darkmoon\.sh\s+--log\s+([A-Za-z0-9_\-]+)")
 _CAMPAIGN_RE = re.compile(r"camp_[0-9]{8}_[A-Za-z0-9_\-]+")
 
@@ -414,7 +418,47 @@ def _broadcast(job: Job, payload: Dict[str, Any]) -> None:
             pass
 
 
+_SECRET_ENV_RE = re.compile(
+    r"(?i)\b([A-Z0-9_]*(?:API_KEY|APIKEY|SECRET|PASSWORD|TOKEN|ACCESS_KEY)[A-Z0-9_]*)\s*=\s*(\S+)"
+)
+# Bare credential shapes that show up in tool output regardless of the variable
+# name (env dumps, config files, curl headers, .env echoes).
+_SECRET_VALUE_RES = [
+    re.compile(r"sk-or-v1-[A-Za-z0-9_\-]{8,}"),
+    re.compile(r"sk-cp-[A-Za-z0-9_\-]{8,}"),
+    re.compile(r"sk-ant-[A-Za-z0-9_\-]{8,}"),
+    re.compile(r"\bsk-[A-Za-z0-9_\-]{16,}"),
+    re.compile(r"(?i)\b(?:ghp_|gho_|ghu_|ghs_|github_pat_)[A-Za-z0-9_\-]{10,}"),
+    re.compile(r"\beyJ[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}"),
+]
+
+
+def _redact(text: str) -> str:
+    """Mask credentials before they reach the browser or the job buffer.
+
+    An agent that runs `env` or `cat .env` prints the engine's provider keys
+    straight into the console. The live console is served over SSE without
+    authentication, so those keys would otherwise be readable by anyone who can
+    reach the Web UI — and stored in the job buffer, which the SSE endpoint
+    replays.
+    """
+    if not text:
+        return text
+
+    def _mask_kv(m: "re.Match[str]") -> str:
+        name, val = m.group(1), m.group(2)
+        if len(val) <= 6:
+            return f"{name}=***"
+        return f"{name}={val[:4]}…{val[-2:]}***"
+
+    out = _SECRET_ENV_RE.sub(_mask_kv, text)
+    for rx in _SECRET_VALUE_RES:
+        out = rx.sub(lambda m: m.group(0)[:6] + "…" + m.group(0)[-2:] + "***", out)
+    return out
+
+
 def _push_line(job: Job, line: str) -> None:
+    line = _redact(line)
     job.lines.append(line)
     if len(job.lines) > 4000:
         del job.lines[:1000]
@@ -423,10 +467,32 @@ def _push_line(job: Job, line: str) -> None:
         ev["ts"] = _now()
         job.events.append(ev)
         if len(job.events) > 1000:
-            del job.events[:500]
+            del job.events[:1000]
     _broadcast(job, {"type": "line", "line": line, "ts": _now()})
     if ev:
         _broadcast(job, {"type": "event", "event": ev})
+
+
+def _pump_exec_stream(job: Job, stream: Any, loop: asyncio.AbstractEventLoop, q: "asyncio.Queue") -> None:
+    """Drain the exec output into an asyncio queue from a DEDICATED thread.
+
+    This must not run on the loop's default executor. The default executor is
+    shared with every other blocking Docker call the API makes (the status
+    poll, the overview, the stack actions). When those pile up, no worker is
+    left to run `next(stream)`, the exec pipe fills up, and the assessment
+    process blocks forever on write — the run looks "running" but produces
+    nothing. A dedicated thread cannot be starved that way.
+    """
+    try:
+        while True:
+            chunk = next(stream, None)
+            if chunk is None:
+                break
+            loop.call_soon_threadsafe(q.put_nowait, chunk)
+    except Exception as exc:  # pragma: no cover - defensive
+        loop.call_soon_threadsafe(q.put_nowait, ("__error__", exc))
+    finally:
+        loop.call_soon_threadsafe(q.put_nowait, None)
 
 
 async def _run_job(job: Job) -> None:
@@ -453,10 +519,19 @@ async def _run_job(job: Job) -> None:
         stream = getattr(raw, "output", raw)
         if stream is None:
             raise RuntimeError(f"no output stream from exec: {raw!r}")
+
+        q: asyncio.Queue = asyncio.Queue()
+        reader = threading.Thread(
+            target=_pump_exec_stream, args=(job, stream, loop, q), daemon=True
+        )
+        reader.start()
+
         while True:
-            chunk = await loop.run_in_executor(None, lambda: next(stream, None))
+            chunk = await q.get()
             if chunk is None:
                 break
+            if isinstance(chunk, tuple) and len(chunk) == 2 and chunk[0] == "__error__":
+                raise chunk[1]
             out, err = chunk if isinstance(chunk, tuple) else (chunk, b"")
             for raw_bytes in (out or b"", err or b""):
                 text = raw_bytes.decode("utf-8", "replace") if raw_bytes else ""
@@ -560,6 +635,20 @@ def overview() -> Dict[str, Any]:
 
 @app.get("/api/status")
 def status() -> Dict[str, Any]:
+    # The dashboard polls this every 15s. It shells into the engine container
+    # (to probe the MCP port), and every one of those is a Docker API call. Left
+    # uncached they pile up on the same executor the job runner uses and can
+    # starve it, so the result is cached briefly.
+    global _STATUS_CACHE
+    cached = _STATUS_CACHE
+    if cached and (time.time() - cached[0]) < 10:
+        return cached[1]
+    out = _status_uncached()
+    _STATUS_CACHE = (time.time(), out)
+    return out
+
+
+def _status_uncached() -> Dict[str, Any]:
     mcp = _exec_in_container(
         OPENCODE_CONTAINER,
         [
@@ -675,7 +764,7 @@ def report(name: str) -> Any:
     path = REPORTS_DIR / safe
     if not path.exists():
         raise HTTPException(404, "report not found")
-    return PlainTextResponse(path.read_text(encoding="utf-8", errors="replace"))
+    return PlainTextResponse(_redact(path.read_text(encoding="utf-8", errors="replace")))
 
 
 @app.get("/api/sessions")
@@ -689,7 +778,7 @@ def session(name: str) -> Any:
     path = SESSIONS_DIR / safe
     if not path.exists():
         raise HTTPException(404, "session not found")
-    return PlainTextResponse(path.read_text(encoding="utf-8", errors="replace"))
+    return PlainTextResponse(_redact(path.read_text(encoding="utf-8", errors="replace")))
 
 
 # -- agents / tools ----------------------------------------------------------
@@ -719,7 +808,12 @@ def tools() -> Dict[str, Any]:
 
 # -- configuration -----------------------------------------------------------
 
-SECRET_KEYS = {"OPENROUTER_API_KEY", "OPENCODE_LOCAL_API_KEY", "ANTHROPIC_API_KEY"}
+SECRET_KEYS = {
+    "OPENROUTER_API_KEY",
+    "OPENCODE_LOCAL_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "MINIMAX_API_KEY",
+}
 
 
 def _read_env() -> Dict[str, str]:
@@ -790,6 +884,25 @@ async def set_env(request: Request) -> Dict[str, Any]:
             "OPENROUTER_API_KEY": key,
         }
 
+    # Optional: MiniMax M Plan MCP (web_search + understand_image). Kept out of
+    # the provider blocks above because it is independent of the LLM provider —
+    # it adds MCP tools, not a model.
+    #
+    # "minimax_api_key" present in the body -> explicit intent (empty string
+    # disables the MCP). Absent -> preserve whatever is already stored, so that
+    # saving the provider config never silently drops the MCP key (and so the
+    # masked key read back from GET /api/env is never written to disk).
+    if "minimax_api_key" in body:
+        minimax_key = str(body.get("minimax_api_key") or "").strip()
+        if minimax_key:
+            env["MINIMAX_API_KEY"] = minimax_key
+            env["MINIMAX_API_HOST"] = str(body.get("minimax_api_host") or "https://api.minimax.io").strip()
+    else:
+        existing = _read_env()
+        if existing.get("MINIMAX_API_KEY"):
+            env["MINIMAX_API_KEY"] = existing["MINIMAX_API_KEY"]
+            env["MINIMAX_API_HOST"] = existing.get("MINIMAX_API_HOST") or "https://api.minimax.io"
+
     header = "# Darkmoon — LLM provider configuration\n# Written by the DarkMoon Web UI\n"
     body_text = "\n".join(f"{k}={v}" for k, v in env.items()) + "\n"
     ENV_FILE.write_text(header + body_text, encoding="utf-8")
@@ -857,6 +970,11 @@ Rules:
 - safe_harbor is true when the program explicitly waives CFAA/DMCA liability.
 - exclusions is the "out of scope vulnerability types" / "ineligible findings" list.
 - Be exhaustive but precise; never invent assets or rewards not in the text.
+- NEVER widen the scope. Only list hostnames that appear verbatim in the brief.
+  If the brief lists "app.example.com", do NOT emit "*.example.com" or
+  "example.com" — a wildcard would authorise testing assets the program never
+  granted. If a hostname is not literally in the brief, leave it out.
+- Never invent reward amounts: use only the numbers written in the brief.
 """
 
 
@@ -889,6 +1007,77 @@ def _extract_json_object(text: str) -> str:
     if start == -1 or end == -1 or end <= start:
         return text
     return text[start : end + 1]
+
+
+_HOST_RE = re.compile(
+    r"(?:\*\.)?((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24})", re.IGNORECASE
+)
+
+
+def _brief_hosts(text: str) -> set:
+    """Every hostname literally present in the source brief."""
+    hosts = set()
+    for m in _HOST_RE.finditer(text):
+        h = m.group(1).lower().strip(".")
+        if h and "." in h:
+            hosts.add(h)
+    return hosts
+
+
+def _validate_scope(scope: Dict[str, Any], brief: str) -> Dict[str, Any]:
+    """Cross-check the generated scope against the brief it came from.
+
+    A language model asked to summarise a bug-bounty policy occasionally widens
+    the scope (inventing "*.example.com" from "app.example.com") or narrows it.
+    Widening is the dangerous direction: it would authorise scanning assets the
+    program never granted. So every generated host must be traceable to a host
+    that literally appears in the brief; invented entries are dropped and
+    reported back so the reviewer sees what was removed.
+    """
+    known = _brief_hosts(brief)
+    if not known:
+        return scope
+
+    dropped: List[str] = []
+    kept: List[str] = []
+    for entry in scope.get("in_scope") or []:
+        if not isinstance(entry, str):
+            continue
+        raw = entry.strip().lower().rstrip("/")
+        if not raw:
+            continue
+        host = re.sub(r"^https?://", "", raw).split("/")[0].split(":")[0]
+        host = host.lstrip("*.").strip(".")
+        if not host:
+            dropped.append(entry)
+            continue
+        # A host is acceptable if it appears in the brief, or if it is a
+        # subdomain of a host the brief lists (e.g. brief has "example.com"
+        # and the model emitted "api.example.com").
+        base_ok = host in known or any(
+            host == k or host.endswith("." + k) for k in known
+        )
+        if base_ok:
+            kept.append(entry)
+        else:
+            dropped.append(entry)
+
+    scope["in_scope"] = kept
+    assets = []
+    for a in scope.get("assets") or []:
+        if not isinstance(a, dict):
+            continue
+        url = str(a.get("url") or "")
+        host = re.sub(r"^https?://", "", url).split("/")[0].split(":")[0].lstrip("*.").strip(".")
+        if host and (host in known or any(host == k or host.endswith("." + k) for k in known)):
+            assets.append(a)
+        else:
+            dropped.append(url or "(empty asset)")
+    scope["assets"] = assets
+
+    if dropped:
+        scope["_dropped_out_of_brief"] = sorted(set(x for x in dropped if x))
+    return scope
 
 
 def _scope_provider() -> Optional[Dict[str, str]]:
@@ -978,7 +1167,9 @@ def _scope_via_openai(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {"ok": False, "error": f"model did not return valid JSON: {exc}", "raw": raw[-800:]}
     if not isinstance(parsed, dict):
         return {"ok": False, "error": "model returned a non-object JSON value", "raw": raw[-800:]}
-    return {"ok": True, "scope": parsed, "model": prov["model"]}
+    validated = _validate_scope(parsed, brief)
+    dropped = validated.pop("_dropped_out_of_brief", [])
+    return {"ok": True, "scope": validated, "model": prov["model"], "dropped": dropped}
 
 
 def _scope_run(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -1012,7 +1203,9 @@ def _scope_run(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {"ok": False, "error": f"model did not return valid JSON: {exc}", "raw": raw[-800:]}
     if not isinstance(data, dict):
         return {"ok": False, "error": "model returned a non-object JSON value", "raw": raw[-800:]}
-    return {"ok": True, "scope": data, "model": "opencode head-less"}
+    validated = _validate_scope(data, (payload.get("brief") or ""))
+    dropped = validated.pop("_dropped_out_of_brief", [])
+    return {"ok": True, "scope": validated, "model": "opencode head-less", "dropped": dropped}
 
 
 @app.post("/api/scope")

@@ -142,6 +142,34 @@ RUN printf '%s\n' \
 COPY --from=builder /opencode-bin /usr/local/bin/opencode
 RUN chmod +x /usr/local/bin/opencode
 
+# ------------------------------------------------------------
+# uv / uvx — the tool runner used to spawn the optional MiniMax MCP
+# ------------------------------------------------------------
+# The MiniMax M Plan MCP server (web_search + understand_image) is launched as
+# `uvx minimax-coding-plan-mcp`, so the image needs the uv tool runner. The
+# base image is a Debian slim without curl/wget, so uv is installed from PyPI
+# into a dedicated venv instead of the usual shell installer.
+RUN python3 -m venv /opt/uv \
+ && for i in 1 2 3; do \
+      /opt/uv/bin/pip install --no-cache-dir uv && break || { echo "pip install uv failed (attempt $i), retrying"; sleep 5; }; \
+    done \
+ && /opt/uv/bin/uv --version \
+ && printf '%s\n' \
+    '#!/bin/sh' \
+    'exec /opt/uv/bin/uv tool run "$@"' \
+    > /usr/local/bin/uvx \
+ && chmod +x /usr/local/bin/uvx \
+ && ln -sf /opt/uv/bin/uv /usr/local/bin/uv
+ENV UV_CACHE_DIR=/opt/uv-cache \
+    UV_TOOL_DIR=/opt/uv-tools
+
+# Pre-warm the uv tool cache with the MiniMax MCP package so the first MCP
+# handshake does not have to download ~40 wheels (which would exceed opencode's
+# MCP connection timeout). Cached tools are reused across container restarts.
+RUN mkdir -p /opt/uv-cache /opt/uv-tools \
+ && UV_CACHE_DIR=/opt/uv-cache UV_TOOL_DIR=/opt/uv-tools \
+    /usr/local/bin/uvx minimax-coding-plan-mcp --help >/dev/null 2>&1 || true
+
 ENV TERM=xterm-256color
 ENV LANG=C.UTF-8
 
