@@ -19,7 +19,9 @@ keep the campaign alive, not to optimise scan speed.
 """
 
 import re
-from typing import List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from src.scope_policy import tool_cap as _scope_tool_cap
 
 # Default per-tool rate flags. `flag` is the vendor's requests/packets-per-second
 # knob; `cap` is the ceiling the engine enforces when the agent did not set
@@ -60,8 +62,15 @@ def _tokens(segment: str) -> List[str]:
     return segment.split()
 
 
-def _cap_segment(seg_tokens: List[str]) -> Tuple[List[str], bool]:
-    """Floor/inject the rate flag for the (single) command in one segment."""
+def _cap_segment(
+    seg_tokens: List[str], policy: Optional[Dict[str, Any]] = None
+) -> Tuple[List[str], bool]:
+    """Floor/inject the rate flag for the (single) command in one segment.
+
+    The cap is the MINIMUM of the tool's conservative default and the scope's
+    allowance (scope_policy.tool_cap) — the programme's own stated rate wins
+    whenever it is tighter than the engine default.
+    """
     out = list(seg_tokens)
     changed = False
 
@@ -69,7 +78,8 @@ def _cap_segment(seg_tokens: List[str]) -> Tuple[List[str], bool]:
         cfg = NETWORK_RATE_TOOLS.get(tok)
         if not cfg:
             continue
-        flag, cap = cfg["flag"], cfg["cap"]
+        flag = cfg["flag"]
+        cap = _scope_tool_cap(policy, cfg["cap"]) if policy else cfg["cap"]
         if flag in out:
             # Explicit rate: floor any value above the cap, never raise.
             j = 0
@@ -86,7 +96,9 @@ def _cap_segment(seg_tokens: List[str]) -> Tuple[List[str], bool]:
     return out, changed
 
 
-def _enforce_string(script: str) -> Tuple[str, bool]:
+def _enforce_string(
+    script: str, policy: Optional[Dict[str, Any]] = None
+) -> Tuple[str, bool]:
     """Apply rate caps inside a shell-script string, per segment."""
     parts = _SEPARATOR_RE.split(script)
     changed = False
@@ -100,14 +112,17 @@ def _enforce_string(script: str) -> Tuple[str, bool]:
                 parts[idx] = seg[: m.start(2)] + inner
                 changed = True
             continue
-        capped, seg_changed = _cap_segment(_tokens(seg))
+        capped, seg_changed = _cap_segment(_tokens(seg), policy)
         if seg_changed:
             parts[idx] = " ".join(capped)
             changed = True
     return ("".join(parts), changed) if changed else (script, False)
 
 
-def enforce_rate_limits(command: Union[str, List[str]]) -> Union[str, List[str]]:
+def enforce_rate_limits(
+    command: Union[str, List[str]],
+    policy: Optional[Dict[str, Any]] = None,
+) -> Union[str, List[str]]:
     """Inject the vendor rate flag into any network tool that lacks one.
 
     Applied mechanically at the docker_client choke point, so a workflow (or a
@@ -116,12 +131,18 @@ def enforce_rate_limits(command: Union[str, List[str]]) -> Union[str, List[str]]
     respected: the engine never *raises* a rate, it only *floors* it at the cap
     (a caller asking for less traffic keeps asking for less).
 
+    The cap itself comes from the SCOPE (see src/scope_policy.py): a programme
+    that states "5 requests per second" gets 5, one that forbids automated
+    tools gets manual-mode trickle and its high-volume scanners refused
+    upstream. The bare-function call keeps the engine default for callers that
+    have no scope context yet.
+
     Returns the command unchanged (same type) when there is nothing to do.
     """
     if isinstance(command, (list, tuple)):
         tokens = [str(t) for t in command]
         # An argv list is ONE command: cap it as a single segment.
-        capped, changed = _cap_segment(tokens)
+        capped, changed = _cap_segment(tokens, policy)
         # A list may still carry a script body in one token (`bash -c <script>`
         # with the script as a single argv element) — cap inside those too.
         # Only tokens that span multiple words can be script bodies; a bare
@@ -129,13 +150,13 @@ def enforce_rate_limits(command: Union[str, List[str]]) -> Union[str, List[str]]
         out = []
         for tok in capped:
             if " " in tok or "\n" in tok:
-                t, ch = _enforce_string(tok)
+                t, ch = _enforce_string(tok, policy)
                 out.append(t)
                 changed = changed or ch
             else:
                 out.append(tok)
         return out if changed else list(command)
-    return _enforce_string(command)[0]
+    return _enforce_string(command, policy)[0]
 
 
 def describe_rate_limits() -> dict:

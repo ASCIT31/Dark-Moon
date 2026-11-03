@@ -424,11 +424,25 @@ def init_live_campaign(
     ports: Optional[List[Dict[str, Any]]] = None,
     technologies: Optional[List[Dict[str, Any]]] = None,
     os_info: str = "",
+    rate_policy: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, str]:
     """
     Initialize a live campaign. Creates project + target + campaign skeleton.
     Rule: 1 project = 1 target.
+
+    rate_policy: scope-driven rate budget for this programme (2026-11-03
+    PornBox directive). Either a parsed policy dict ({"mode", "rps",
+    "concurrency", "prohibit_automation", ...}) from
+    src.scope_policy.parse_rate_policy / policy_from_scope_json, or a raw
+    policy TEXT string (the programme's own wording), which is parsed here.
+    The engine enforces it mechanically — see src/scope_policy.py.
     """
+    # A raw string is accepted for agent convenience: the orchestrator has the
+    # programme text in its context and may pass it verbatim.
+    if isinstance(rate_policy, str):
+        from src.scope_policy import parse_rate_policy
+
+        rate_policy = parse_rate_policy(rate_policy, source="operator/init")
     now = _now_iso()
     today = _today_compact()
 
@@ -571,6 +585,16 @@ def init_live_campaign(
         "agents_dispatched": [],
         "cascade_depth": 0,
         "overall_risk": "none",
+        # Scope-driven rate policy (2026-11-03, PornBox directive): the rate
+        # budget belongs to the TARGET PROGRAMME. ALSCO allowed automated
+        # scanning at 5 req/s; PornBox forbids automated tools outright. Stored
+        # on the campaign so the report can show which policy governed the run,
+        # and resolved per-session by the docker client for enforcement.
+        "rate_policy": rate_policy or {
+            "mode": "automated",
+            "rps": 25,
+            "source": "engine default",
+        },
         "stats": {
             "total_findings": 0,
             "critical": 0,

@@ -315,3 +315,98 @@ patches.
 **Tests:** `mcp/tests/test_discovery_workflow.py` — 13 tests (flag injection,
 floor-not-raise, per-segment capping, argv-list capping, registry discovery,
 NVD parsing/ranking/filtering offline against fixtures). Full suite: 137 passed.
+
+---
+
+# Scope-driven rate policy + deployment errors (2026-11-03, P-series, PornBox)
+
+Directive that surfaced these: run the PornBox programme, where the rate budget
+is qualitatively different — PornBox PROHIBITS automated tools and any "tool
+that generates a significant volume of traffic", while ALSCO allowed automated
+scanning within 5 req/s. A single global cap cannot serve both.
+
+## P1 — The rate cap was a global constant instead of a scope property
+
+**Observed.** The first mechanical limiter (D1) floored every network tool to a
+hard-wired 25 pps. For PornBox that is a compliance violation (automation is
+prohibited outright); for a programme that states its own tighter number (ALSCO:
+5 req/s), the stated number was ignored.
+
+**Fix (code).** `mcp/src/scope_policy.py` — the rate budget is parsed from the
+programme's OWN wording: stated rates ("5 requests per second", "300 requests
+per minute"), concurrency ("5 concurrent"), courtesy phrases ("keep scanning to
+a minimum" → limited mode), and outright prohibitions ("automated tools … not
+allowed", "significant volume of traffic" → manual mode). Enforcement:
+- `tool_cap()` = MIN(tool default, scope allowance) — the engine never RAISES a
+  rate, the scope's tighter number wins.
+- Manual mode (automation prohibited) floors everything to a 2 req/s trickle
+  AND refuses high-volume scanners pre-flight (nuclei/ffuf/katana/naabu/
+  sqlmap/nikto/…), execution-guard style, with a manual-testing alternative.
+- `enforce_rate_limits(command, policy)` threads the policy through the
+  choke point; `rate_limiter` without a policy keeps the engine default.
+- `dashboard_init_campaign(rate_policy=…)` accepts the programme's verbatim
+  text or a parsed dict, stores it on the campaign (visible in the report)
+  and registers it on the docker client per session.
+- `list_allowed_tools()` exposes the effective `engine_rate_limits`.
+
+**Verified.** ALSCO text → `mode: automated, rps: 5, concurrency: 5` and naabu
+capped at `-rate 5`. PornBox text → `mode: manual, rps: 2, prohibit: true`,
+naabu floored to `-rate 2`, and nuclei/ffuf/katana/sqlmap/naabu/nikto refused
+pre-flight while `curl` (manual testing) stays allowed.
+
+## P2 — The policy could not reach the engine without agent cooperation
+
+**Observed.** The first PornBox run created its campaign with
+`rate_policy: null` — the policy lived in the prompt text, and the agent called
+`dashboard_init_campaign` without the (optional) argument, so nothing was
+enforced.
+
+**Fix (code).** The Web UI launch endpoint now writes the programme's verbatim
+policy to the SHARED data store (`darkmoon-settings/rate_policy.json`, mounted
+into the engine container at `/root/.local/share/opencode/rate_policy.json`),
+and `scope_policy.resolve_policy()` reads it as a fallback in its chain:
+session policy > campaign scope file > env override > engine default. The
+enforcement no longer depends on the agent remembering to pass the argument.
+(The campaign record may still show the default when the agent skips the
+argument — the file is the enforcement source of truth.)
+
+## P3 — A broken MCP deploy silently killed the whole campaign (and the launch went out unredacted)
+
+**Observed.** Mounting the live MCP code (`src/`, `api/`) into the engine
+container made the persistent MCP daemon crash at boot on a mid-copy import
+error (`NameError: Optional` in rate_limiter.py). The entrypoint fired and
+forgot: no port check, no retry. The campaign then started against a dead MCP —
+the privacy tokenization failed, the launch prompt went out unredacted, and the
+agent (correctly) refused to work and ended the run after ~12 lines.
+
+**Fix (code).** `conf/entrypoint-opencode.sh` now verifies the MCP port is
+actually listening and retries (6 attempts, restart + log tail), exiting FATAL
+with the boot log if the MCP never comes up — the campaign must not start
+against a dead engine. Also added the missing `docker-compose.yml` mounts for
+`mcp/src` and `mcp/api` so engine fixes deploy without a full image rebuild
+(the pattern `workflows/` already used; the `.venv` stays from the image).
+
+## P4 — Agent routed curl to the wrong container (self-corrected)
+
+**Observed.** The PornBox agent tried `curl` via `bash` inside the opencode
+container (no curl there) instead of `darkmoon_execute_command` (the toolbox,
+which has it). It self-corrected via the `which` ladder — but wasted turns.
+
+**Fix.** Noted for the prompt backlog: the discovery doctrine should say
+explicitly that network probes run through `darkmoon_execute_command` (the
+toolbox), not the engine's own shell.
+
+## Status
+
+| Error | Fix | Where |
+|---|---|---|
+| P1 global cap instead of scope policy | parse the programme's own wording; manual mode + pre-flight refusal | `mcp/src/scope_policy.py`, `mcp/src/rate_limiter.py`, `mcp/src/docker_client.py`, `dashboard_init_campaign`, `list_allowed_tools` |
+| P2 policy unreachable without agent cooperation | launch writes `rate_policy.json` into the shared store; MCP reads it as fallback | `webui/server.py`, `mcp/src/scope_policy.py` |
+| P3 dead-MCP deploy killed the campaign | entrypoint verifies the port and retries, FATAL otherwise | `conf/entrypoint-opencode.sh`, `docker-compose.yml` (live mounts) |
+| P4 curl routed to the wrong container | documented for the prompt backlog | this register |
+
+**Tests:** `mcp/tests/test_scope_policy.py` — 13 tests (ALSCO/PornBox parsing,
+min-of-caps, floor-not-raise, manual-mode refusal of scanners while curl stays
+allowed, scope-JSON field consumption, courtesy-phrase limited mode). Full
+suite: 150 passed. Live-verified inside the engine container against the real
+PornBox policy file.

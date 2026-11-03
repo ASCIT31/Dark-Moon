@@ -1319,6 +1319,28 @@ async def launch(request: Request) -> Dict[str, Any]:
     payload = await request.json()
     kind = (payload.get("kind") or "assessment").lower()
 
+    # Scope-driven rate policy (2026-11-03, PornBox directive): the programme's
+    # own rate/automation rule travels with the launch and is written to the
+    # SHARED data store, where the MCP engine reads it as its enforcement
+    # fallback. This is what makes the policy mechanical without depending on
+    # the agent passing it to dashboard_init_campaign: darkmoon-settings/ is
+    # bind-mounted into the engine container, so the policy file is visible to
+    # the MCP no matter what the agent does.
+    rate_policy_text = str(payload.get("rate_policy") or "").strip()
+    if rate_policy_text:
+        try:
+            (DATA_DIR / "rate_policy.json").write_text(json.dumps({
+                "text": rate_policy_text,
+                "program": payload.get("program") or "",
+                "updated_at": _now(),
+            }, ensure_ascii=False, indent=2), encoding="utf-8")
+            try:
+                os.chmod(DATA_DIR / "rate_policy.json", 0o600)
+            except OSError:
+                pass
+        except OSError:
+            pass  # best effort: the run still starts with the engine default
+
     if kind == "mcp-stream":
         job_id = "job_" + uuid.uuid4().hex[:10]
         job = Job(job_id, "MCP raw stream", "", ["darkmoon-cli"], kind="mcp-stream")

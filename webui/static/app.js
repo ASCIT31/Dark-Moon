@@ -230,6 +230,13 @@ $("#scope-ai-actions").addEventListener("click", (e) => {
     const exclusions = s.out_of_scope || [];
     $("#f-scope").value = assets.join(", ");
     if (exclusions.length) $("#f-note").value = exclusions.join("; ");
+    // Carry the programme's own rate/automation rule into the launch: the
+    // engine writes it to the shared store and enforces it mechanically.
+    state.scopeRatePolicy = s.rate_limit || "";
+    if (s.rate_limit) {
+      const cur = $("#f-note").value;
+      $("#f-note").value = cur ? cur + "\n[RATE POLICY] " + s.rate_limit : "[RATE POLICY] " + s.rate_limit;
+    }
     closeScopeAI();
     statusToast("scope loaded into the launch form — tweak it and run the assessment");
   } catch (e) {
@@ -253,6 +260,7 @@ $("#btn-launch").addEventListener("click", async () => {
     scope: $("#f-scope").value.trim(),
     creds: $("#f-creds").value.trim(),
     note: $("#f-note").value.trim(),
+    rate_policy: state.scopeRatePolicy || "",
   };
   if (!payload.target) { $("#launch-status").textContent = "⚠ target is required"; return; }
   $("#btn-launch").disabled = true;
