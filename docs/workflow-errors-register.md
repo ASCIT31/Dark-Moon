@@ -476,3 +476,53 @@ vectors as explicit "not tested" items.
 **Tests:** `mcp/tests/test_report_assembly.py` — 2 tests (agent narrative
 survives into the report; an informational-only campaign still has a populated
 roadmap). Full suite: 152 passed.
+
+---
+
+# Scope-header enforcement (2026-11-03, H-series, PB Web Media / Intigriti)
+
+The PB Web Media programme states a mandatory header on EVERY request:
+`X-Intigriti-Username: davidgonzalez`. A request that goes out without it is
+discarded by triage. Making compliance depend on the agent remembering a header
+on every single call is not a control — it is a hope.
+
+## H1 — Mandatory per-request headers were not enforced at all
+
+**Fix (code).** `mcp/src/scope_policy.py` parses the programme's own wording for
+required headers (`Add request header X-Foo: bar`, `Required header on every
+request: X-Foo: value`), stores them in the policy, and
+`mcp/src/docker_client.py` injects them into curl/wget invocations that do not
+already carry them. The policy also travels with the campaign (`rate_policy` on
+the campaign record, `required_headers` included), so the report can show which
+headers governed the run.
+
+## H2 — Header injection only covered the commands it could rewrite
+
+**Observed.** The PB Web Media run drives its probing with lightpanda (a
+JS-capable browser) and node scripts, not curl, so command-level rewriting
+never reached those requests — the log showed the header name only inside the
+PROMPT, never in an outgoing request.
+
+**Fix (code).** `DarkmoonDockerClient._ensure_scope_headers_rc()` installs the
+required headers into the toolbox `~/.curlrc`, so EVERY curl call the toolbox
+makes carries them, whatever the agent wrote — verified live:
+`> x-intigriti-username: davidgonzalez`. wget is still handled at the command
+level (it has no rc file); curl is skipped there when the rc is installed, so
+the header is never sent twice (curl sends every occurrence).
+
+## H3 — A greedy capture turned a header value into a paragraph
+
+**Observed.** The value of `X-Intigriti-Username` came out as
+`davidgonzalez. Do not use bulk scanners or fuzzers against the
+age-verification endpoints` — the programme page puts the header sentence next
+to other prose, and the capture ran past the end of the value. A polluted header
+value is worse than none: triage sees a malformed identifier.
+
+**Fix (code).** The value is restricted to a single token (or an explicitly
+quoted string) and trailing punctuation is stripped. Regression test:
+`test_required_header_value_is_not_polluted_by_prose`.
+
+**Tests:** `mcp/tests/test_scope_policy.py` — 8 header tests (parsing, single
+token, injection into curl/wget, no duplication, no overwrite of an explicit
+value, non-HTTP commands untouched, curl skipped when the rc covers it, prose
+pollution). Full suite: 159 passed.

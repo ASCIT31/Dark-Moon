@@ -35,6 +35,7 @@ DEFAULT_POLICY: Dict[str, Any] = {
     "rps": 25,            # global requests-or-packets per second ceiling
     "concurrency": 5,
     "prohibit_automation": False,
+    "required_headers": {},   # headers the programme demands on EVERY request
     "source": "engine default",
     "notes": "",
 }
@@ -95,6 +96,8 @@ def parse_rate_policy(text: str, source: str = "programme policy") -> Dict[str, 
     policy = dict(DEFAULT_POLICY)
     policy["source"] = source
 
+    policy["required_headers"] = parse_required_headers(t)
+
     if any(re.search(p, t, re.I) for p in _PROHIBITION_PATTERNS):
         policy.update({
             "mode": "manual",
@@ -149,6 +152,84 @@ def policy_from_scope_json(scope_json: Any, source: str = "AI scope generator") 
     out = dict(DEFAULT_POLICY)
     out["source"] = source
     return out
+
+
+_HEADER_RE = re.compile(
+    r"(?<![\w-])([Xx]-[A-Za-z0-9-]{2,40})\s*:\s*([^\n\r;,]{1,200}?)"
+    r"(?=\s*(?:$|[\n\r;,]|\bAdd\b|\bwith\b))"
+)
+
+
+def parse_required_headers(text: str) -> Dict[str, str]:
+    """Extract the headers a programme requires on EVERY request.
+
+    Intigriti programmes state it as `X-Intigriti-Username: {your username}` or
+    `Add request header X-Foo: bar` — the name can sit mid-sentence, so this
+    scans the whole text rather than anchoring to a line.
+
+    The VALUE is deliberately restricted to a single token (or a quoted
+    string): a programme page puts the header sentence next to other prose, and
+    a greedy capture would produce a header whose value is a whole paragraph
+    ("X-Foo: abc. Do not use bulk scanners against ..."). A header with a
+    polluted value is worse than no header at all.
+    """
+    headers: Dict[str, str] = {}
+    for m in _HEADER_RE.finditer(str(text or "")):
+        name = m.group(1).strip()
+        value = m.group(2).strip().strip('"').strip("'")
+        if not value:
+            continue
+        # Keep only a single token, unless the value was explicitly quoted.
+        if " " in value and not (m.group(2).strip().startswith(('"', "'"))):
+            value = value.split()[0]
+        value = value.strip().strip('"').strip("'").rstrip(".,;:")
+        if not value:
+            continue
+        headers[name] = value
+    return headers
+
+
+def inject_required_headers(
+    command: str, headers: Dict[str, str], skip_clients: tuple = ()
+) -> str:
+    """Add the programme's mandatory headers to an HTTP client invocation.
+
+    Some programmes require a header on EVERY request (Intigriti:
+    `X-Intigriti-Username`). Relying on the agent to remember it is exactly
+    how a request goes out unidentified and the report gets discarded, so the
+    engine injects it mechanically into curl/wget calls that do not already
+    carry it. A header the caller set explicitly is never overwritten.
+    """
+    if not headers:
+        return command
+    lowered = command.lower()
+    is_curl = re.search(r"(?<![\w-])curl(?![\w-])", lowered) is not None
+    is_wget = re.search(r"(?<![\w-])wget(?![\w-])", lowered) is not None
+    # A client whose headers are already installed globally (curl via the
+    # toolbox ~/.curlrc) must NOT get them again here: curl sends every
+    # occurrence, so the request would carry the header twice.
+    if is_curl and "curl" in skip_clients:
+        is_curl = False
+    if not (is_curl or is_wget):
+        return command
+
+    additions = []
+    for name, value in headers.items():
+        if re.search(rf"(?<![\w-]){re.escape(name)}\s*:", command, re.I):
+            continue  # the caller already set it
+        if is_curl:
+            additions.append(f'-H "{name}: {value}"')
+        else:
+            additions.append(f'--header="{name}: {value}"')
+    if not additions:
+        return command
+
+    # Insert right after the client name so the flags bind to that invocation.
+    m = re.search(r"(?<![\w-])(curl|wget)(?![\w-])", command, re.I)
+    if not m:
+        return command
+    end = m.end()
+    return command[:end] + " " + " ".join(additions) + command[end:]
 
 
 def resolve_policy(

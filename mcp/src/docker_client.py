@@ -11,7 +11,7 @@ from docker.errors import DockerException, NotFound
 from src.models.common import ExecutionResult, ExecutionStatus
 from src.execution_guard import adapt_command, classify, effective_timeout, remediation
 from src.rate_limiter import enforce_rate_limits
-from src.scope_policy import is_prohibited_tool, resolve_policy
+from src.scope_policy import inject_required_headers, is_prohibited_tool, resolve_policy
 
 STREAM_BASE = "/tmp/darkmoon_mcp_stream"
 
@@ -45,6 +45,7 @@ class DarkmoonDockerClient:
         # engine default. Written by dashboard_init_campaign / a dedicated
         # setter, read by execute_command.
         self._session_policy: Dict[str, Dict[str, Any]] = {}
+        self._scope_rc_key: Optional[str] = None
         try:
             self.client = docker.from_env()
         except DockerException as e:
@@ -80,6 +81,43 @@ class DarkmoonDockerClient:
             return None
         except DockerException as e:
             raise RuntimeError(f"Error accessing container: {e}")
+
+    def _ensure_scope_headers_rc(self, policy: Dict[str, Any]) -> None:
+        """Install the programme's mandatory headers into the toolbox ~/.curlrc.
+
+        Command-level injection (see inject_required_headers) only covers the
+        curl/wget invocations the engine can rewrite. A ~/.curlrc covers EVERY
+        curl call the toolbox makes, whatever the agent wrote — which is the
+        difference between a request that carries the required identifier and
+        one that gets discarded by triage.
+        """
+        headers = (policy or {}).get("required_headers") or {}
+        if not headers:
+            return
+        key = "|".join(f"{k}={v}" for k, v in sorted(headers.items()))
+        if key == getattr(self, "_scope_rc_key", None):
+            return
+        lines = [
+            "# DarkMoon — mandatory headers for this engagement's scope.",
+            "# Managed by the engine: do not edit by hand.",
+        ]
+        for name, value in sorted(headers.items()):
+            lines.append(f'header = "{name}: {value}"')
+        body = "\n".join(lines) + "\n"
+        try:
+            res = self.execute_command(
+                f"cat > /root/.curlrc <<'DMCURLRC'\n{body}DMCURLRC\n"
+                f"wc -c < /root/.curlrc",
+                timeout=15,
+            )
+            self._scope_rc_key = key
+            self._broadcast(
+                f"\n\033[1;36m[scope-header]\033[0m installed required header(s) "
+                f"{sorted(headers)} in the toolbox ~/.curlrc (every curl call now carries them)\n".encode(),
+                None,
+            )
+        except Exception:
+            pass
 
     def set_session_policy(self, session_id: str, policy: Dict[str, Any]) -> None:
         """Register the scope-driven rate policy for one MCP session.
@@ -142,6 +180,7 @@ class DarkmoonDockerClient:
             # the Web UI launch into the shared darkmoon-settings store) >
             # env override > engine default.
             policy = resolve_policy(self._session_policy.get(session_id or ""))
+            self._ensure_scope_headers_rc(policy)
 
             if isinstance(command, str):
                 adapted, note = adapt_command(command, self._gpu_state(container))
@@ -183,6 +222,24 @@ class DarkmoonDockerClient:
                         f"\n\033[1;36m[rate-limit]\033[0m engine capped network tool rate flags (scope={policy.get('mode')}, {policy.get('rps')}/s): {command}\n".encode(),
                         session_id,
                     )
+
+                # Mandatory per-request headers (e.g. Intigriti's
+                # X-Intigriti-Username). Injected mechanically: a request that
+                # goes out without the identifier is discarded by triage, and
+                # the agent cannot be relied on to remember it on every call.
+                required = policy.get("required_headers") or {}
+                if required:
+                    # curl is covered by the toolbox ~/.curlrc (every call, even
+                    # ones the agent wrote by hand) - only wget needs the
+                    # command-level injection, otherwise the header is sent twice.
+                    skip = ("curl",) if getattr(self, "_scope_rc_key", None) else ()
+                    with_headers = inject_required_headers(command, required, skip_clients=skip)
+                    if with_headers != command:
+                        command = with_headers
+                        self._broadcast(
+                            f"\n\033[1;36m[scope-header]\033[0m engine added required header(s) {sorted(required)}\n".encode(),
+                            session_id,
+                        )
 
             if isinstance(command, list):
                 cmd = ["timeout", "--kill-after=5", str(hard_timeout)] + command

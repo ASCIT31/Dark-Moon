@@ -27,6 +27,7 @@ from src.scope_policy import (  # noqa: E402
     MANUAL_MODE_RPS,
     is_prohibited_tool,
     parse_rate_policy,
+    parse_required_headers,
     policy_from_scope_json,
     tool_cap,
 )
@@ -143,3 +144,68 @@ def test_nuclei_rate_capped_by_scope():
     p = parse_rate_policy(ALSCO_POLICY)
     out = enforce_rate_limits("nuclei -u http://x -t cves", policy=p)
     assert "-rate-limit 5" in out, f"ALSCO 5 req/s not applied to nuclei: {out}"
+
+
+# ── required headers (Intigriti X-Intigriti-Username) ───────────────────────
+
+def test_required_header_is_parsed_from_programme_text():
+    p = parse_rate_policy(
+        "Automated tooling max. 5 requests/sec Request header "
+        "Add request header X-Intigriti-Username: davidgonzalez"
+    )
+    assert p["required_headers"] == {"X-Intigriti-Username": "davidgonzalez"}
+    assert p["rps"] == 5
+
+
+def test_required_header_placeholder_is_parsed():
+    h = parse_required_headers("Add request header X-Intigriti-Username: {Username}")
+    assert h == {"X-Intigriti-Username": "{Username}"}
+
+
+def test_required_header_is_injected_into_curl_and_wget():
+    from src.scope_policy import inject_required_headers
+
+    h = {"X-Intigriti-Username": "davidgonzalez"}
+    out = inject_required_headers("curl -sk https://fucd.com/", h)
+    assert '-H "X-Intigriti-Username: davidgonzalez"' in out
+    out = inject_required_headers("wget -qO- https://x/", h)
+    assert '--header="X-Intigriti-Username: davidgonzalez"' in out
+
+
+def test_required_header_not_duplicated_when_already_present():
+    from src.scope_policy import inject_required_headers
+
+    h = {"X-Intigriti-Username": "davidgonzalez"}
+    cmd = 'curl -sk -H "X-Intigriti-Username: other" https://x/'
+    out = inject_required_headers(cmd, h)
+    assert out.count("X-Intigriti-Username") == 1
+    assert "other" in out, "an explicitly set header must never be overwritten"
+
+
+def test_non_http_commands_are_untouched():
+    from src.scope_policy import inject_required_headers
+
+    h = {"X-Intigriti-Username": "davidgonzalez"}
+    assert inject_required_headers("ls -la /tmp", h) == "ls -la /tmp"
+    assert inject_required_headers("cat /etc/hosts", h) == "cat /etc/hosts"
+
+
+def test_required_header_value_is_not_polluted_by_prose():
+    """A programme page puts the header sentence next to other prose. A greedy
+    capture would send 'X-Intigriti-Username: davidgonzalez. The engine injects
+    it into every curl.' as the header value - worse than no header at all."""
+    h = parse_required_headers(
+        "Required header on every request: X-Intigriti-Username: davidgonzalez. "
+        "The engine injects it into every curl call."
+    )
+    assert h == {"X-Intigriti-Username": "davidgonzalez"}
+
+
+def test_curl_is_skipped_when_the_curlrc_already_carries_the_header():
+    """curl sends EVERY occurrence of a header, so a request would carry it
+    twice when both the ~/.curlrc and the command line add it."""
+    from src.scope_policy import inject_required_headers
+
+    h = {"X-Intigriti-Username": "davidgonzalez"}
+    assert inject_required_headers("curl -sk https://x/", h, skip_clients=("curl",)) == "curl -sk https://x/"
+    assert "--header=" in inject_required_headers("wget -qO- https://x/", h, skip_clients=("curl",))
