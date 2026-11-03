@@ -410,3 +410,69 @@ min-of-caps, floor-not-raise, manual-mode refusal of scanners while curl stays
 allowed, scope-JSON field consumption, courtesy-phrase limited mode). Full
 suite: 150 passed. Live-verified inside the engine container against the real
 PornBox policy file.
+
+---
+
+# Report-assembly + coverage errors (2026-11-03, R-series, PornBox round 2)
+
+Found while reviewing the PornBox round-2 deliverable against the programme's
+own qualifying classes.
+
+## R1 — The agent's report body was discarded; the report contradicted itself
+
+**Observed.** The agent passed a complete report (29 KB) to
+`dashboard_finalize_campaign`, including the reasoning, the explicit list of
+FIVE vectors it deliberately did NOT test and the requests needed to complete
+them. The written report contained NONE of it (0 matches for "untested"), while
+the agent's executive summary — which IS used verbatim — claimed "five untested
+items are filed explicitly with the requests needed to complete them". The
+report said it contained something it did not contain.
+
+**Root cause.** `finalize_campaign()` deliberately regenerates the body from
+the findings store ("deterministic reports", to avoid condensed/incomplete
+LLM reports) and dropped `report_markdown` on the floor. The store can hold
+findings; it cannot hold reasoning, negative results, or untested vectors.
+The guard that protects a good existing report also compared the agent's
+FRAGMENT length against the existing report length — wrong twice over once the
+fragment became an appendix.
+
+**Fix (code).** `mcp/api/live_push.py`: the agent's markdown is now preserved
+as a "## 5. AGENT ANALYSIS (campaign narrative)" appendix of the generated
+report (the deterministic findings body is unchanged); the "never replace a
+good report with a shorter one" guard now compares the FINAL assembled report
+instead of the agent's fragment, and it no longer silently drops a short but
+valuable narrative.
+
+## R2 — An all-informational campaign produced an EMPTY remediation roadmap
+
+**Observed.** Every roadmap band (P0..P3) is filtered by severity. A campaign
+whose only findings are proven negatives / hardening notes (the normal outcome
+of a well-run assessment) hit none of them, so "## 4. REMEDIATION ROADMAP"
+was a bare heading with nothing under it.
+
+**Fix (code).** P4 "Backlog / hardening" added, emitting each finding's own
+remediation text, plus a note when no critical/high/medium/low finding exists.
+
+## R3 — The budget triage dropped a planned qualifying-vector test
+
+**Observed.** PornBox round 1 planned an authenticated IDOR test ("authenticate
+on the main portal so I can test IDOR") and then, with the request budget
+running low, switched to a different vector and finalised — the planned test
+vanished. A dropped test reads to triage as "not applicable", and the
+qualifying class ("backend interface takeover") was silently left untested.
+
+**Fix (prompt).** GATE 11 in `conf/agents/pentest.md`: order the work by the
+programme's QUALIFYING classes (write them down first); a qualifying class
+needs at least one completed test, even if negative; get a session when a test
+needs one (it is usually one request); never drop a planned test silently —
+file it as "NOT TESTED - requires follow-up" with the exact requests.
+
+Round 2 applied GATE 11 and did exactly that: it executed the three
+qualifying hypotheses, refuted all three with direct evidence (the register
+endpoint auto-logs-in, which unlocked a genuinely authenticated session AND
+supplied the second object the IDOR test needed), and filed the remaining
+vectors as explicit "not tested" items.
+
+**Tests:** `mcp/tests/test_report_assembly.py` — 2 tests (agent narrative
+survives into the report; an informational-only campaign still has a populated
+roadmap). Full suite: 152 passed.
