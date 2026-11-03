@@ -134,6 +134,19 @@ td.mono, .mono { font-family: var(--mono); font-size: 12px; }
 .badge.high { background: rgba(255,138,61,.16); color: var(--high); }
 .badge.medium { background: rgba(255,210,61,.14); color: var(--medium); }
 .badge.low { background: rgba(61,220,151,.14); color: var(--low); }
+.badge.accent { background: rgba(124,92,255,.16); color: var(--accent); }
+
+/* Withdrawn / false-positive records: visible as the audit trail, but muted
+   and struck so no reader can mistake them for a payable finding. */
+tr.withdrawn td { opacity: .55; }
+tr.withdrawn td:nth-child(2) { text-decoration: line-through; text-decoration-color: var(--muted); }
+
+/* Filters toolbar checkbox */
+.chk { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
+.chk input { accent-color: var(--accent); }
+
+.stat.open::after { background: var(--accent-2); }
+.stat.withd::after { background: var(--muted); }
 .badge.info { background: rgba(98,168,255,.14); color: var(--info); }
 .badge.neutral { background: var(--panel-2); color: var(--muted); }
 

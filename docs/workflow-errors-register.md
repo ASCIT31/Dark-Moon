@@ -174,3 +174,78 @@ the raw store records, so withdrawn records still appear in its Overview counts
 until the store is reconciled; the report is the vendor-facing artifact and is
 correct. `dashboard_push_finding()` could also expose the `withdrawn` flag as
 an explicit tool argument rather than relying on title markers.
+---
+
+# Web UI error register (2026-11-03 UI audit)
+
+Same campaign, Web UI side. Verified live against the real store (28 records,
+26 of them withdrawn) before/after each fix.
+
+## W1 — Overview counted withdrawn records as live findings
+
+**Observed.** `/api/overview` reported `findings.total: 28 / open: 28` while
+only 2 records were actually valid — the 26 withdrawn/refuted corrections
+(which the MCP had just learned to exclude) were counted as if they were
+payable findings, and the severity chart showed 26 info + 2 low.
+
+**Fix.** The withdrawal rule (`_is_withdrawn` / `_validated`, mirroring
+`mcp/api/live_push.py`) now drives `overview`: `total`/`open`/`by_severity`
+count validated records only, and a new `findings.withdrawn` field exposes the
+audit-trail size. The Overview grid gained an explicit **Withdrawn** stat and
+the "Open" stat is now labelled **Open (valid)** with its own accent colour
+(it previously borrowed the "low" green underline, which read as a severity).
+
+## W2 — Findings view listed withdrawn records as ordinary findings
+
+**Observed.** `/api/findings` (and the table) returned every store record, so
+a vendor-looking reviewer saw 28 rows where 26 were refuted corrections with
+no visual distinction.
+
+**Fix.** `/api/findings` excludes withdrawn records by default (same rule as
+the report); `?include_withdrawn=1` re-includes them **flagged** with
+`withdrawn: true`. The table renders flagged rows muted + struck-through with
+an inline "(withdrawn / false positive)" tag, behind a new
+*include withdrawn / false positives* checkbox. Same for
+`/api/campaigns/{id}`: `findings` is validated-only, `withdrawn` is returned
+separately for the drawer, and `/api/campaigns` exposes
+`findings_count` (validated) alongside `records_count`.
+
+## W3 — "Save MiniMax MCP" failed whenever the provider form was empty
+
+**Observed.** The MiniMax panel re-sent `mode/provider/model/api_key/base_url`
+from the provider form; with an empty form the request hit the cloud branch,
+which raises 400 "model and api_key are required" **before** the MiniMax block
+ever runs. Saving only the MCP key was impossible.
+
+**Fix.** The panel now sends **only** the MiniMax fields, and `set_env`
+detects the MiniMax-only save (no provider keys in the body) and preserves the
+provider config already on disk instead of routing through a provider branch.
+
+## W4 — Stale assets after a redeploy (browser served the old app.js)
+
+**Observed.** After rebuilding the image, a fresh navigation still executed
+the previous `app.js` from browser cache — the new stat labels did not appear
+until a hard reload, which makes every UI fix look "not applied" in
+verification.
+
+**Fix.** HTTP middleware sets `Cache-Control: no-cache` on `/`,
+`/static/*` and `/api/*`, so the browser revalidates against the StaticFiles
+ETag and picks up new builds. (StaticFiles already emits the ETag, so unchanged
+assets still answer 304.)
+
+## W5 — Cosmetic: campaign status badges were all grey
+
+**Observed.** Campaign status badges hardcoded the `neutral` class, so a
+`running` campaign and a `completed` one were visually identical in the
+Campaigns table and in the campaign drawer.
+
+**Fix.** `statusBadge()` colour-codes the status (`running` → accent,
+`completed`/`finished` → green) across the campaigns table, the campaign
+drawer and the Overview recent list.
+
+## W6 — Cosmetic: CVSS "0.0" noise on withdrawn/informational records
+
+**Observed.** `findingCard` rendered "CVSS 0.0" for every record whose score
+was 0 or N/A, adding noise to the drawer.
+
+**Fix.** The CVSS chip is only rendered when the score parses to a number > 0.

@@ -77,7 +77,11 @@ async function loadOverview() {
     { l: "Critical", n: f.by_severity.critical, cls: "crit" },
     { l: "High", n: f.by_severity.high, cls: "high" },
     { l: "Medium", n: f.by_severity.medium, cls: "med" },
-    { l: "Open", n: f.open, cls: "low" },
+    // Withdrawn / refuted records are excluded from every count above (same
+    // rule as the MCP since the 2026-11-03 audit); surfaced here so the
+    // auditor can see how much of the store is audit trail.
+    { l: "Open (valid)", n: f.open, cls: "open" },
+    { l: "Withdrawn", n: f.withdrawn ?? 0, cls: "withd" },
     { l: "Agents", n: o.agents, cls: "" },
     { l: "MCP tools", n: o.tools, cls: "" },
   ];
@@ -94,7 +98,7 @@ async function loadOverview() {
 
   $("#recent-campaigns").innerHTML = o.recent_campaigns.length ? o.recent_campaigns.map((c2) => `
     <div class="list-item" data-campaign="${esc(c2.id)}">
-      <span>${esc(c2.target_host || c2.target_id || c2.id)} <span class="badge neutral">${esc(c2.status || "?")}</span></span>
+      <span>${esc(c2.target_host || c2.target_id || c2.id)} ${statusBadge(c2.status)}</span>
       <span class="meta">${esc(c2.started_at || "")}</span>
     </div>`).join("") : `<div class="hint">No campaigns yet — launch one from “New assessment”.</div>`;
 
@@ -361,7 +365,7 @@ async function loadCampaigns() {
     <tr data-campaign="${esc(c.id)}">
       <td class="mono">${esc(c.id)}</td>
       <td>${esc(c.target_host || c.target_id || "-")}</td>
-      <td><span class="badge neutral">${esc(c.status || "?")}</span></td>
+      <td>${statusBadge(c.status)}</td>
       <td>${esc(c.started_at || "-")}</td>
       <td>${esc(c.duration_seconds ?? "-")}</td>
       <td>${esc(c.findings_count ?? 0)}</td>
@@ -388,7 +392,7 @@ async function openCampaign(id) {
     openDrawer(campaign.id, `
       <dl class="kv">
         <dt>Target</dt><dd>${esc(campaign.target_host || campaign.target_id || "-")}</dd>
-        <dt>Status</dt><dd><span class="badge neutral">${esc(campaign.status || "?")}</span></dd>
+        <dt>Status</dt><dd>${statusBadge(campaign.status)}</dd>
         <dt>Started</dt><dd class="mono">${esc(campaign.started_at || "-")}</dd>
         <dt>Duration</dt><dd>${esc(campaign.duration_seconds ?? "-")}s</dd>
         <dt>Executive summary</dt><dd>${esc(campaign.executive_summary || "-")}</dd>
@@ -402,13 +406,24 @@ async function openCampaign(id) {
 }
 
 /* ------------------------------------------------------------------ findings */
+function statusBadge(s) {
+  // A campaign's status deserves its own colour: "running" is in flight
+  // (accent), "completed" is done (green). Both rendered "neutral" before,
+  // so a live campaign and a finished one looked identical in the table.
+  const st = String(s || "?").toLowerCase();
+  const cls = st === "running" ? "accent" : st === "completed" || st === "finished" ? "low" : "neutral";
+  return `<span class="badge ${cls}">${esc(s || "?")}</span>`;
+}
+
 function findingCard(v) {
   const sev = String(v.severity || "info").toLowerCase();
+  const cvss = parseFloat(v.cvss_score);
   return `<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:9px;background:var(--panel-2)">
     <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
       <span class="badge ${esc(sev)}">${esc(sev)}</span>
       <b>${esc(v.title || v.id || "untitled")}</b>
-      ${v.cvss_score != null ? `<span class="mono hint">CVSS ${esc(v.cvss_score)}</span>` : ""}
+      ${v.withdrawn ? '<span class="badge neutral">withdrawn / false positive</span>' : ""}
+      ${Number.isFinite(cvss) && cvss > 0 ? `<span class="mono hint">CVSS ${esc(v.cvss_score)}</span>` : ""}
       ${v.cve ? `<span class="mono hint">${esc(v.cve)}</span>` : ""}
       ${v.status ? `<span class="badge neutral">${esc(v.status)}</span>` : ""}
     </div>
@@ -423,19 +438,24 @@ async function loadFindings() {
   const q = $("#f-q").value.trim();
   const sev = $("#f-sev").value;
   const camp = $("#f-campaign").value;
+  const showWithdrawn = $("#f-withdrawn") && $("#f-withdrawn").checked;
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (sev) params.set("severity", sev);
   if (camp && camp !== "all") params.set("campaign_id", camp);
+  // The server hides withdrawn / refuted records by default so this view
+  // matches the vendor-facing report (2026-11-03 audit). The checkbox
+  // re-includes them, flagged, for the audit trail.
+  if (showWithdrawn) params.set("include_withdrawn", "1");
   const { findings } = await api("/api/findings?" + params.toString());
   state.findings = findings;
   $("#findings-table").innerHTML = findings.length ? `<table><thead><tr>
       <th>Severity</th><th>Title</th><th>CVSS</th><th>Endpoint</th><th>Agent</th><th>CVE</th><th>MITRE</th><th>Status</th>
     </tr></thead><tbody>${findings.map((v, i) => `
-      <tr data-idx="${i}">
+      <tr data-idx="${i}" class="${v.withdrawn ? "withdrawn" : ""}">
         <td><span class="badge ${esc(String(v.severity || "info").toLowerCase())}">${esc(v.severity || "info")}</span></td>
-        <td>${esc(v.title || v.id || "-")}</td>
-        <td class="mono">${esc(v.cvss_score ?? "-")}</td>
+        <td>${esc(v.title || v.id || "-")}${v.withdrawn ? ' <span class="hint">(withdrawn / false positive)</span>' : ""}</td>
+        <td class="mono">${Number.isFinite(parseFloat(v.cvss_score)) && parseFloat(v.cvss_score) > 0 ? esc(v.cvss_score) : "-"}</td>
         <td class="mono">${esc(v.endpoint || "-")}</td>
         <td>${esc(v.discovered_by_agent || "-")}</td>
         <td class="mono">${esc(v.cve || "-")}</td>
@@ -450,6 +470,7 @@ async function loadFindings() {
 $("#f-q").addEventListener("input", debounce(loadFindings, 300));
 $("#f-sev").addEventListener("change", loadFindings);
 $("#f-campaign").addEventListener("change", loadFindings);
+$("#f-withdrawn").addEventListener("change", loadFindings);
 
 /* severity filter options */
 $("#f-sev").innerHTML = `<option value="all">all severities</option>` +
@@ -629,25 +650,17 @@ $("#btn-save-minimax").addEventListener("click", async () => {
   const key = $("#s-minimax-key").value.trim();
   const host = $("#s-minimax-host").value.trim();
   if (!key) {
-    status.textContent = "⚠ enter a MiniMax API key (or use the provider panel to remove it)";
+    status.textContent = "⚠ enter a MiniMax API key (empty key disables the MCP)";
     return;
   }
-  const env = await api("/api/env");
-  const cfg = env.configured || {};
+  // MiniMax-only save: send NO provider fields. The server preserves the
+  // provider config already on disk (routing this through the provider
+  // branches used to 400 when the provider form was empty).
   const body = {
-    mode: $("#s-mode").value,
-    provider: $("#s-provider").value.trim(),
-    model: $("#s-model").value.trim(),
-    api_key: $("#s-key").value.trim(),
-    base_url: $("#s-baseurl").value.trim(),
-    provider_id: $("#s-provider").value.trim() || "ollama",
     minimax_api_key: key,
     minimax_api_host: host || "https://api.minimax.io",
   };
-  // The masked provider key cannot be re-sent as-is; keep the stored one.
-  if (!body.api_key && cfg.OPENROUTER_API_KEY) body.api_key = cfg.OPENROUTER_API_KEY;
-  if (!body.api_key && cfg.ANTHROPIC_API_KEY) body.api_key = cfg.ANTHROPIC_API_KEY;
-  if (!body.api_key && cfg.OPENCODE_LOCAL_API_KEY) body.api_key = cfg.OPENCODE_LOCAL_API_KEY;  try {
+  try {
     const r = await api("/api/env", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
     });
@@ -656,6 +669,7 @@ $("#btn-save-minimax").addEventListener("click", async () => {
       : "✓ saved — restart the engine to apply";
     $("#s-minimax-key").value = "";
     loadSettings();
+    refreshStatus();
   } catch (e) { status.textContent = "✗ " + e.message; }
 });
 

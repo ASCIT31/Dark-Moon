@@ -82,6 +82,44 @@ TOOLBOX_CONTAINER = os.environ.get("DARKMOON_TOOLBOX_CONTAINER", "darkmoon")
 SEVERITIES = ["critical", "high", "medium", "low", "info"]
 SEV_RANK = {s: i for i, s in enumerate(SEVERITIES)}
 
+# ---------------------------------------------------------------------------
+# Withdrawal filtering — mirrors mcp/api/live_push.py (2026-11-03 ALSCO audit)
+# ---------------------------------------------------------------------------
+# During the ALSCO campaign the engine raised 1 CRITICAL + 2 HIGH findings and
+# then withdrew all three itself by pushing correction records titled
+# "WITHDRAWN / FALSE POSITIVE - ...". The MCP was fixed to count validated
+# records only; the Web UI must apply the SAME rule or its Overview and
+# Findings views show 26 withdrawn records as if they were live findings
+# (observed: total 28 / open 28 when only 2 records are actually valid).
+
+_WITHDRAWN_MARKERS = (
+    "withdrawn",
+    "false positive",
+    "retracted",
+    "refuted",
+    "superseded",
+    "negative result",
+    "not a vulnerability",
+)
+
+
+def _is_withdrawn(v: Dict[str, Any]) -> bool:
+    """A record the agent explicitly withdrew or refuted.
+
+    Marked in the title ("WITHDRAWN / FALSE POSITIVE - ...", "REFUTED ...",
+    "NEGATIVE RESULT ..."), in a ``withdrawn`` boolean, or in a status that
+    carries a withdrawal marker. Withdrawn records stay on disk as the audit
+    trail — they are excluded from the counts, never deleted.
+    """
+    if v.get("withdrawn") is True:
+        return True
+    blob = f"{v.get('title', '')} {v.get('status', '')}".lower()
+    return any(m in blob for m in _WITHDRAWN_MARKERS)
+
+
+def _validated(vulns: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return [v for v in vulns if not _is_withdrawn(v)]
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -584,6 +622,24 @@ def build_prompt(payload: Dict[str, Any]) -> str:
 app = FastAPI(title="DarkMoon Web UI", version="1.0.0", docs_url="/api/docs")
 
 
+@app.middleware("http")
+async def _no_cache_static(request: Request, call_next):
+    """Force revalidation of the static assets and the SPA shell.
+
+    Observed live during the 2026-11-03 audit: after rebuilding the image the
+    browser kept serving the previous app.js from cache (the Open view
+    stubbornly rendered the old stat labels on a fresh deploy), so UI fixes
+    looked "not applied" until a hard reload. StaticFiles already emits an
+    ETag, so `no-cache` (revalidate, don't skip) is enough to pick up new
+    builds while still avoiding needless re-downloads of unchanged assets.
+    """
+    response = await call_next(request)
+    p = request.url.path
+    if p == "/" or p.startswith("/static/") or p.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 @app.get("/", response_class=HTMLResponse)
 def index() -> Any:
     f = STATIC_DIR / "index.html"
@@ -595,7 +651,13 @@ def index() -> Any:
 @app.get("/api/overview")
 def overview() -> Dict[str, Any]:
     campaigns = load_campaigns()
-    vulns = load_vulns()
+    raw_vulns = load_vulns()
+    # Withdrawn / refuted records stay in the store but must not be counted as
+    # live findings here — this is the same rule the MCP applies since the
+    # 2026-11-03 audit (see the _is_withdrawn docstring above). Without it the
+    # dashboard reported 28 findings / 28 open when only 2 records were valid.
+    vulns = _validated(raw_vulns)
+    withdrawn = len(raw_vulns) - len(vulns)
     sev = Counter(str(v.get("severity", "info")).lower() for v in vulns)
     status = Counter(str(c.get("status", "unknown")).lower() for c in campaigns)
     agents = load_agents()
@@ -617,6 +679,7 @@ def overview() -> Dict[str, Any]:
                 if str(v.get("status", "unconfirmed")).lower()
                 not in {"remediated", "resolved", "closed", "fixed"}
             ),
+            "withdrawn": withdrawn,
         },
         "targets": len(load_targets()),
         "projects": len(load_projects()),
@@ -700,9 +763,16 @@ def campaigns() -> Dict[str, Any]:
     out = sorted(load_campaigns(), key=_campaign_sort_key, reverse=True)
     for c in out:
         cid = str(c.get("id", ""))
-        c["findings_count"] = len(load_vulns(cid))
+        # Counts mirror the MCP's validated-only rule; raw record counts are
+        # exposed separately so the audit trail stays visible.
+        c["findings_count"] = len(_validated(load_vulns(cid)))
+        c["records_count"] = c["findings_count"] + len(_withdrawn_records(cid))
         c["nodes_count"] = len(load_infra(cid))
     return {"campaigns": out, "targets": load_targets(), "projects": load_projects()}
+
+
+def _withdrawn_records(campaign_id: str) -> List[Dict[str, Any]]:
+    return [v for v in load_vulns(campaign_id) if _is_withdrawn(v)]
 
 
 @app.get("/api/campaigns/{campaign_id}")
@@ -711,7 +781,11 @@ def campaign_detail(campaign_id: str) -> Dict[str, Any]:
         if str(c.get("id")) == campaign_id:
             return {
                 "campaign": c,
-                "findings": load_vulns(campaign_id),
+                # Validated findings only — the agent's withdrawn corrections
+                # are returned separately so the drawer can show the audit
+                # trail without mixing it into the live findings list.
+                "findings": _validated(load_vulns(campaign_id)),
+                "withdrawn": _withdrawn_records(campaign_id),
                 "infrastructure": load_infra(campaign_id),
             }
     raise HTTPException(404, "campaign not found")
@@ -723,8 +797,16 @@ def findings(
     severity: Optional[str] = None,
     status: Optional[str] = None,
     q: Optional[str] = None,
+    include_withdrawn: bool = False,
 ) -> Dict[str, Any]:
     items = load_vulns(campaign_id)
+    # Withdrawn records are hidden by default so the Findings view matches the
+    # vendor-facing report. They remain reachable (flagged) for the audit view.
+    if include_withdrawn:
+        for v in items:
+            v["withdrawn"] = _is_withdrawn(v)
+    else:
+        items = _validated(items)
     if severity and severity.lower() != "all":
         items = [v for v in items if str(v.get("severity", "")).lower() == severity.lower()]
     if status and status.lower() != "all":
@@ -844,45 +926,57 @@ def get_env() -> Dict[str, Any]:
 @app.post("/api/env")
 async def set_env(request: Request) -> Dict[str, Any]:
     body = await request.json()
-    mode = (body.get("mode") or "cloud").lower()
-    env: Dict[str, str] = {}
 
-    if mode == "local":
-        provider_id = (body.get("provider_id") or "ollama").strip()
-        base_url = (body.get("base_url") or "http://host.docker.internal:11434/v1").strip()
-        model = (body.get("model") or "").strip()
-        if not model:
-            raise HTTPException(400, "model is required for a local provider")
-        env = {
-            "OPENCODE_LOCAL_MODE": "true",
-            "OPENCODE_LOCAL_PROVIDER_ID": provider_id,
-            "OPENCODE_LOCAL_PROVIDER_NAME": body.get("provider_name") or provider_id,
-            "OPENCODE_LOCAL_BASE_URL": base_url,
-            "OPENCODE_LOCAL_MODEL": model,
-        }
-        if body.get("api_key"):
-            env["OPENCODE_LOCAL_API_KEY"] = str(body["api_key"]).strip()
-    elif mode == "anthropic":
-        base_url = (body.get("base_url") or "").strip()
-        model = (body.get("model") or "").strip()
-        if not base_url or not model:
-            raise HTTPException(400, "base_url and model are required")
-        env = {
-            "ANTHROPIC_BASE_URL": base_url,
-            "ANTHROPIC_MODEL": model,
-            "ANTHROPIC_API_KEY": str(body.get("api_key") or "darkmoon-local").strip(),
-        }
+    # A MiniMax-only save (no provider fields at all, just the MCP key) must
+    # NOT be routed through a provider branch: the cloud branch raises 400 for
+    # a missing model/key before the MiniMax block is ever reached, which made
+    # the Settings "Save MiniMax MCP" button fail whenever the provider form
+    # was empty. Preserve the provider config already on disk instead.
+    provider_intent = any(
+        k in body for k in ("mode", "provider", "model", "api_key", "base_url", "provider_id")
+    )
+    if not provider_intent and "minimax_api_key" in body:
+        env = {k: v for k, v in _read_env().items() if not k.startswith("MINIMAX_")}
     else:
-        provider = (body.get("provider") or "anthropic").strip()
-        model = (body.get("model") or "").strip()
-        key = str(body.get("api_key") or "").strip()
-        if not model or not key:
-            raise HTTPException(400, "model and api_key are required")
-        env = {
-            "OPENROUTER_PROVIDER": provider,
-            "OPENCODE_MODEL": model,
-            "OPENROUTER_API_KEY": key,
-        }
+        mode = (body.get("mode") or "cloud").lower()
+        env: Dict[str, str] = {}
+
+        if mode == "local":
+            provider_id = (body.get("provider_id") or "ollama").strip()
+            base_url = (body.get("base_url") or "http://host.docker.internal:11434/v1").strip()
+            model = (body.get("model") or "").strip()
+            if not model:
+                raise HTTPException(400, "model is required for a local provider")
+            env = {
+                "OPENCODE_LOCAL_MODE": "true",
+                "OPENCODE_LOCAL_PROVIDER_ID": provider_id,
+                "OPENCODE_LOCAL_PROVIDER_NAME": body.get("provider_name") or provider_id,
+                "OPENCODE_LOCAL_BASE_URL": base_url,
+                "OPENCODE_LOCAL_MODEL": model,
+            }
+            if body.get("api_key"):
+                env["OPENCODE_LOCAL_API_KEY"] = str(body["api_key"]).strip()
+        elif mode == "anthropic":
+            base_url = (body.get("base_url") or "").strip()
+            model = (body.get("model") or "").strip()
+            if not base_url or not model:
+                raise HTTPException(400, "base_url and model are required")
+            env = {
+                "ANTHROPIC_BASE_URL": base_url,
+                "ANTHROPIC_MODEL": model,
+                "ANTHROPIC_API_KEY": str(body.get("api_key") or "darkmoon-local").strip(),
+            }
+        else:
+            provider = (body.get("provider") or "anthropic").strip()
+            model = (body.get("model") or "").strip()
+            key = str(body.get("api_key") or "").strip()
+            if not model or not key:
+                raise HTTPException(400, "model and api_key are required")
+            env = {
+                "OPENROUTER_PROVIDER": provider,
+                "OPENCODE_MODEL": model,
+                "OPENROUTER_API_KEY": key,
+            }
 
     # Optional: MiniMax M Plan MCP (web_search + understand_image). Kept out of
     # the provider blocks above because it is independent of the LLM provider —
