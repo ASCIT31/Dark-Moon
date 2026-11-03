@@ -625,6 +625,114 @@ def init_live_campaign(
 # 2. Push a single finding (vulnerability) — incremental
 # -----------------------------------------------------------------------
 
+# -----------------------------------------------------------------------
+# Finding identity & withdrawal (2026-11-03, ALSCO campaign audit)
+# -----------------------------------------------------------------------
+# Two defects surfaced during the ALSCO / Secure Gateway campaign:
+#
+#   * push_finding() APPENDED blindly, so an agent that re-tested and
+#     re-reported the same issue (or withdrew an earlier one by pushing a
+#     "WITHDRAWN / FALSE POSITIVE - ..." record) produced duplicates: the
+#     2026-11-02 campaign ended with 39 records for 38 distinct titles,
+#     several of them near-duplicates with different wording.
+#   * The management summary counted withdrawn records as if they were
+#     live, so a report regenerated after a withdrawal still shipped
+#     "2 high severity vulnerabilities requiring urgent attention" from
+#     records the agent had just refuted.
+#
+# A finding is now IDENTIFIED by its normalized title within its campaign
+# (re-pushing the same title UPDATES the record instead of appending), and
+# a record whose title/status carries a withdrawal marker is excluded from
+# the severity, status and risk counts. Withdrawn records stay on disk as
+# the audit trail — they are hidden from the counts, never deleted.
+
+_WITHDRAWN_MARKERS = (
+    "withdrawn",
+    "false positive",
+    "retracted",
+    "refuted",
+    "superseded",
+    "negative result",
+    "not a vulnerability",
+)
+
+
+def _norm_finding_title(title: Any) -> str:
+    """Collapse a finding title to its identity key (case/punct-insensitive).
+
+    Withdrawal / correction markers are stripped FIRST so that a record
+    titled ``WITHDRAWN / FALSE POSITIVE - <original title>`` (or
+    ``REFUTED - ...``, ``NEGATIVE RESULT ...``) resolves to the SAME key as
+    the record it corrects — pushing a correction then UPDATES the original
+    instead of leaving a live duplicate next to it. That is exactly how the
+    agent withdraws a finding: it pushes a corrected record, and the
+    original must not stay counted as a valid finding afterwards.
+    """
+    t = str(title or "").lower()
+    for marker in _WITHDRAWN_MARKERS:
+        t = t.replace(marker, " ")
+    return re.sub(r"[^a-z0-9]+", "", t)
+
+
+def _is_withdrawn(v: Dict[str, Any]) -> bool:
+    """A record the agent has explicitly withdrawn or refuted.
+
+    Marked in the title ("WITHDRAWN / FALSE POSITIVE - ...", "REFUTED ...",
+    "NEGATIVE RESULT ...") or in a dedicated ``withdrawn`` boolean.
+    """
+    if v.get("withdrawn") is True:
+        return True
+    blob = f"{v.get('title', '')} {v.get('status', '')}".lower()
+    return any(m in blob for m in _WITHDRAWN_MARKERS)
+
+
+def _validated(vulns: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Records that still count as findings."""
+    return [v for v in vulns if not _is_withdrawn(v)]
+
+
+def _upsert_finding(
+    vulns: List[Dict[str, Any]], finding: Dict[str, Any]
+) -> bool:
+    """Merge `finding` into the campaign's store in place.
+
+    Returns True when an existing record was UPDATED (same title), False
+    when the finding was appended as new. On update the record keeps its
+    original id and discovered_at (so references and timelines survive),
+    gains a revision counter, and textual evidence is merged rather than
+    replaced so earlier proof is never lost by a re-push.
+    """
+    key = _norm_finding_title(finding.get("title"))
+    if key:
+        for i, existing in enumerate(vulns):
+            if _norm_finding_title(existing.get("title")) == key:
+                # Keep the original identity: the id is what the report,
+                # the dashboard and any earlier references cite.
+                if existing.get("id"):
+                    finding["id"] = existing["id"]
+                prev_evidence = existing.get("evidence")
+                if isinstance(prev_evidence, dict) and isinstance(finding.get("evidence"), dict):
+                    merged = dict(prev_evidence)
+                    for field in ("commands", "payloads", "logs"):
+                        merged[field] = list(
+                            dict.fromkeys(
+                                [*prev_evidence.get(field, []), *finding["evidence"].get(field, [])]
+                            )
+                        )
+                    for field in ("raw_request", "raw_response", "explanation"):
+                        if not merged.get(field) and finding["evidence"].get(field):
+                            merged[field] = finding["evidence"][field]
+                    finding["evidence"] = merged
+                if existing.get("discovered_at"):
+                    finding["discovered_at"] = existing["discovered_at"]
+                finding["revision"] = int(existing.get("revision", 0) or 0) + 1
+                vulns[i] = finding
+                return True
+    finding["revision"] = 1
+    vulns.append(finding)
+    return False
+
+
 def push_finding(
     campaign_id: str,
     finding: Dict[str, Any],
@@ -651,21 +759,30 @@ def push_finding(
     finding["severity"] = str(finding.get("severity", "info")).strip().lower()
     finding["status"] = str(finding.get("status", "unconfirmed")).strip().lower()
 
-    vulns.append(finding)
+    # Upsert by title: a re-tested/re-worded finding UPDATES its record
+    # instead of appending a duplicate (see the header comment above).
+    updated = _upsert_finding(vulns, finding)
     _write_json(vuln_path, vulns)
 
+    # Count only VALIDATED records. Withdrawn / refuted records remain on
+    # disk as the audit trail but must not inflate severity, status, the
+    # overall risk, or the vendor-facing report (a withdrawn CRITICAL left
+    # in the store used to keep the management summary at "urgent action").
+    active = _validated(vulns)
     stats = campaign.get("stats", {})
-    stats["total_findings"] = len(vulns)
+    stats["total_records"] = len(vulns)
+    stats["withdrawn"] = len(vulns) - len(active)
+    stats["total_findings"] = len(active)
 
     for sev in ("critical", "high", "medium", "low", "info"):
         stats[sev] = sum(
-            1 for v in vulns
+            1 for v in active
             if str(v.get("severity", "info")).strip().lower() == sev
         )
 
     for st in ("exploited", "confirmed", "unconfirmed"):
         stats[st] = sum(
-            1 for v in vulns
+            1 for v in active
             if str(v.get("status", "unconfirmed")).strip().lower() == st
         )
 
@@ -679,7 +796,7 @@ def push_finding(
     # campaigns that completed but did not pass the argument [INC-012].
     # A richer list explicitly passed at finalize still wins over this one.
     seen: Dict[str, int] = {}
-    for v in vulns:
+    for v in active:
         name = str(v.get("discovered_by_agent") or "").strip()
         if name:
             seen[name] = seen.get(name, 0) + 1
@@ -724,8 +841,14 @@ def push_finding(
     return {
         "vuln_id": finding["id"],
         "campaign_id": campaign_id,
-        "total_findings": len(vulns),
-        "status": "finding_pushed",
+        # Validated count (withdrawn records excluded) — the number the
+        # dashboard and the report should show.
+        "total_findings": stats.get("total_findings", 0),
+        "total_records": stats.get("total_records", 0),
+        "withdrawn_records": stats.get("withdrawn", 0),
+        "revision": finding.get("revision", 1),
+        "updated": updated,
+        "status": "finding_updated" if updated else "finding_pushed",
     }
 
 
@@ -834,14 +957,26 @@ def _generate_report_from_db(
     confirmed = stats.get("confirmed", 0)
     now = _now_iso()
 
+    # 2026-11-03 (ALSCO audit): withdrawn / refuted records must not drive
+    # the vendor-facing narrative. During that campaign a report was
+    # regenerated AFTER the agent withdrew its CRITICAL and both HIGH
+    # findings, and still shipped "2 high severity vulnerabilities
+    # requiring urgent attention" because the summary counted every record
+    # on disk. Count the posture, the plain-language top-3 and the summary
+    # table from VALIDATED records only; withdrawn records stay in the
+    # findings table (tagged) and in the details as the audit trail.
+    validated = _validated(vulns)
+    n_withdrawn = len(vulns) - len(validated)
+
     L: List[str] = []
     A = L.append
 
     # ── MANAGEMENT SUMMARY ──────────────────────────────────────────
     overall_risk = campaign.get("overall_risk", "unknown").upper()
-    n_crit  = stats.get("critical", 0)
-    n_high  = stats.get("high", 0)
-    n_total = stats.get("total_findings", len(vulns))
+    # Validated counts only — see the block comment above.
+    n_crit  = sum(1 for v in validated if str(v.get("severity", "")).lower() == "critical")
+    n_high  = sum(1 for v in validated if str(v.get("severity", "")).lower() == "high")
+    n_total = len(validated)
 
     A(f"# Vulnerability Assessment Report — {host}\n\n")
     A(f"**Classification:** CONFIDENTIAL — Restricted to authorized personnel  \n")
@@ -875,8 +1010,9 @@ def _generate_report_from_db(
     A(f"### Overall Security Posture: {posture}\n\n")
     A(f"{posture_text}\n\n")
 
-    # Top 3 critical findings in plain language
-    top3 = [v for v in vulns if str(v.get("severity","")).lower() == "critical"][:3]
+    # Top 3 critical findings in plain language (validated records only —
+    # a withdrawn critical must not be narrated to a decision-maker).
+    top3 = [v for v in validated if str(v.get("severity","")).lower() == "critical"][:3]
     if top3:
         A("### Most Critical Issues\n\n")
         for i, v in enumerate(top3, 1):
@@ -901,10 +1037,17 @@ def _generate_report_from_db(
     A("| Severity | Count | Exploited | Confirmed |\n|----------|-------|-----------|----------|\n")
     for s, label in [("critical","CRITICAL"),("high","HIGH"),("medium","MEDIUM"),("low","LOW"),("info","INFO")]:
         n   = stats.get(s, 0)
-        exp = sum(1 for v in vulns if str(v.get("severity","")).lower()==s and v.get("status")=="exploited")
-        con = sum(1 for v in vulns if str(v.get("severity","")).lower()==s and v.get("status")=="confirmed")
+        exp = sum(1 for v in validated if str(v.get("severity","")).lower()==s and v.get("status")=="exploited")
+        con = sum(1 for v in validated if str(v.get("severity","")).lower()==s and v.get("status")=="confirmed")
         A(f"| {label} | {n} | {exp} | {con} |\n")
-    A(f"| **TOTAL** | **{n_total}** | **{exploited}** | **{confirmed}** |\n\n---\n\n")
+    A(f"| **TOTAL** | **{n_total}** | **{exploited}** | **{confirmed}** |\n")
+    if n_withdrawn > 0:
+        A(
+            f"\n*{n_withdrawn} withdrawn / false-positive record(s) are kept in the "
+            "findings table and details for audit purposes but are excluded from "
+            "every count above. See the False Positive Analysis.*\n"
+        )
+    A("\n---\n\n")
 
     # ── FINDINGS TABLE ───────────────────────────────────────────────
     A("## 2. FINDINGS TABLE\n\n")
@@ -915,6 +1058,9 @@ def _generate_report_from_db(
         ep    = (v.get("endpoint") or "").replace("https://","").replace("http://","")
         ep    = ep[:50]+"..." if len(ep)>50 else ep
         title = v.get("title","")[:50]+"..." if len(v.get("title",""))>50 else v.get("title","")
+        if _is_withdrawn(v):
+            # Keep the audit trail visible but unmistakably non-payable.
+            title = f"~~{title}~~ *(withdrawn / false positive)*"
         A(f"| {i+1} | `{v.get('id','')}` | {title} | {sev(v)} | {cvss} | {stat(v)} | `{ep}` |\n")
     A("\n---\n\n")
 

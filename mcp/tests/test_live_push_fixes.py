@@ -122,3 +122,125 @@ def test_headless_browser_has_memory_flags():
     text = agent.read_text(encoding="utf-8")
     for flag in ("--disable-dev-shm-usage", "--single-process", "--no-zygote"):
         assert flag in text, f"Bug A2 regression: headless-browser missing {flag}"
+
+
+# ── 2026-11-03 ALSCO campaign audit ──────────────────────────────────────────
+# Two more live-run defects, found during the ALSCO / Secure Gateway campaign
+# (2026-11-02/03) and fixed the same day. These tests keep them fixed.
+
+# Dedup bug — push_finding() appended blindly, so the campaign ended with 39
+# records for 38 distinct titles (several near-duplicates with different
+# wording), and an agent that wanted to withdraw a finding had to push a new
+# "WITHDRAWN / FALSE POSITIVE - ..." record next to the original.
+#
+# Stale-summary bug — the report's management summary counted withdrawn
+# records as live, so a report regenerated AFTER the agent refuted its own
+# CRITICAL and both HIGH findings still shipped "N high severity
+# vulnerabilities requiring urgent attention".
+
+
+def _push(lp, campaign_id, title, severity="high", status="confirmed", agent="php"):
+    return lp.push_finding(
+        campaign_id=campaign_id,
+        finding={
+            "title": title,
+            "severity": severity,
+            "cvss_score": 7.5,
+            "category": "sql_injection",
+            "status": status,
+            "description": "desc",
+            "endpoint": "/x",
+            "discovered_by_agent": agent,
+            "evidence": {"commands": ["curl a"], "logs": [], "explanation": ""},
+            "remediation": "fix",
+        },
+    )
+
+
+def test_push_finding_upserts_by_title(lp):
+    """Re-pushing the same title must UPDATE the record, not append a
+    duplicate: same vuln_id, one record on disk, revision incremented and
+    earlier evidence preserved."""
+    _root(lp, "ses_UPSERTaaaa1", 1000)
+    cid = _init(lp)
+
+    r1 = _push(lp, cid, "SQL Injection in Royal CMS article parameter")
+    r2 = _push(lp, cid, "SQL injection in royal-cms article   parameter!!")
+
+    assert r1["updated"] is False
+    assert r2["updated"] is True, "Bug: re-push appended a duplicate record"
+    assert r1["vuln_id"] == r2["vuln_id"], "Bug: re-push minted a new vuln_id"
+    assert r2["revision"] == 2
+
+    from api.json_storage import VULNERABILITIES_DIR
+    stored = lp._read_json(VULNERABILITIES_DIR / f"{cid}.json") if hasattr(lp, "_read_json") else None
+    if stored is None:
+        from api import json_storage
+        import json as _json
+        stored = _json.loads((json_storage.VULNERABILITIES_DIR / f"{cid}.json").read_text())
+    assert isinstance(stored, list) and len(stored) == 1, (
+        f"Bug: expected 1 record after a re-push, found {len(stored)}"
+    )
+
+
+def test_withdrawn_findings_do_not_inflate_counts(lp):
+    """A record the agent withdrew (title carries a withdrawal marker) must be
+    excluded from severity/status/risk counts while remaining on disk."""
+    _root(lp, "ses_WITDRaaaa1", 1000)
+    cid = _init(lp)
+
+    _push(lp, cid, "SQL Injection in complaint insert", severity="high", status="confirmed")
+    r2 = _push(
+        lp, cid,
+        "WITHDRAWN / FALSE POSITIVE - SQL Injection in complaint insert",
+        severity="high", status="confirmed",
+    )
+    _push(lp, cid, "Cleartext session cookie on 307 hop", severity="low", status="confirmed")
+
+    camp = lp.load_campaign(cid)
+    stats = camp["stats"]
+    assert stats["high"] == 0, "Bug: a withdrawn HIGH still counts as high"
+    assert stats["critical"] == 0
+    assert stats["low"] == 1
+    assert stats["withdrawn"] == 1
+    assert stats["total_findings"] == 1
+    # The withdrawal record UPDATES the original in place (marker-insensitive
+    # title key), so the store holds 2 records, not 3.
+    assert stats["total_records"] == 2
+    assert camp["overall_risk"] == "low", (
+        f"Bug: overall risk {camp['overall_risk']} driven by a withdrawn record"
+    )
+    assert r2["withdrawn_records"] == 1
+
+
+def test_report_summary_ignores_withdrawn(lp):
+    """The vendor-facing management summary must be computed from validated
+    records only: with every CRITICAL/HIGH withdrawn, the report may not
+    claim an urgent-remediation posture."""
+    _root(lp, "ses_REPOaaaaa1", 1000)
+    cid = _init(lp)
+
+    _push(lp, cid, "SQL Injection in homeLang", severity="critical", status="confirmed")
+    _push(
+        lp, cid,
+        "FALSE POSITIVE (not a vulnerability) - SQL Injection in homeLang",
+        severity="critical", status="confirmed",
+    )
+    _push(
+        lp, cid,
+        "REFUTED - claimed WAF bypass",
+        severity="high", status="confirmed",
+    )
+
+    camp = lp.load_campaign(cid)
+    md = lp._generate_report_from_db(cid, camp)
+
+    assert "Urgent Remediation Required" not in md, (
+        "Bug: report claims urgent remediation from a withdrawn HIGH"
+    )
+    assert "Immediate Action Required" not in md, (
+        "Bug: report claims immediate action from a withdrawn CRITICAL"
+    )
+    assert "withdrawn / false-positive record" in md or "withdrawn" in md.lower()
+    # The withdrawn record must still be visible in the table as the audit trail.
+    assert "WITHDRAWN / FALSE POSITIVE" in md or "REFUTED" in md or "withdrawn / false positive" in md.lower()
