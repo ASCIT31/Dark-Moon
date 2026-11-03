@@ -249,3 +249,69 @@ drawer and the Overview recent list.
 was 0 or N/A, adding noise to the drawer.
 
 **Fix.** The CVSS chip is only rendered when the score parses to a number > 0.
+
+---
+
+# Discovery-workflow error register (2026-11-03, D-series)
+
+Audit of the discovery workflow itself: workflows, tool invocation, MCP
+exposure, prompts. Verified against the real campaign traces.
+
+## D1 — `naabu` ran uncapped in the port_scan workflow (the actual IP-ban incident)
+
+**Observed.** `port_scan.py` launched `naabu -list … -top-ports N` with no
+`-rate`; the campaign's free-form invocation added `-rate 500` and the target
+firewall banned the source for ~6 minutes. The prompt's "≤5 req/s" was advice
+the agent overrode when it picked flags.
+
+**Fix (code).** `mcp/src/rate_limiter.py` — a mechanical rate floor applied in
+`DarkmoonDockerClient.execute_command`, the single choke point every command
+passes through: if a network tool is invoked without its vendor rate flag, the
+flag is injected with the cap (naabu/masscan/nmap/ffuf/feroxbuster 25, nuclei
+15, katana 10, httpx 15, wpscan 5); an explicit higher value is *floored*, an
+explicit lower value is kept. Capping is applied per shell-segment so a flag
+belonging to one command cannot leak into another (`naabu … && cat out` caps
+only the naabu part). `port_scan.scan_ports` also gained an explicit
+`rate_limit=25` parameter and its command carries `-rate` natively. The caps
+are also exposed via `list_allowed_tools()` as `engine_rate_limits` so an
+agent can discover them.
+
+## D2 — No automated CVE discovery existed at all
+
+**Observed.** The engine had no step from "product+version identified" to
+"applicable CVEs": a version banner was either dropped or, worse, turned into
+CVE numbers from the model's memory — the same failure family as E3 (the rule
+id cited from memory that never appeared in any response).
+
+**Fix (code + prompt).** New `cve_lookup` workflow
+(`mcp/src/tools/workflows/cve_lookup.py`), auto-discovered by the registry:
+- `search_cves(product, version, max_results, recent_years, min_severity)` —
+  one public NVD 2.0 request (no API key; tolerant of its 5 req/30s polite
+  limit), `recent_years: 5` window by default and `0` for an all-time sweep,
+  returns a CVSS-descending shortlist with description, references, mapped
+  CPEs and a `version_hint_match` flag.
+- `get_cve(cve_id)` — full single record.
+- GATE 9 in `conf/agents/pentest.md` wires it into the doctrine: fingerprint →
+  `cve_lookup` → targeted nuclei validation, and an explicit "never cite CVE
+  identifiers from memory" rule.
+
+## D3 — Workflows composed commands without rate flags of their own
+
+**Observed.** `subdomain_discovery` (httpx), `web_crawler` (katana) and
+`vulnerability_scan` (nuclei) all launched their tools unbounded; only
+`port_scan` got a native flag in this fix, because for the others the
+mechanical choke-point injection (D1) now covers every invocation including
+composed `&&` scripts — the engine-side guarantee is the point, not per-file
+patches.
+
+## Status
+
+| Error | Fix | Where |
+|---|---|---|
+| D1 naabu uncapped → IP ban | mechanical rate floor at the choke point + native `-rate` in port_scan | `mcp/src/rate_limiter.py`, `mcp/src/docker_client.py`, `mcp/src/tools/workflows/port_scan.py` |
+| D2 no CVE discovery | `cve_lookup` workflow (NVD 2.0) + GATE 9 in the prompt | `mcp/src/tools/workflows/cve_lookup.py`, `conf/agents/pentest.md` |
+| D3 unbounded workflow tools | covered by the D1 choke-point guarantee | `mcp/src/rate_limiter.py` |
+
+**Tests:** `mcp/tests/test_discovery_workflow.py` — 13 tests (flag injection,
+floor-not-raise, per-segment capping, argv-list capping, registry discovery,
+NVD parsing/ranking/filtering offline against fixtures). Full suite: 137 passed.

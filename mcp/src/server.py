@@ -16,6 +16,7 @@ from typing import Optional, Dict, Any
 from fastmcp import FastMCP
 
 from src.docker_client import DarkmoonDockerClient
+from src.rate_limiter import describe_rate_limits
 from src.tools.core.executor import GenericExecutor
 from src.tools.core.health import HealthChecker
 from src.tools.workflows.list_workflows import WorkflowRegistry
@@ -508,10 +509,15 @@ def list_allowed_tools() -> Dict[str, Any]:
             "recon": ["subfinder", "waybackurls", "katana"],
             "dns": ["dig", "nslookup"],
             "network": ["curl", "wget", "ping"],
-            "ad_windows": ["netexec", "bloodhound-python", "smbclient.py", "hashcat", "Get-GPPPassword.py", "GetADComputer.py", "GetADUsers.py", "GetLAPSassword.py", "GetNPUsers.py", "GetUserSPNs.py", "ldapdomaindump.py", "smbclient.py", "smbexec.py", "smbserver.py", "findDelegation.py", "addcomputer.py", "exchanger.py", "raiseChild.py", "rdp-check.py", "registry-read.py", "regsecrets.py", "rpcdump.py", "rpcmap.py", "ticketConverter.py", "ticketer.py", "tstool.py", "owneredit.py", "ping.py", "psexec.py", "sambaPipe.py", "samedit.py", "samrdump.py", "sniff.py", "sniffer.py", "secretsdump.py", "snmpwalk", "dcomexec.py", "dpapi.py", "filetime.py", "getArch.py", "getPac.py", "getST.py", "getTGT.py", "goldenPac.py", "jp.py", "keylistattack.py", "lookupsid.py", "mimikatz.py", "minikerberos-asreproast", "minikerberos-ccache2kirbi", "minikerberos-ccacheedit", "minikerberos-ccacheroast", "minikerberos-cve202233647", "minikerberos-cve202233679", "minikerberos-getNTPKInit", "minikerberos-getS4U2proxy", "minikerberos-getS4U2self", "minikerberos-getTGS", "minikerberos-kerb23hashdecrypt", "minikerberos-kerberoast", "minikerberos-keylist", "minikerberos-kirbi2ccache", "minikerberos-pw", "mqtt_check.py", "mssqlclient.py", "mssqlinstance.py", "wmiexec.py", "wmipersist.py", "wmiquery.py", "changepasswd.py", "badsuccessor.py", "net.py", "netview.py", "ntfs-read.py", "ntmlrelayx.py",],
+            "ad_windows": ["netexec", "bloodhound-python", "smbclient.py", "hashcat", "Get-GPPPassword.py", "GetADComputer.py", "GetADUsers.py", "GetLAPSassword.py", "GetNPUsers.py", "GetUserSPNs.py", "ldapdomaindump.py", "smbclient.py", "smbexec.py", "smbserver.py", "findDelegation.py", "addcomputer.py", "exchanger.py", "raiseChild.py", "rdp-check.py", "registry-read.py", "regsecrets.py", "rpcdump.py", "rpcmap.py", "ticketConverter.py", "ticketer.py", "tstool.py", "owneredit.py", "ping.py", "psexec.py", "sambaPipe.py", "samedit.py", "samrdump.py", "sniff.py", "sniffer.py", "secretsdump.py", "snmpwalk", "dcomexec.py", "dpapi.py", "filetime.py", "getArch.py", "getPac.py", "getST.py", "getTGT.py", "goldenPac.py", "jp.py", "keylistattack.py", "lookupsid.py", "mimikatz.py", "minikerberos-asreprost", "minikerberos-ccache2kirbi", "minikerberos-ccacheedit", "minikerberos-ccacheroast", "minikerberos-cve202233647", "minikerberos-cve202233679", "minikerberos-getNTPKInit", "minikerberos-getS4U2proxy", "minikerberos-getS4U2self", "minikerberos-getTGS", "minikerberos-kerb23hashdecrypt", "minikerberos-kerberoast", "minikerberos-keylist", "minikerberos-kirbi2ccache", "minikerberos-pw", "mqtt_check.py", "mssqlclient.py", "mssqlinstance.py", "wmiexec.py", "wmipersist.py", "wmiquery.py", "changepasswd.py", "badsuccessor.py", "net.py", "netview.py", "ntfs-read.py", "ntmlrelayx.py",],
             "kubernetes": ["kubectl", "kubeletctl", "kubescape"],
             "misc": ["jq", "grep", "awk", "sed", "zip", "unzip",],
         },
+        # Mechanical rate caps the engine enforces on every network tool that
+        # passes through execute_command (2026-11-03 ALSCO audit): a prompt
+        # rule could not stop `naabu -rate 500` from getting the source IP
+        # banned, so the cap lives in the executor, not the prompt.
+        "engine_rate_limits": describe_rate_limits(),
     }
 
 

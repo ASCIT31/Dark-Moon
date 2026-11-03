@@ -23,6 +23,7 @@ class PortScanWorkflow(BaseWorkflow):
         self,
         target: Union[str, List[str]],
         top_ports: int = 100,
+        rate_limit: int = 25,
         timeout: int = 300,
     ) -> Dict[str, Any]:
         """
@@ -35,6 +36,13 @@ class PortScanWorkflow(BaseWorkflow):
         Args:
             target: Single host or list of hosts
             top_ports: 100 (fast), 1000 (thorough), or 0 for full scan
+            rate_limit: Packets per second ceiling for naabu (default 25).
+                        DO NOT raise this: during the 2026-11-02 ALSCO campaign
+                        an uncapped run (-rate 500) got the source IP banned for
+                        6 minutes by the target firewall and killed the run.
+                        The engine also floors this mechanically (see
+                        mcp/src/rate_limiter.py) — a higher value passed here is
+                        capped again at the choke point.
             timeout: Total timeout in seconds (default: 300s)
 
         Returns:
@@ -80,14 +88,18 @@ class PortScanWorkflow(BaseWorkflow):
         )
 
         # ========================================
-        # STEP 1: Naabu port scan
+        # STEP 1: Naabu port scan (rate-capped)
         # ========================================
         naabu_output = f"{workspace_dir}/naabu_output.json"
         top_ports_arg = self.normalize_top_ports(top_ports)
+        # `-rate` is explicit here: the 2026-11-02 ALSCO campaign ran naabu
+        # uncapped (-rate 500) and the target firewall banned the source IP
+        # for 6 minutes. 25 pps stays inside the bug-bounty norms.
+        rate_limit = max(1, min(int(rate_limit), 25))
 
         success, findings, output = self.execute_step(
-            step_name=f"Port scanning ({len(targets)} targets, top {top_ports} ports)",
-            command=f"naabu -list {targets_file} -top-ports {top_ports_arg} -json -silent -o {naabu_output} && cat {naabu_output}",
+            step_name=f"Port scanning ({len(targets)} targets, top {top_ports} ports, {rate_limit} pps)",
+            command=f"naabu -list {targets_file} -top-ports {top_ports_arg} -rate {rate_limit} -json -silent -o {naabu_output} && cat {naabu_output}",
             timeout=naabu_timeout,
             parse_json=True,
         )

@@ -10,6 +10,7 @@ from docker.errors import DockerException, NotFound
 
 from src.models.common import ExecutionResult, ExecutionStatus
 from src.execution_guard import adapt_command, classify, effective_timeout, remediation
+from src.rate_limiter import enforce_rate_limits
 
 STREAM_BASE = "/tmp/darkmoon_mcp_stream"
 
@@ -120,6 +121,19 @@ class DarkmoonDockerClient:
                 if note:
                     command = adapted
                     self._broadcast(f"\n\033[1;33m[guard]\033[0m {note}\n".encode(), session_id)
+
+                # Mechanical rate limiting (2026-11-03, ALSCO audit): the engine
+                # floors the rate of every network tool the agent or a workflow
+                # launches, because prompt text could not stop `naabu -rate 500`
+                # from getting the source IP banned. Applied here so neither a
+                # free-form command nor a composed workflow script can bypass it.
+                limited = enforce_rate_limits(command)
+                if limited != command:
+                    command = limited
+                    self._broadcast(
+                        f"\n\033[1;36m[rate-limit]\033[0m engine capped network tool rate flags: {command}\n".encode(),
+                        session_id,
+                    )
 
             if isinstance(command, list):
                 cmd = ["timeout", "--kill-after=5", str(hard_timeout)] + command
