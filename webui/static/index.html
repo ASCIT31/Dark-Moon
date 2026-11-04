@@ -20,6 +20,7 @@
     <nav id="nav">
       <button class="nav-item active" data-view="overview"><span>◉</span> Overview</button>
       <button class="nav-item" data-view="launch"><span>▶</span> New assessment</button>
+      <button class="nav-item" data-view="scope"><span>◆</span> Scope index</button>
       <button class="nav-item" data-view="live"><span>●</span> Live console</button>
       <button class="nav-item" data-view="campaigns"><span>◇</span> Campaigns</button>
       <button class="nav-item" data-view="findings"><span>⚠</span> Findings</button>
@@ -137,6 +138,20 @@
         </div>
       </div>
     </div>
+
+    <!-- Bug-bounty scope index -->
+    <section class="view hidden" id="view-scope">
+      <div class="card">
+        <h2>Bug-bounty scope index</h2>
+        <p class="hint">Programmes indexed from your configured bug-bounty platforms — click one to prefill a new assessment with its targets and scope. The indexer never invents a rate/automation policy: fill it from the programme brief before launching.</p>
+        <div class="actions">
+          <button class="btn" id="btn-scope-refresh">⟳ Refresh index</button>
+          <span id="scope-updated" class="meta"></span>
+        </div>
+        <div id="scope-creds" class="hint" style="margin-top:8px"></div>
+        <div id="scope-programs" style="margin-top:8px"></div>
+      </div>
+    </section>
 
     <section class="view hidden" id="view-live">
       <div class="card console-card">

@@ -29,7 +29,7 @@ async function api(path, opts) {
 
 /* ------------------------------------------------------------------ nav */
 const TITLES = {
-  overview: "Overview", launch: "New assessment", live: "Live console", campaigns: "Campaigns",
+  overview: "Overview", launch: "New assessment", scope: "Scope index", live: "Live console", campaigns: "Campaigns",
   findings: "Findings", infra: "Infrastructure", reports: "Reports", sessions: "Sessions",
   agents: "Agents", tools: "MCP tools", settings: "Settings",
 };
@@ -44,6 +44,7 @@ function show(view) {
     overview: loadOverview, campaigns: loadCampaigns, findings: loadFindings,
     infra: loadInfra, reports: loadReports, sessions: loadSessions, agents: loadAgents,
     tools: loadTools, settings: loadSettings, live: loadJobs, launch: loadJobs,
+    scope: loadScope,
   };
   (loaders[view] || (() => {}))();
 }
@@ -248,6 +249,75 @@ function statusToast(msg) {
   const s = $("#launch-status");
   if (s) s.textContent = msg;
 }
+
+/* ------------------------------------------------------- bug-bounty scope index */
+async function loadScope() {
+  try {
+    renderScope(await api("/api/scope-index"));
+  } catch (e) {
+    $("#scope-programs").innerHTML = `<div class="hint">✗ ${esc(e.message)}</div>`;
+  }
+}
+
+function renderScope(data) {
+  $("#scope-updated").textContent = data.updated_at ? "indexed " + data.updated_at : "never indexed";
+  const creds = data.credentials || {};
+  $("#scope-creds").innerHTML = Object.keys(creds).map((p) => {
+    const missing = creds[p] || [];
+    return missing.length
+      ? `<span class="pill bad">${esc(p)}: missing ${missing.join(", ")}</span>`
+      : `<span class="pill ok">${esc(p)} ✓</span>`;
+  }).join(" ") + " — configure API keys in Settings → Environment. YesWeHack needs none.";
+
+  const progs = data.programs || [];
+  if (!progs.length) {
+    $("#scope-programs").innerHTML = `<div class="hint">No programmes indexed yet — click “Refresh index”.</div>`;
+    return;
+  }
+  $("#scope-programs").innerHTML = progs.map((p) => `
+    <div class="list-item" data-platform="${esc(p.platform)}" data-handle="${esc(p.handle)}">
+      <span><b>${esc(p.name || p.handle)}</b> <span class="meta">${esc(p.platform)}</span>
+        ${p.bounty_min ? `<span class="meta"> · $${esc(p.bounty_min)}${p.bounty_max ? "–" + esc(p.bounty_max) : "+"}</span>` : ""}</span>
+      <span class="meta">${p.in_scope_count ?? "?"} in scope · ${esc(p.indexed_at || "")}</span>
+    </div>`).join("");
+  $$("#scope-programs .list-item").forEach((el) =>
+    el.addEventListener("click", () => launchFromScope(el.dataset.platform, el.dataset.handle)));
+}
+
+async function launchFromScope(platform, handle) {
+  try {
+    const prog = await api(`/api/scope-index/program/${encodeURIComponent(platform)}/${encodeURIComponent(handle)}`);
+    const inScope = prog.in_scope || [];
+    const first = (inScope.find((a) => /http/i.test(a.asset || "")) || inScope[0] || {}).asset || "";
+    $("#f-target").value = first;
+    $("#f-program").value = prog.name || prog.handle || "";
+    $("#f-scope").value = inScope.map((a) => a.asset).filter(Boolean).join(", ");
+    // scope_index never invents a rate policy — clear any stale one and let the
+    // operator fill it from the programme brief (see the launch form).
+    state.scopeRatePolicy = "";
+    statusToast(`scope loaded from ${platform}:${handle} — add the rate policy, then start`);
+    show("launch");
+  } catch (e) {
+    statusToast("✗ " + e.message);
+  }
+}
+
+$("#btn-scope-refresh").addEventListener("click", async () => {
+  const btn = $("#btn-scope-refresh");
+  btn.disabled = true;
+  const old = btn.textContent;
+  btn.textContent = "⟳ indexing…";
+  try {
+    await api("/api/scope-index/refresh", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}),
+    });
+  } catch (e) {
+    statusToast("✗ index refresh failed: " + e.message);
+  }
+  await loadScope();
+  btn.disabled = false;
+  btn.textContent = old;
+});
 
 /* ------------------------------------------------------------------ launch */
 $("#btn-launch").addEventListener("click", async () => {

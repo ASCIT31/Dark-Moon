@@ -71,6 +71,7 @@ to take effect — the settings page says so too.
 |---|---|
 | **Overview** | Campaign/finding counters, severity breakdown, recent campaigns and reports, engine health. |
 | **New assessment** | Launches a pentest against a target with program, focus, noise, scope, credentials and format. The prompt is assembled exactly like the CLI (`TARGET: … PROGRAM="…" FOCUS=… NOISE=… FORMAT=…`). |
+| **Scope index** | Bug-bounty programmes indexed from your configured platforms (HackerOne, Bugcrowd, Intigriti, YesWeHack). Click one to prefill a new assessment with its targets and scope. The indexer never invents a rate/automation policy — fill it from the programme brief before launching. |
 | **Live console** | SSE stream of the running assessment, a classified event feed (findings / commands / errors / recon) and a *start MCP stream* button that tails the raw MCP output (`darkmoon-cli`). |
 | **Campaigns** | Every campaign the MCP recorded, with target, status, duration, finding and node counts. |
 | **Findings** | All vulnerabilities with severity, CVSS, endpoint, discovering agent, CVE, MITRE ATT&CK id, status and remediation. Filter by severity, campaign and free text. |
@@ -162,6 +163,13 @@ SSE without authentication — so `*_API_KEY`, `*_SECRET`, `*_PASSWORD`,
 Everything the UI does is available over HTTP, so it can be scripted:
 
 ```bash
+# scope index: bug-bounty programmes (YesWeHack needs no credentials;
+# the others require their API keys in Settings → Environment)
+curl localhost:8080/api/scope-index
+curl -X POST localhost:8080/api/scope-index/refresh -H 'content-type: application/json' \
+     -d '{"platforms":["yeswehack"],"detail_limit":25}'
+curl localhost:8080/api/scope-index/program/yeswehack/<handle>
+
 # launch an assessment
 curl -X POST localhost:8080/api/launch -H 'content-type: application/json' \
      -d '{"target":"example.com","focus":"sqli,xss","noise":"low","format":"h1"}'

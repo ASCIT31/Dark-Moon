@@ -23,6 +23,10 @@ GET  /api/agent/{name}          one agent prompt
 GET  /api/tools                 MCP allowlist + workflows
 GET  /api/env                   LLM provider configuration (secrets masked)
 POST /api/env                   write .opencode.env
+GET  /api/scope-index           bug-bounty programme index + per-platform credential state
+POST /api/scope-index/refresh   re-index programmes from the configured platforms
+GET  /api/scope-index/program/{platform}/{handle}
+                                one indexed programme (full scope)
 POST /api/launch                start a new assessment (returns job id)
 GET  /api/jobs                  running / finished jobs
 GET  /api/jobs/{id}             one job
@@ -40,6 +44,7 @@ import re
 import shutil
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -58,6 +63,11 @@ from fastapi.responses import (
     StreamingResponse,
 )
 from fastapi.staticfiles import StaticFiles
+
+# scope_index lives next to server.py; uvicorn runs with this directory as the
+# working directory, but make the import robust for any launcher.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import scope_index  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -1312,6 +1322,55 @@ async def scope(request: Request) -> Dict[str, Any]:
         return await loop.run_in_executor(None, lambda: _scope_run(payload))
     except Exception as exc:  # pragma: no cover - defensive
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+
+
+@app.get("/api/scope-index")
+async def scope_index_overview() -> Dict[str, Any]:
+    """Persisted bug-bounty programme index plus per-platform credential state."""
+    loop = asyncio.get_running_loop()
+    idx = await loop.run_in_executor(None, lambda: scope_index.load_index(DATA_DIR))
+    return {
+        "ok": True,
+        "updated_at": idx.get("updated_at"),
+        "programs": idx.get("programs") or [],
+        "platforms": list(scope_index.PLATFORMS),
+        "credentials": {p: scope_index.needs_credentials(p) for p in scope_index.PLATFORMS},
+    }
+
+
+@app.post("/api/scope-index/refresh")
+async def scope_index_refresh(request: Request) -> Dict[str, Any]:
+    """Re-index bug-bounty programmes from the requested platforms (all by default)."""
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    platforms = payload.get("platforms") or list(scope_index.PLATFORMS)
+    if not isinstance(platforms, list):
+        platforms = list(scope_index.PLATFORMS)
+    platforms = [str(p).lower() for p in platforms if p in scope_index.PLATFORMS] or list(scope_index.PLATFORMS)
+    detail_limit = payload.get("detail_limit")
+    try:
+        detail_limit = max(1, min(int(detail_limit or 25), 100))
+    except (TypeError, ValueError):
+        detail_limit = 25
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(
+        None,
+        lambda: scope_index.refresh_platforms(platforms, ENV_FILE, DATA_DIR, detail_limit=detail_limit),
+    )
+    idx = scope_index.load_index(DATA_DIR)
+    result.update({"programs": idx.get("programs") or [], "updated_at": idx.get("updated_at")})
+    return result
+
+
+@app.get("/api/scope-index/program/{platform}/{handle}")
+async def scope_index_program(platform: str, handle: str) -> Dict[str, Any]:
+    loop = asyncio.get_running_loop()
+    program = await loop.run_in_executor(None, lambda: scope_index.load_program(DATA_DIR, platform.lower(), handle))
+    if not program:
+        raise HTTPException(status_code=404, detail="programme not indexed — refresh the scope index first")
+    return program
 
 
 @app.post("/api/launch")
