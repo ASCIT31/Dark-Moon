@@ -247,3 +247,38 @@ def test_effective_policy_prefers_the_scope_file_over_the_default(monkeypatch, t
     assert pol["rps"] == 5, f"scope rate not resolved: {pol}"
     assert pol["required_headers"] == {"X-Intigriti-Username": "zerodayexploit@intigriti.me"}
     assert pol["source"] != "engine default"
+
+
+def test_mandatory_headers_survive_an_operator_policy_that_omits_them(monkeypatch, tmp_path):
+    """A programme-mandated header must not be silently dropped.
+
+    The agent passes its own rate_policy text to dashboard_init_campaign. If that
+    text does not spell out the mandatory header, the session policy would
+    carry no required_headers - and the engine rewrites the toolbox ~/.curlrc
+    from that policy, so the header would stop being sent at all.
+    """
+    import json
+
+    from src import scope_policy
+
+    home = tmp_path / "home"
+    (home / ".local" / "share" / "opencode").mkdir(parents=True)
+    (home / ".local" / "share" / "opencode" / "rate_policy.json").write_text(json.dumps({
+        "text": "Automated tooling: maximum 5 requests per second.\n"
+                "Required header on every request: X-Intigriti-Username: zerodayexploit@intigriti.me\n",
+        "program": "PB Web Media bug bounty (Intigriti)",
+    }))
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("DARKMOON_RATE_POLICY", raising=False)
+    monkeypatch.setenv(
+        "DARKMOON_RATE_POLICY_FILE",
+        str(home / ".local" / "share" / "opencode" / "rate_policy.json"),
+    )
+
+    # The agent's own text states the rate but NOT the header.
+    pol = scope_policy.effective_policy("automated scanning max 5 requests per second")
+    assert pol["rps"] == 5
+    assert pol["required_headers"] == {"X-Intigriti-Username": "zerodayexploit@intigriti.me"}, (
+        "the programme's mandatory header was dropped: "
+        f"{pol.get('required_headers')}"
+    )

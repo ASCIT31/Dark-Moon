@@ -567,3 +567,30 @@ and correctly refused to treat the engagement as compliant.
 quoted string) and trailing punctuation is stripped — see H3. The correct value for this
 engagement is the researcher's own Intigriti username, `zerodayexploit@intigriti.me`;
 "davidgonzalez" is only the engagement display name and is not what triage matches on.
+
+---
+
+# Scope-policy merge (2026-11-03, P6)
+
+## P6 — A programme-mandated header could be silently dropped by the agent's own policy text
+
+**Observed.** During the PB Web Media phase-4 run the campaign record came out with
+`"required_headers": {}` while the engagement's scope file required
+`X-Intigriti-Username` on EVERY request. The agent had passed its own `rate_policy`
+text to `dashboard_init_campaign`, and that text stated the rate but not the header —
+and the session policy (agent text) took precedence over the scope file, so the header
+was not in the effective policy. Since the engine rewrites the toolbox `~/.curlrc`
+from that policy, a policy without the header could have stopped the mandatory
+identifier from being sent at all.
+
+**Root cause.** The precedence chain replaced policies instead of merging the
+mandatory-header requirement. A programme's "send this header on every request" is a
+hard requirement, not a preference that a later policy can overwrite.
+
+**Fix (code).** `scope_policy.effective_policy()` now MERGES `required_headers`: the
+scope file's headers are always carried over, and the operator's value wins only on a
+name conflict. Live-verified: `effective_policy("automated scanning max 5 requests per
+second")` -> `rps 5`, `required_headers {X-Intigriti-Username: zerodayexploit@intigriti.me}`.
+
+**Test:** `mcp/tests/test_scope_policy.py::test_mandatory_headers_survive_an_operator_policy_that_omits_them`.
+Full suite: 161 passed.

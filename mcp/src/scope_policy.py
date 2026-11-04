@@ -295,13 +295,33 @@ def effective_policy(rate_policy: Optional[str] = None) -> Dict[str, Any]:
     This is what the campaign record must carry. A campaign whose record says
     "engine default" while the scope said "5 req/s + a mandatory header"
     produces a report that misstates the compliance facts of the engagement.
+
+    MANDATORY HEADERS ARE MERGED, NEVER REPLACED. A programme that requires
+    `X-Intigriti-Username` on every request must keep that requirement even when
+    the agent passes its own policy text that happens not to spell the header
+    out. The operator's value wins on a name conflict; the scope file's headers
+    fill in the rest.
     """
+    from_file: Dict[str, Any] = {}
+    try:
+        resolved_file = resolve_policy(None)
+    except Exception:
+        resolved_file = {}
+    if resolved_file.get("source") != "engine default":
+        from_file = resolved_file
+
     if rate_policy:
-        return parse_rate_policy(rate_policy, source="operator scope")
-    resolved = resolve_policy(None)
-    if resolved.get("source") != "engine default":
-        return resolved
-    return dict(DEFAULT_POLICY)
+        policy = parse_rate_policy(rate_policy, source="operator scope")
+    elif from_file:
+        policy = dict(from_file)
+    else:
+        policy = dict(DEFAULT_POLICY)
+
+    merged_headers = dict(from_file.get("required_headers") or {})
+    merged_headers.update(policy.get("required_headers") or {})
+    if merged_headers:
+        policy["required_headers"] = merged_headers
+    return policy
 
 
 def tool_cap(policy: Dict[str, Any], tool_default_cap: Optional[int]) -> Optional[int]:
