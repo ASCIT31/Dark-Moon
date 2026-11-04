@@ -172,6 +172,32 @@ if [ "${DARKMOON_MCP_TRANSPORT:-http}" != "stdio" ]; then
   export DARKMOON_PRIVACY_TTL="${DARKMOON_PRIVACY_TTL:-604800}"
   log "Starting persistent Darkmoon MCP (http) on ${DARKMOON_MCP_HOST}:${DARKMOON_MCP_PORT}${DARKMOON_MCP_PATH}"
   /usr/local/bin/darkmoon-mcp >/tmp/darkmoon-mcp-boot.log 2>&1 &
+
+  # 2026-11-03: the MCP code is bind-mounted live (src/, api/), so a deploy can
+  # hand the entrypoint a broken moment (an import failing mid-copy). A dead MCP
+  # is a dead campaign — the privacy tokenization fails, the launch prompt goes
+  # out unredacted and the agent (correctly) refuses to work. Verify the port is
+  # actually listening and retry; never let the campaign start against a dead MCP.
+  _mcp_ok() {
+    python3 - "$DARKMOON_MCP_HOST" "$DARKMOON_MCP_PORT" <<'PYEOF'
+import socket, sys
+s = socket.socket(); s.settimeout(2)
+sys.exit(0 if s.connect_ex((sys.argv[1], int(sys.argv[2]))) == 0 else 1)
+PYEOF
+  }
+  _mcp_tries=0
+  until _mcp_ok; do
+    _mcp_tries=$((_mcp_tries + 1))
+    if [ "$_mcp_tries" -ge 6 ]; then
+      log "FATAL: Darkmoon MCP did not come up after ${_mcp_tries} attempts — see /tmp/darkmoon-mcp-boot.log"
+      tail -20 /tmp/darkmoon-mcp-boot.log >&2
+      exit 1
+    fi
+    log "Darkmoon MCP not listening yet (attempt ${_mcp_tries}/6) — restarting"
+    /usr/local/bin/darkmoon-mcp >>/tmp/darkmoon-mcp-boot.log 2>&1 &
+    sleep 3
+  done
+  log "Darkmoon MCP is listening on ${DARKMOON_MCP_HOST}:${DARKMOON_MCP_PORT}${DARKMOON_MCP_PATH}"
 fi
 
 #######################################

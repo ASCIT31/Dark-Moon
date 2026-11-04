@@ -93,6 +93,25 @@ Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local mode
 ./darkmoon.sh --log <session_id>
 ```
 
+### Web UI
+
+There is also a browser dashboard that drives the same engine — launch assessments,
+watch them live, browse campaigns, findings, the attack-surface graph, reports,
+agents and MCP tools, and configure your LLM provider:
+
+```bash
+./webui.sh            # pull the engine, build the Web UI, start everything
+```
+
+Then open **http://localhost:8080**. `./webui.sh` is idempotent; see
+[`docs/webui.md`](docs/webui.md) for the full reference.
+
+**✨ AI scope generator** — in *New assessment*, paste a bug-bounty program brief
+(HackerOne / Bugcrowd / Intigriti / any platform text) and the configured LLM
+extracts a structured scope JSON (in-scope assets, out-of-scope rules, reward
+table, rate limits, safe-harbour flags, exclusions). One click lands the assets
+in the launch form and you're running.
+
 **Prerequisites:** Docker & Docker Compose, and an LLM API key (or a local model). GPU setup, environment variables and the full flags reference live in the [Full Documentation](docs/full.md).
 
 ---

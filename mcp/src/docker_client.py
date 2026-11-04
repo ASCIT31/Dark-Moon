@@ -10,6 +10,8 @@ from docker.errors import DockerException, NotFound
 
 from src.models.common import ExecutionResult, ExecutionStatus
 from src.execution_guard import adapt_command, classify, effective_timeout, remediation
+from src.rate_limiter import enforce_rate_limits
+from src.scope_policy import inject_required_headers, is_prohibited_tool, resolve_policy
 
 STREAM_BASE = "/tmp/darkmoon_mcp_stream"
 
@@ -38,6 +40,12 @@ class DarkmoonDockerClient:
     ):
         self.container_name = container_name
         self.default_timeout = timeout
+        # Scope-driven rate policy per MCP session (2026-11-03, PornBox
+        # directive). Keyed by session_id; a session without an entry runs the
+        # engine default. Written by dashboard_init_campaign / a dedicated
+        # setter, read by execute_command.
+        self._session_policy: Dict[str, Dict[str, Any]] = {}
+        self._scope_rc_key: Optional[str] = None
         try:
             self.client = docker.from_env()
         except DockerException as e:
@@ -73,6 +81,53 @@ class DarkmoonDockerClient:
             return None
         except DockerException as e:
             raise RuntimeError(f"Error accessing container: {e}")
+
+    def _ensure_scope_headers_rc(self, policy: Dict[str, Any]) -> None:
+        """Install the programme's mandatory headers into the toolbox ~/.curlrc.
+
+        Command-level injection (see inject_required_headers) only covers the
+        curl/wget invocations the engine can rewrite. A ~/.curlrc covers EVERY
+        curl call the toolbox makes, whatever the agent wrote — which is the
+        difference between a request that carries the required identifier and
+        one that gets discarded by triage.
+        """
+        headers = (policy or {}).get("required_headers") or {}
+        if not headers:
+            return
+        key = "|".join(f"{k}={v}" for k, v in sorted(headers.items()))
+        if key == getattr(self, "_scope_rc_key", None):
+            return
+        lines = [
+            "# DarkMoon — mandatory headers for this engagement's scope.",
+            "# Managed by the engine: do not edit by hand.",
+        ]
+        for name, value in sorted(headers.items()):
+            lines.append(f'header = "{name}: {value}"')
+        body = "\n".join(lines) + "\n"
+        try:
+            res = self.execute_command(
+                f"cat > /root/.curlrc <<'DMCURLRC'\n{body}DMCURLRC\n"
+                f"wc -c < /root/.curlrc",
+                timeout=15,
+            )
+            self._scope_rc_key = key
+            self._broadcast(
+                f"\n\033[1;36m[scope-header]\033[0m installed required header(s) "
+                f"{sorted(headers)} in the toolbox ~/.curlrc (every curl call now carries them)\n".encode(),
+                None,
+            )
+        except Exception:
+            pass
+
+    def set_session_policy(self, session_id: str, policy: Dict[str, Any]) -> None:
+        """Register the scope-driven rate policy for one MCP session.
+
+        Called by dashboard_init_campaign (and any future scope tool) when the
+        programme states its rate/automation rule. Until a policy is set, the
+        session runs the engine default.
+        """
+        if policy:
+            self._session_policy[session_id or ""] = policy
 
     def execute_command(
         self,
@@ -115,11 +170,76 @@ class DarkmoonDockerClient:
             # returns what it found inside the budget rather than holding the
             # campaign for hours. Measured on an RTX 5060: 7.57 MH/s on GPU against
             # 33.5 kH/s on CPU threads for md5crypt, a factor of 225.
+            # Scope-driven rate policy (2026-11-03, PornBox directive): the
+            # rate budget is a property of the TARGET PROGRAMME, not a global
+            # constant — ALSCO allowed 5 req/s, PornBox forbids automated tools
+            # outright. The policy is resolved per session (set via
+            # dashboard_init_campaign's rate_policy argument) and enforced here
+            # where no prompt text can argue with it.
+            # Fallback chain: session policy > campaign scope file (written by
+            # the Web UI launch into the shared darkmoon-settings store) >
+            # env override > engine default.
+            policy = resolve_policy(self._session_policy.get(session_id or ""))
+            self._ensure_scope_headers_rc(policy)
+
             if isinstance(command, str):
                 adapted, note = adapt_command(command, self._gpu_state(container))
                 if note:
                     command = adapted
                     self._broadcast(f"\n\033[1;33m[guard]\033[0m {note}\n".encode(), session_id)
+
+                # Programmes that forbid automated tools: refuse their scanners
+                # pre-flight, the same way execution_guard refuses unbounded ones.
+                forbidden = is_prohibited_tool(command, policy)
+                if forbidden:
+                    self._broadcast(
+                        f"\n\033[1;33m[scope-policy]\033[0m {forbidden} is refused: this programme "
+                        "prohibits automated tools / significant traffic — test manually, one request at a time\n".encode(),
+                        session_id,
+                    )
+                    return ExecutionResult(
+                        status=ExecutionStatus.CANCELLED,
+                        stdout="",
+                        stderr=(
+                            f"[scope-policy] {forbidden} is refused under this programme's rate policy "
+                            f"(mode={policy.get('mode')}, source={policy.get('source')}). The programme prohibits "
+                            "automated tools or significant traffic. Test manually, one request at a time "
+                            "(browser or curl with realistic headers), and derive findings from observed responses."
+                        ),
+                        exit_code=126,
+                        timeout=0,
+                    )
+
+                # Mechanical rate limiting (2026-11-03, ALSCO audit): the engine
+                # floors the rate of every network tool the agent or a workflow
+                # launches, because prompt text could not stop `naabu -rate 500`
+                # from getting the source IP banned. Applied here so neither a
+                # free-form command nor a composed workflow script can bypass it.
+                limited = enforce_rate_limits(command, policy)
+                if limited != command:
+                    command = limited
+                    self._broadcast(
+                        f"\n\033[1;36m[rate-limit]\033[0m engine capped network tool rate flags (scope={policy.get('mode')}, {policy.get('rps')}/s): {command}\n".encode(),
+                        session_id,
+                    )
+
+                # Mandatory per-request headers (e.g. Intigriti's
+                # X-Intigriti-Username). Injected mechanically: a request that
+                # goes out without the identifier is discarded by triage, and
+                # the agent cannot be relied on to remember it on every call.
+                required = policy.get("required_headers") or {}
+                if required:
+                    # curl is covered by the toolbox ~/.curlrc (every call, even
+                    # ones the agent wrote by hand) - only wget needs the
+                    # command-level injection, otherwise the header is sent twice.
+                    skip = ("curl",) if getattr(self, "_scope_rc_key", None) else ()
+                    with_headers = inject_required_headers(command, required, skip_clients=skip)
+                    if with_headers != command:
+                        command = with_headers
+                        self._broadcast(
+                            f"\n\033[1;36m[scope-header]\033[0m engine added required header(s) {sorted(required)}\n".encode(),
+                            session_id,
+                        )
 
             if isinstance(command, list):
                 cmd = ["timeout", "--kill-after=5", str(hard_timeout)] + command

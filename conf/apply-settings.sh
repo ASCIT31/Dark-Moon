@@ -31,6 +31,13 @@ OPENCODE_LOCAL_API_KEY="${OPENCODE_LOCAL_API_KEY:-}"
 ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-}"
 ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-}"
 
+# MiniMax M Plan MCP vars (web_search + understand_image).
+# Optional: when MINIMAX_API_KEY is set, the MiniMax MCP server is registered in
+# opencode.json and the agent gains live web search + image understanding.
+MINIMAX_API_KEY="${MINIMAX_API_KEY:-}"
+MINIMAX_API_HOST="${MINIMAX_API_HOST:-https://api.minimax.io}"
+MINIMAX_MCP_PACKAGE="${MINIMAX_MCP_PACKAGE:-minimax-coding-plan-mcp}"
+
 #######################################
 # Decide model strategy
 # Priority: local > anthropic > cloud > fallback
@@ -149,6 +156,31 @@ else
   MCP_DARKMOON="\"darkmoon\": { \"type\": \"remote\", \"url\": \"${_DM_MCP_URL}\", \"enabled\": true }"
 fi
 
+# MiniMax M Plan MCP (optional). Registers the official MiniMax MCP server as a
+# local stdio server, which exposes two tools to the agent:
+#   - web_search       : live web search
+#   - understand_image : image understanding/analysis
+# It is spawned with `uvx minimax-coding-plan-mcp` (the uv tool runner ships in
+# the image), so no permanent install is needed. Enabled only when a
+# MINIMAX_API_KEY is provided; otherwise the block is omitted entirely.
+MCP_MINIMAX=""
+# Per-agent MCP allowlist. Agents declare which MCP servers they may use, so the
+# MiniMax server has to be added here too — otherwise the server would be
+# registered but its tools (web_search / understand_image) would stay invisible
+# to every agent.
+AGENT_MCP_LIST='["darkmoon"]'
+if [ -n "${MINIMAX_API_KEY}" ]; then
+  # The environment block must be self-contained: opencode spawns local MCP
+  # servers with a restricted environment, and `uv tool run` hangs (handshake
+  # timeout) when it cannot see PATH/HOME or its cache+tool directories — it
+  # then tries to re-resolve the package on every start. Pinning all of them
+  # makes the spawn hermetic and fast.
+  MCP_MINIMAX=",
+    \"MiniMax\": { \"type\": \"local\", \"command\": [\"/usr/local/bin/uvx\", \"${MINIMAX_MCP_PACKAGE}\"], \"environment\": { \"PATH\": \"/usr/local/bin:/usr/bin:/bin\", \"HOME\": \"/root\", \"UV_CACHE_DIR\": \"/opt/uv-cache\", \"UV_TOOL_DIR\": \"/opt/uv-tools\", \"MINIMAX_API_KEY\": \"${MINIMAX_API_KEY}\", \"MINIMAX_API_HOST\": \"${MINIMAX_API_HOST}\" }, \"timeout\": 36000000, \"enabled\": true }"
+  AGENT_MCP_LIST='["darkmoon", "MiniMax"]'
+  log "MiniMax MCP enabled (${MINIMAX_MCP_PACKAGE}) → web_search + understand_image"
+fi
+
 cat > "$OPENCODE_CONFIG_FILE" <<EOF
 {
   "\$schema": "https://opencode.ai/config.json"${PROVIDER_BLOCK},
@@ -157,7 +189,7 @@ cat > "$OPENCODE_CONFIG_FILE" <<EOF
   "small_model": "$FINAL_MODEL",
 
   "mcp": {
-    ${MCP_DARKMOON}
+    ${MCP_DARKMOON}${MCP_MINIMAX}
   },
 
   "plugin": ["file:///opt/darkmoon/plugins/darkmoon-privacy.ts", "file:///opt/darkmoon/plugins/darkmoon-growth-cta.ts"],
@@ -167,343 +199,343 @@ cat > "$OPENCODE_CONFIG_FILE" <<EOF
   "agent": {
     "pentest": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "primary": true,
       "prompt_file": "/root/.opencode/agents/pentest.md"
     },
 
     "aws": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/aws.md"
     },
     "azure": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/azure.md"
     },
     "entra-id": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/entra-id.md"
     },
     "gcp": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/gcp.md"
     },
     "github": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/github.md"
     },
     "gitlab": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/gitlab.md"
     },
     "jenkins": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/jenkins.md"
     },
     "terraform": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/terraform.md"
     },
     "ansible": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/ansible.md"
     },
     "docker": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/docker.md"
     },
     "container-registry": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/container-registry.md"
     },
     "hashicorp-vault": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/hashicorp-vault.md"
     },
     "sql-databases": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/sql-databases.md"
     },
     "messaging-cache": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/messaging-cache.md"
     },
     "firmware": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/firmware.md"
     },
 
     "sso-idp": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/sso-idp.md"
     },
 
     "gitops": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/gitops.md"
     },
 
     "observability": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/observability.md"
     },
 
     "storage": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/storage.md"
     },
 
     "edge-proxy": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/edge-proxy.md"
     },
 
     "vpn-remote-access": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/vpn-remote-access.md"
     },
 
     "firewall-network": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/firewall-network.md"
     },
 
     "email-infrastructure": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/email-infrastructure.md"
     },
 
     "backup": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/backup.md"
     },
 
     "pki-adcs": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/pki-adcs.md"
     },
 
     "nosql-databases": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/nosql-databases.md"
     },
 
     "container-platform": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/container-platform.md"
     },
 
     "hypervisor": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/hypervisor.md"
     },
 
     "business-platforms": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/business-platforms.md"
     },
 
     "mobile": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/mobile.md"
     },
 
     "mdm": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/mdm.md"
     },
 
     "active-directory": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/ad.md"
     },
 
     "aspnet": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/aspnet.md"
     },
 
     "python-flask": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/flask.md"
     },
 
     "graphql": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/graphql.md"
     },
 
     "llm": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/llm.md"
     },
 
     "golang": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/golang.md"
     },
 
     "headless-browser": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/headless-browser.md"
     },
 
     "kubernetes": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/kubernetes.md"
     },
 
     "nest": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/nest.md"
     },
 
     "php": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/php.md"
     },
 
     "ruby-on-rails": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/ruby.md"
     },
 
     "springboot": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/springboot.md"
     },
 
     "nodejs": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/nodejs-express-angular.md"
     },
 
     "wordpress": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/wordpress.md"
     },
 
     "prestashop": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/prestashop.md"
     },
 
     "moodle": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/moodle.md"
     },
 
     "magento": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/magento.md"
     },
 
     "joomla": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/joomla.md"
     },
 
     "drupal": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
+      "mcp": ${AGENT_MCP_LIST},
       "secondary": true,
       "prompt_file": "/root/.opencode/agents/drupal.md"
     }

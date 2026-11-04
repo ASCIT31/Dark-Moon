@@ -16,6 +16,7 @@ from typing import Optional, Dict, Any
 from fastmcp import FastMCP
 
 from src.docker_client import DarkmoonDockerClient
+from src.rate_limiter import describe_rate_limits
 from src.tools.core.executor import GenericExecutor
 from src.tools.core.health import HealthChecker
 from src.tools.workflows.list_workflows import WorkflowRegistry
@@ -508,10 +509,15 @@ def list_allowed_tools() -> Dict[str, Any]:
             "recon": ["subfinder", "waybackurls", "katana"],
             "dns": ["dig", "nslookup"],
             "network": ["curl", "wget", "ping"],
-            "ad_windows": ["netexec", "bloodhound-python", "smbclient.py", "hashcat", "Get-GPPPassword.py", "GetADComputer.py", "GetADUsers.py", "GetLAPSassword.py", "GetNPUsers.py", "GetUserSPNs.py", "ldapdomaindump.py", "smbclient.py", "smbexec.py", "smbserver.py", "findDelegation.py", "addcomputer.py", "exchanger.py", "raiseChild.py", "rdp-check.py", "registry-read.py", "regsecrets.py", "rpcdump.py", "rpcmap.py", "ticketConverter.py", "ticketer.py", "tstool.py", "owneredit.py", "ping.py", "psexec.py", "sambaPipe.py", "samedit.py", "samrdump.py", "sniff.py", "sniffer.py", "secretsdump.py", "snmpwalk", "dcomexec.py", "dpapi.py", "filetime.py", "getArch.py", "getPac.py", "getST.py", "getTGT.py", "goldenPac.py", "jp.py", "keylistattack.py", "lookupsid.py", "mimikatz.py", "minikerberos-asreproast", "minikerberos-ccache2kirbi", "minikerberos-ccacheedit", "minikerberos-ccacheroast", "minikerberos-cve202233647", "minikerberos-cve202233679", "minikerberos-getNTPKInit", "minikerberos-getS4U2proxy", "minikerberos-getS4U2self", "minikerberos-getTGS", "minikerberos-kerb23hashdecrypt", "minikerberos-kerberoast", "minikerberos-keylist", "minikerberos-kirbi2ccache", "minikerberos-pw", "mqtt_check.py", "mssqlclient.py", "mssqlinstance.py", "wmiexec.py", "wmipersist.py", "wmiquery.py", "changepasswd.py", "badsuccessor.py", "net.py", "netview.py", "ntfs-read.py", "ntmlrelayx.py",],
+            "ad_windows": ["netexec", "bloodhound-python", "smbclient.py", "hashcat", "Get-GPPPassword.py", "GetADComputer.py", "GetADUsers.py", "GetLAPSassword.py", "GetNPUsers.py", "GetUserSPNs.py", "ldapdomaindump.py", "smbclient.py", "smbexec.py", "smbserver.py", "findDelegation.py", "addcomputer.py", "exchanger.py", "raiseChild.py", "rdp-check.py", "registry-read.py", "regsecrets.py", "rpcdump.py", "rpcmap.py", "ticketConverter.py", "ticketer.py", "tstool.py", "owneredit.py", "ping.py", "psexec.py", "sambaPipe.py", "samedit.py", "samrdump.py", "sniff.py", "sniffer.py", "secretsdump.py", "snmpwalk", "dcomexec.py", "dpapi.py", "filetime.py", "getArch.py", "getPac.py", "getST.py", "getTGT.py", "goldenPac.py", "jp.py", "keylistattack.py", "lookupsid.py", "mimikatz.py", "minikerberos-asreprost", "minikerberos-ccache2kirbi", "minikerberos-ccacheedit", "minikerberos-ccacheroast", "minikerberos-cve202233647", "minikerberos-cve202233679", "minikerberos-getNTPKInit", "minikerberos-getS4U2proxy", "minikerberos-getS4U2self", "minikerberos-getTGS", "minikerberos-kerb23hashdecrypt", "minikerberos-kerberoast", "minikerberos-keylist", "minikerberos-kirbi2ccache", "minikerberos-pw", "mqtt_check.py", "mssqlclient.py", "mssqlinstance.py", "wmiexec.py", "wmipersist.py", "wmiquery.py", "changepasswd.py", "badsuccessor.py", "net.py", "netview.py", "ntfs-read.py", "ntmlrelayx.py",],
             "kubernetes": ["kubectl", "kubeletctl", "kubescape"],
             "misc": ["jq", "grep", "awk", "sed", "zip", "unzip",],
         },
+        # Mechanical rate caps the engine enforces on every network tool that
+        # passes through execute_command (2026-11-03 ALSCO audit): a prompt
+        # rule could not stop `naabu -rate 500` from getting the source IP
+        # banned, so the cap lives in the executor, not the prompt.
+        "engine_rate_limits": describe_rate_limits(),
     }
 
 
@@ -623,6 +629,7 @@ def dashboard_init_campaign(
     target_ip: str,
     project_name: str = "Darkmoon Assessment",
     methodology: str = "ISO 27001 / NIST SP 800-115 / MITRE ATT&CK",
+    rate_policy: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Initialize a live campaign for the Darkmoon Dashboard.
@@ -637,26 +644,51 @@ def dashboard_init_campaign(
         target_ip: Target IP address
         project_name: Name for the assessment project
         methodology: Methodology string
+        rate_policy: The programme's OWN rate/automation rule, verbatim from its
+            policy page or the AI scope generator's rate_limit field — e.g.
+            "maximum 5 requests per second and 5 concurrent requests" or
+            "the use of automated tools or scripted testing is not allowed".
+            The engine parses it (src/scope_policy.py) and enforces it
+            mechanically for every command of this session: the rate of every
+            network tool is floored to the scope's allowance, and on programmes
+            that forbid automated tools the bulk scanners are refused outright.
 
     Returns:
-        Dictionary with project_id, target_id, campaign_id.
+        Dictionary with project_id, target_id, campaign_id, rate_policy.
 
     Example:
         dashboard_init_campaign(
             session_id="d7c20dbe",
             target_host="172.20.0.4",
             target_ip="172.20.0.4",
+            rate_policy="automated scanning max 5 requests per second, 5 concurrent",
         )
         → {"project_id": "proj_...", "target_id": "tgt_...", "campaign_id": "camp_..."}
     """
     from api.live_push import init_live_campaign
-    return init_live_campaign(
+    from src.scope_policy import effective_policy
+
+    # The policy that will actually govern this campaign: the operator's own
+    # wording if the agent passed it, else the engagement's scope file (written
+    # by the Web UI launch), else the engine default. The campaign record must
+    # state the rule that really applied — the report is a compliance artefact
+    # for the vendor, so "engine default" must not be recorded when the scope
+    # said 5 req/s and a mandatory header.
+    policy = effective_policy(rate_policy)
+    result = init_live_campaign(
         session_id=session_id,
         target_host=target_host,
         target_ip=target_ip,
         project_name=project_name,
         methodology=methodology,
+        rate_policy=policy,
     )
+    # Register the policy on the docker client so execute_command enforces it
+    # mechanically for every command issued under this session.
+    if policy:
+        docker_client.set_session_policy(session_id, policy)
+    result["rate_policy"] = policy or {"mode": "automated", "source": "engine default"}
+    return result
 
 
 @mcp.tool()

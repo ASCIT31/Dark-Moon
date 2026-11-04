@@ -48,6 +48,12 @@ services:
       - ./reports:/root/.local/share/opencode/reports/:rw
       - ./sessions:/root/.local/share/opencode/sessions/:rw
       - ./workflows:/opt/darkmoon/mcp/server/src/tools/workflows/:rw
+      # Live MCP engine code: src/ and api/ are bind-mounted so a fix to the
+      # rate limiter, the scope policy or the dashboard push does not require a
+      # full image rebuild (the pattern workflows/ already used). The .venv
+      # stays from the image, so only these two trees are shadowed.
+      - ./mcp/src:/opt/darkmoon/mcp/server/src/:rw
+      - ./mcp/api:/opt/darkmoon/mcp/server/api/:rw
 
     environment:
       - TERM=xterm-256color

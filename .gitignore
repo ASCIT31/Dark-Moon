@@ -2,7 +2,10 @@ darkmoon-settings/
 data/
 sessions/
 reports/
-workflows/
+# Only the repo-root campaign workflows dir — a bare `workflows/` pattern also
+# matched mcp/src/tools/workflows/ and silently ignored every NEW MCP workflow
+# file (existing ones stayed tracked; new ones never got committed).
+/workflows/
 .opencode.env
 *.env
 # OS metadata. A drive-by PR (#37) once added two of these because nothing
@@ -23,3 +26,8 @@ desktop.ini
 .idea/
 *.swp
 *~
+
+# DarkMoon Web UI
+webui/.venv/
+webui/__pycache__/
+webui/**/__pycache__/
