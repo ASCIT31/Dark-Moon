@@ -526,3 +526,44 @@ quoted string) and trailing punctuation is stripped. Regression test:
 token, injection into curl/wget, no duplication, no overwrite of an explicit
 value, non-HTTP commands untouched, curl skipped when the rc covers it, prose
 pollution). Full suite: 159 passed.
+
+---
+
+# Scope-policy metadata vs. enforcement (2026-11-03, P-series follow-up)
+
+## P4 — The campaign record said "engine default" while the run was governed by the scope
+
+**Observed.** During the PB Web Media run the enforcement was correct (5 req/s and the
+mandatory `X-Intigriti-Username` header went out on every request, verified on the wire),
+but the CAMPAIGN record - which is what the generated report quotes - showed
+`{"mode": "automated", "rps": 25, "source": "engine default"}`. The agent had not passed
+`rate_policy` to `dashboard_init_campaign`, and the tool only stored what it was given.
+
+**Why that matters.** The report is a compliance artefact handed to the vendor. A record
+that says the engagement ran at the engine default (25 req/s) while the programme's rule
+was 5 req/s misstates the compliance facts of the run, and the missing `required_headers`
+hides that a mandatory identifier was in force on every request.
+
+**Fix (code).** `src/scope_policy.effective_policy()` resolves the policy that will
+actually govern the campaign — the operator's wording if passed, else the engagement's
+scope file (written by the Web UI at launch), else the engine default — and
+`dashboard_init_campaign` stores THAT on the campaign and registers it on the docker
+client. Live-verified: `effective_policy(None)` now returns
+`automated, 5 rps, required_headers {X-Intigriti-Username: zerodayexploit@intigriti.me},
+source: campaign scope file`.
+
+**Tests:** `mcp/tests/test_scope_policy.py::test_effective_policy_prefers_the_scope_file_over_the_default`.
+Full suite: 160 passed.
+
+## P5 — The header VALUE was polluted by prose (found by the agent, not by us)
+
+**Observed.** The first PB Web Media run sent
+`X-Intigriti-Username: davidgonzalez. Do not use bulk scanners or fuzzers against the
+age-verification endpoints` — the parser captured the sentence that followed the header in
+the programme text. The agent filed it as *"Scope policy header misconfigured by engine"*
+and correctly refused to treat the engagement as compliant.
+
+**Fix (code).** The captured value is restricted to a single token (or an explicitly
+quoted string) and trailing punctuation is stripped — see H3. The correct value for this
+engagement is the researcher's own Intigriti username, `zerodayexploit@intigriti.me`;
+"davidgonzalez" is only the engagement display name and is not what triage matches on.

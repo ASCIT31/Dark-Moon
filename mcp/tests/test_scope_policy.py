@@ -209,3 +209,41 @@ def test_curl_is_skipped_when_the_curlrc_already_carries_the_header():
     h = {"X-Intigriti-Username": "davidgonzalez"}
     assert inject_required_headers("curl -sk https://x/", h, skip_clients=("curl",)) == "curl -sk https://x/"
     assert "--header=" in inject_required_headers("wget -qO- https://x/", h, skip_clients=("curl",))
+
+
+def test_effective_policy_prefers_the_scope_file_over_the_default(monkeypatch, tmp_path):
+    """The campaign record must state the rule that actually governed the run.
+
+    An agent that does not pass rate_policy explicitly still runs under the
+    engagement's scope file (written by the Web UI at launch). Recording
+    "engine default" there would put a false compliance statement in the
+    vendor-facing report.
+    """
+    import json
+    import os
+
+    from src import scope_policy
+
+    store = tmp_path / "viewer-session.json"
+    home = tmp_path / "home"
+    (home / ".local" / "share" / "opencode").mkdir(parents=True)
+    (home / ".local" / "share" / "opencode" / "rate_policy.json").write_text(
+        json.dumps({
+            "text": "Automated tooling: maximum 5 requests per second.\n"
+                    "Required header on every request: X-Intigriti-Username: zerodayexploit@intigriti.me\n",
+            "program": "PB Web Media bug bounty (Intigriti)",
+        })
+    )
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("DARKMOON_RATE_POLICY", raising=False)
+    monkeypatch.setattr(scope_policy, "_session_store_path", lambda: home / ".local" / "share" / "opencode" / "rate_policy.json", raising=False)
+
+    # resolve_policy reads the file through _session_store_path only for the
+    # viewer session; the rate policy file path is derived from HOME, so point
+    # it there explicitly.
+    monkeypatch.setenv("DARKMOON_RATE_POLICY_FILE", str(home / ".local" / "share" / "opencode" / "rate_policy.json"))
+
+    pol = scope_policy.effective_policy(None)
+    assert pol["rps"] == 5, f"scope rate not resolved: {pol}"
+    assert pol["required_headers"] == {"X-Intigriti-Username": "zerodayexploit@intigriti.me"}
+    assert pol["source"] != "engine default"

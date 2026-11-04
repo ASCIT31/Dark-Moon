@@ -666,9 +666,15 @@ def dashboard_init_campaign(
         → {"project_id": "proj_...", "target_id": "tgt_...", "campaign_id": "camp_..."}
     """
     from api.live_push import init_live_campaign
-    from src.scope_policy import parse_rate_policy
+    from src.scope_policy import effective_policy
 
-    policy = parse_rate_policy(rate_policy, source="operator scope") if rate_policy else None
+    # The policy that will actually govern this campaign: the operator's own
+    # wording if the agent passed it, else the engagement's scope file (written
+    # by the Web UI launch), else the engine default. The campaign record must
+    # state the rule that really applied — the report is a compliance artefact
+    # for the vendor, so "engine default" must not be recorded when the scope
+    # said 5 req/s and a mandatory header.
+    policy = effective_policy(rate_policy)
     result = init_live_campaign(
         session_id=session_id,
         target_host=target_host,

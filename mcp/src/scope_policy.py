@@ -286,6 +286,24 @@ def resolve_policy(
     return dict(DEFAULT_POLICY)
 
 
+def effective_policy(rate_policy: Optional[str] = None) -> Dict[str, Any]:
+    """The policy that will actually govern a campaign.
+
+    The operator's own wording wins; otherwise the engagement's scope file (the
+    Web UI writes it at launch) is used; otherwise the engine default.
+
+    This is what the campaign record must carry. A campaign whose record says
+    "engine default" while the scope said "5 req/s + a mandatory header"
+    produces a report that misstates the compliance facts of the engagement.
+    """
+    if rate_policy:
+        return parse_rate_policy(rate_policy, source="operator scope")
+    resolved = resolve_policy(None)
+    if resolved.get("source") != "engine default":
+        return resolved
+    return dict(DEFAULT_POLICY)
+
+
 def tool_cap(policy: Dict[str, Any], tool_default_cap: Optional[int]) -> Optional[int]:
     """Effective cap for one tool under this policy.
 
