@@ -14,6 +14,7 @@
 <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-2667FF?style=for-the-badge&labelColor=0A2472" alt="License GPLv3"></a>
 <a href="#quick-start"><img src="https://img.shields.io/badge/Runs%20on-Local%20LLM-87BFFF?style=for-the-badge&labelColor=0A2472" alt="Made with local LLM"></a>
 <a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/badge/Autonomous%20AI-Pentesting-DCEAF4?style=for-the-badge&labelColor=0A2472" alt="Autonomous AI pentesting"></a>
+<a href="https://github.com/NipunaRanasinghe/awesome-ai-agents"><img src="https://img.shields.io/badge/Featured_in-Awesome_AI_Agents-2ea44f?style=for-the-badge" alt="Featured in Awesome AI Agents"></a>
 </p>
 
 [**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**🚀 Quick Start**](#quick-start) · [**🧩 Integrations**](#-darkmoon-everywhere) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🔒 Darkmoon Pro**](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) · [**▶️ Install & Run (OSS)**](https://youtu.be/3Qv1luvW99E) · [**▶️ Demo (Pro)**](https://youtu.be/zQE95bVLZgM)
