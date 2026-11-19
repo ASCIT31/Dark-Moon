@@ -73,7 +73,7 @@ def _report() -> str:
 
 
 def _section(md: str, title: str) -> str:
-    m = re.search(rf"^## {re.escape(title)}\n(.*?)(?=^## |^---\n\n\*Report auto-generated|\Z)", md, re.S | re.M)
+    m = re.search(rf"^## {re.escape(title)}\n(.*?)(?=^<!-- dm-section|^## |^---\n\n\*Report auto-generated|\Z)", md, re.S | re.M)
     assert m, f"section {title} missing"
     return m.group(1)
 

@@ -1144,7 +1144,7 @@ def _generate_report_from_db(
           f"before it ended  \n")
     A("\n---\n\n")
 
-    A("## MANAGEMENT SUMMARY\n\n")
+    A("<!-- dm-section: management-summary -->\n## MANAGEMENT SUMMARY\n\n")
     A("> *For non-technical readers and decision-makers.*\n\n")
 
     if n_crit > 0:
@@ -1210,7 +1210,7 @@ def _generate_report_from_db(
         A("| **1** | No finding to treat in the tested scope |\n\n---\n\n")
 
     # ── EXECUTIVE SUMMARY ───────────────────────────────────────────
-    A("## 1. EXECUTIVE SUMMARY\n\n")
+    A("<!-- dm-section: executive-summary -->\n## 1. EXECUTIVE SUMMARY\n\n")
     if executive_summary:
         A("> " + _md_prose(executive_summary).replace("\n", "\n> ") + "\n\n")
     A(f"**Overall Risk Level: {overall_risk}**\n\n")
@@ -1224,7 +1224,7 @@ def _generate_report_from_db(
     A(f"| **TOTAL** | **{n_total}** | **{exploited}** | **{confirmed}** |\n\n---\n\n")
 
     # ── FINDINGS TABLE ───────────────────────────────────────────────
-    A("## 2. FINDINGS TABLE\n\n")
+    A("<!-- dm-section: findings-table -->\n## 2. FINDINGS TABLE\n\n")
     A("| # | ID | Title | Severity | CVSS | Status | Endpoint |\n")
     A("|---|-----|-------|----------|------|--------|----------|\n")
     for i, v in enumerate(vulns):
@@ -1236,7 +1236,7 @@ def _generate_report_from_db(
     A("\n---\n\n")
 
     # ── VULNERABILITY DETAILS ────────────────────────────────────────
-    A("## 3. VULNERABILITY DETAILS\n\n")
+    A("<!-- dm-section: vulnerability-details -->\n## 3. VULNERABILITY DETAILS\n\n")
     for i, v in enumerate(vulns):
         cvss_score = _cvss_shown(v)[1]
         cvss_vec   = v.get("cvss_vector") or "N/A"

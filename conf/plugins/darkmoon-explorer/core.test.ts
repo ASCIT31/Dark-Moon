@@ -262,3 +262,20 @@ describe("visual primitives use real data only", () => {
     expect(durationText(undefined)).toBe("—")
   })
 })
+
+describe("splitSections: server section ids", () => {
+  test("the id marker is never shown and keys the next heading", () => {
+    const md = "# R\n\n<!-- dm-section: management-summary -->\n## MANAGEMENT SUMMARY\ntext\n\n<!-- dm-section: fix-first -->\n\n## PRIORITIZED TREATMENT PLAN\nrows\n"
+    const s = splitSections(md)
+    expect(s.map((x) => x.key ?? null)).toEqual([null, "management-summary", "fix-first"])
+    expect(s.some((x) => x.body.includes("dm-section"))).toBe(false)
+  })
+  test("a marker followed by text, or inside a fence, keys nothing", () => {
+    const s = splitSections("<!-- dm-section: a -->\ntext\n## H\n```\n<!-- dm-section: b -->\n## not a heading\n```\n")
+    expect(s.find((x) => x.title === "H")?.key).toBeUndefined()
+    expect(s.map((x) => x.body).join("")).toContain("<!-- dm-section: b -->")
+  })
+  test("old reports without markers split as before", () => {
+    expect(splitSections("## FIX FIRST\nx\n").map((x) => [x.title, x.key])).toEqual([["FIX FIRST", undefined]])
+  })
+})

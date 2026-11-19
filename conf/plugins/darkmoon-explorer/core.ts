@@ -370,22 +370,34 @@ export function pathFindingIds(p: AttackPath): string[] {
 
 // ---------------------------------------------------------------- markdown report
 
-export type Section = { title: string; level: number; body: string }
+export type Section = { title: string; level: number; body: string; key?: string }
 
-/** Split a report on headings outside fenced code; tolerant of malformed Markdown (unclosed fences). */
+/** Stable section id written by the server on the line before a heading (``<!-- dm-section: fix-first -->``). */
+const SECTION_ID = /^\s*<!--\s*dm-section:\s*([a-z0-9][a-z0-9-]{0,63})\s*-->\s*$/
+
+/** Split a report on headings outside fenced code; tolerant of malformed Markdown (unclosed fences). A section id
+ *  marker is never shown: it gives its ``key`` to the heading that follows it (blank lines allowed in between). */
 export function splitSections(md: string): Section[] {
   const lines = clean(md, 2_000_000).replace(/\r\n?/g, "\n").split("\n")
   const out: Section[] = []
   let cur: Section = { title: "", level: 0, body: "" }
   let fence: string | null = null
+  let key: string | undefined
   for (const line of lines) {
     const f = line.match(/^\s{0,3}(`{3,}|~{3,})/)
     if (f) fence = fence ? (line.trim().startsWith(fence[0]) ? null : fence) : f[1]
+    const id = !fence && !f ? line.match(SECTION_ID) : null
+    if (id) {
+      key = id[1]
+      continue
+    }
     const h = !fence && !f ? line.match(/^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/) : null
     if (h) {
       if (cur.body.trim() || cur.title) out.push(cur)
-      cur = { title: h[2], level: h[1].length, body: line + "\n" }
+      cur = { title: h[2], level: h[1].length, body: line + "\n", ...(key ? { key } : {}) }
+      key = undefined
     } else {
+      if (line.trim()) key = undefined
       cur.body += line + "\n"
     }
   }

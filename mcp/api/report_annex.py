@@ -25,6 +25,12 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 SCHEMA = "darkmoon-report-annex/v1"
 
+
+def section_marker(section_id: str) -> str:
+    """Stable section id on the line before a ``## `` heading (an HTML comment: invisible in a Markdown viewer). Readers
+    group sections by this id, never by the heading text (headings may be renamed; old reports have no marker)."""
+    return f"<!-- dm-section: {section_id} -->"
+
 SEV_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0, "none": -1}
 ZONE_ORDER = ["internet", "edge", "app", "data", "internal", "unknown"]
 ZONE_LABEL = {"internet": "Internet", "edge": "Edge (exposed)", "app": "Application", "data": "Data", "internal": "Internal",
@@ -206,7 +212,7 @@ def attack_paths_section(ap: Dict[str, Any], titles: Dict[str, str]) -> str:
     # the Objective column of the path tables is disambiguated too (not only the
     # closed/reachable columns), over every objective shown here, so two assets sharing a label are distinguishable.
     obj_disp = _objective_display_map((_path_objective_id(p), (p.get("objective") or {}).get("label")) for p in paths)
-    out = ["## ATTACK PATHS", ""]
+    out = [section_marker("attack-paths"), "## ATTACK PATHS", ""]
     observed = [p for p in proven if _is_observed(p)]
     declared = [p for p in proven if not _is_observed(p)]
     seg = [_plural(len(observed), 'observed attack path')]
@@ -343,7 +349,7 @@ def infrastructure_section(infra: Dict[str, Any]) -> str:
     nodes = infra.get("nodes") or []
     edges = infra.get("edges") or []
     by_id = {n.get("id"): n for n in nodes if n.get("id")}
-    out = ["## INFRASTRUCTURE MAP", ""]
+    out = [section_marker("infrastructure"), "## INFRASTRUCTURE MAP", ""]
     if not nodes:
         out.append("No asset is mapped by this campaign.")
         return "\n".join(out)
@@ -442,7 +448,7 @@ def fix_first_section(ap: Dict[str, Any], titles: Dict[str, str]) -> str:
     paths = {p.get("id"): p for p in ap.get("paths") or []}
     ranking = ap.get("ranking") or {}
     ff = ap.get("fix_first") or {}
-    out = ["## FIX FIRST", ""]
+    out = [section_marker("fix-first"), "## FIX FIRST", ""]
     fixes = ranking.get("fixes") or []
     if ranking.get("allowed") and fixes:
         out.append(f"Ranked on the ranked attack paths (observed + declared; provenance {md_cell(ranking.get('provenance'))}): fixing the first "
@@ -517,7 +523,7 @@ def fix_first_section(ap: Dict[str, Any], titles: Dict[str, str]) -> str:
 
 
 def frameworks_section(fw: Dict[str, Any], catalogue: Dict[str, Any]) -> str:
-    out = ["## FRAMEWORK MAPPING", ""]
+    out = [section_marker("frameworks"), "## FRAMEWORK MAPPING", ""]
     att = fw.get("attack") or {}
     fdocs = fw.get("findings") or {}
     out.append("Readings of this campaign's findings in five references. A tactic, control or step without a finding means "
@@ -750,7 +756,7 @@ def remediation_priorities_section(ap: Dict[str, Any], infra: Dict[str, Any], ca
                  if findings else int(stats.get("exploited") or 0))
     ranking = ap.get("ranking") or {}
     ff = ap.get("fix_first") or {}
-    out = ["## REMEDIATION PRIORITIES & ATTACK PATHS", ""]
+    out = [section_marker("remediation-priorities"), "## REMEDIATION PRIORITIES & ATTACK PATHS", ""]
     # Honesty: a product-demo campaign is synthetic data, not a real engagement. Say so before any
     # « exploited » / « proven » figure, so the scripted demo is never read as the result of a live test.
     if (campaign or {}).get("demo"):
@@ -843,7 +849,7 @@ def key_figures_section(campaign: Dict[str, Any], vulns: List[Dict[str, Any]]) -
         s = str(v.get("status") or "").lower()
         return s if s in proofs else "unconfirmed"
     # (the note on the missing written report travels apart, as `note` of the annex document)
-    out = ["## KEY FIGURES", "",
+    out = [section_marker("key-figures"), "## KEY FIGURES", "",
            f"{_plural(len(vulns), 'finding')} · overall risk {md_cell(campaign.get('overall_risk') or 'not rated')}.", "",
            "| Severity | Findings | Exploited | Confirmed | Unconfirmed |", "|---|---|---|---|---|"]
     for s in sevs:
@@ -860,11 +866,11 @@ def _ordered(vulns: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 def findings_sections(vulns: List[Dict[str, Any]]) -> List[str]:
     """FINDINGS TABLE + VULNERABILITY DETAILS from the stored findings: their own fields, their own text."""
     vs = _ordered(vulns)
-    table = ["## FINDINGS TABLE", "", "| # | ID | Title | Severity | CVSS | Status | Endpoint |", "|---|---|---|---|---|---|---|"]
+    table = [section_marker("findings-table"), "## FINDINGS TABLE", "", "| # | ID | Title | Severity | CVSS | Status | Endpoint |", "|---|---|---|---|---|---|---|"]
     for i, v in enumerate(vs, 1):
         table.append("| " + " | ".join([str(i), f"`{md_cell(v.get('id'))}`", md_cell(v.get("title"), 120), _sev(v.get("severity")).upper(),
                                           md_cell(v.get("cvss_score") or "—"), md_cell(v.get("status") or "—"), f"`{md_cell(v.get('endpoint'), 100)}`" if v.get("endpoint") else "—"]) + " |")
-    det = ["## VULNERABILITY DETAILS", ""]
+    det = [section_marker("vulnerability-details"), "## VULNERABILITY DETAILS", ""]
     if not vs:
         det.append("No finding recorded for this campaign.")
     for i, v in enumerate(vs, 1):
