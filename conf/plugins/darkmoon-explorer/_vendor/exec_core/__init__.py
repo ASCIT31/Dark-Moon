@@ -6,15 +6,20 @@ Licence: the licence of the repository that ships it (no per-file header, so the
 
 Modules: ``identity`` (finding identity, weakness class, asset key), ``stats`` (the one stats function),
 ``score`` (Cyber Score v1), ``project`` (project reference score), ``legend`` (shared vocabulary), ``actions``
-(Prioritized Treatment Plan: actions, status machine, history), ``retest`` (retest verdicts with this identity).
+(Prioritized Treatment Plan: actions, status machine, history), ``retest`` (retest verdicts with this identity),
+``framework_catalogues`` + ``frameworks_assess`` (framework technical assessment: 4 states per control, applicability
+from declared facts only), ``profile`` (application profile: validation, provenance, view).
 """
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 MANIFEST = {
-    "actions.py": "7429e6c0df78c0e6510ab00055277df8d884fe1b2c5bb5ba2d8d9af557bf5753",
+    "actions.py": "8c9951cecfcaac8469d77247f4dcdc20c5a643d1811441f02ef27e2eab197456",
+    "framework_catalogues.py": "cf8be4f24862af1572872c0f390d6a9c674da45ddf242b0d36651677a1f50166",
+    "frameworks_assess.py": "2ba91b7cbfc463c02aa284dd8b003d01df128600bf1bc2a7fd75b575df6f1e16",
     "identity.py": "a76e274fd1079c53b683543f98ef411b89f288f518cb38c4e59a787ada7f326f",
     "legend.py": "84df25e47eda2e4616248a1a4afa4b09f07159ef7f66ce720168649f87163ea5",
+    "profile.py": "113ed9f5994cbcb2baab2263f5af635000ccc808323c93aae66fedd8d56d7279",
     "project.py": "897ea6c825ad270ed3648cee4e452d74dae2d73b26b501ce58b8bf19bfe27b88",
     "retest.py": "8430f27f3f8caf028f6c396faa430927c0efc74094746f921d69994cced66482",
     "score.py": "02a610b35777eb2b78ece837ef3a51f41a5b596111df08a3c2e6567d402331db",

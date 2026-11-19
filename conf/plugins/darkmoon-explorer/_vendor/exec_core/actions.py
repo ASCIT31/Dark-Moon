@@ -17,8 +17,9 @@ Actions are derived, never invented:
 * ``treatment_type`` is derived from the weakness class (to confirm by the owner), ``unknown`` when the class says
   nothing;
 * ``expected_impact`` is counts only (findings covered, proven attack paths interrupted): never a risk reduction %;
-* related controls stay empty until the frameworks lot; dependencies, owner, approval requirement and service
-  interruption risk are ``unknown`` unless a person declared them.
+* ``related_controls`` = the framework controls the action's counted findings are technical evidence for
+  (``frameworks_assess.related_controls``); dependencies, owner, approval requirement and service interruption risk
+  are ``unknown`` unless a person declared them.
 
 Status machine (``TRANSITIONS``). ``applied`` is a declaration, never a verification. ``verified_resolved``,
 ``partially_resolved`` and ``failed_verification`` come only from a completed retest campaign matched with the
@@ -35,6 +36,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from . import frameworks_assess as _fa
 from . import identity
 
 PLAN_VERSION = "darkmoon-treatment-plan/1"
@@ -253,8 +255,9 @@ def build_actions(campaign_id: str, paths_doc: Dict[str, Any], findings: Iterabl
             "related_attack_paths": related,
             "proven_attack_paths": proven,
             "interrupts_attack_paths": broken,
-            "related_controls": [],
-            "related_controls_note": "Control mapping is not available yet.",
+            "related_controls": _fa.related_controls(ids, vmap.values()),
+            "related_controls_note": ("Framework controls these findings are technical evidence for (relevance only, "
+                                      "not an audit opinion)."),
             "dependencies": [],
             "expected_impact": {"findings_covered": n, "attack_paths_interrupted": len(broken),
                                 "attack_paths_total": of_total, "text": impact_text},

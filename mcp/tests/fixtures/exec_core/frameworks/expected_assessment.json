@@ -1,0 +1,2382 @@
+{
+ "assessment": {
+  "campaign_id": "camp_fx_fw",
+  "catalogue_version": "darkmoon-framework-technical-catalogue/1",
+  "coverage": {
+   "agents": [
+    "llm",
+    "php",
+    "unknown-helper"
+   ],
+   "classes_exercised": [
+    "access_control",
+    "ai_confidentiality",
+    "ai_exposure",
+    "ai_manipulation",
+    "authentication",
+    "business_logic",
+    "code_execution",
+    "configuration",
+    "csrf",
+    "file_access",
+    "file_upload",
+    "information_disclosure",
+    "input_validation",
+    "nosql_injection",
+    "open_redirect",
+    "session",
+    "source_code_exposure",
+    "sql_injection",
+    "ssrf",
+    "vulnerable_component",
+    "xss",
+    "xxe"
+   ],
+   "coverage_ok": true,
+   "reasons": [],
+   "sentence": "Coverage recorded: 3 test agent(s); classes exercised: 22.",
+   "unknown_agents": [
+    "unknown-helper"
+   ]
+  },
+  "excluded_finding_ids": [
+   "vuln_xss_fp",
+   "vuln_xss_q"
+  ],
+  "excluded_frameworks": [
+   {
+    "framework": "nist_csf_2",
+    "label": "NIST Cybersecurity Framework 2.0",
+    "why": "Not in v1: its outcomes are mostly governance and process outcomes; a mapping from one campaign's findings would add a fifth view without new evidence. Reconsidered when requested by customers."
+   }
+  ],
+  "frameworks": [
+   {
+    "action_ids": [
+     "act_fx_1",
+     "act_fx_3"
+    ],
+    "applicability": {
+     "basis_at": null,
+     "basis_field": "iso27001_isms_scope",
+     "basis_provenance": "unknown",
+     "basis_value": null,
+     "label": "Applicability to be confirmed by the organisation",
+     "status": "to_confirm",
+     "text": "No declaration about an ISO/IEC 27001 ISMS scope."
+    },
+    "controls": [
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "cryptography"
+      ],
+      "control_id": "A.5.14",
+      "finding_ids": [
+       "vuln_tls"
+      ],
+      "key": "iso27001:A.5.14",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 0,
+       "exploited": 0,
+       "unconfirmed": 1
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Data exchanged between the tested components and their clients travels over protected channels.",
+      "to_confirm": true,
+      "to_confirm_note": "Only unconfirmed findings: reported by the agent, to be confirmed."
+     },
+     {
+      "action_ids": [
+       "act_fx_3"
+      ],
+      "attack_path_ids": [
+       "path_1",
+       "path_2"
+      ],
+      "classes": [
+       "access_control"
+      ],
+      "control_id": "A.5.15",
+      "finding_ids": [
+       "vuln_cwe"
+      ],
+      "key": "iso27001:A.5.15",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 1,
+       "exploited": 0,
+       "unconfirmed": 0
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "The application enforces who may reach which function or record (authorisation bypass, object references, privilege escalation).",
+      "to_confirm": false
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "authentication"
+      ],
+      "control_id": "A.5.17",
+      "finding_ids": [
+       "vuln_attack"
+      ],
+      "key": "iso27001:A.5.17",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 1,
+       "exploited": 0,
+       "unconfirmed": 0
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Default, weak, guessable or exposed login secrets, and how they are handled by the tested surface.",
+      "to_confirm": false
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.5.18",
+      "finding_ids": [],
+      "key": "iso27001:A.5.18",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Granting, review and removal of user rights.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.5.34",
+      "finding_ids": [],
+      "key": "iso27001:A.5.34",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Protection of personal data as a legal and organisational duty.",
+      "why": "A legal and organisational obligation: exposure of personal data, when observed, is reported under the technical controls (A.8.12) and GDPR art. 32."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.1",
+      "finding_ids": [],
+      "key": "iso27001:A.8.1",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Protection of end-user devices.",
+      "why": "End-user devices are outside the scope of an application campaign."
+     },
+     {
+      "action_ids": [
+       "act_fx_3"
+      ],
+      "attack_path_ids": [
+       "path_1",
+       "path_2"
+      ],
+      "classes": [
+       "access_control"
+      ],
+      "control_id": "A.8.2",
+      "finding_ids": [
+       "vuln_cwe"
+      ],
+      "key": "iso27001:A.8.2",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 1,
+       "exploited": 0,
+       "unconfirmed": 0
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Escalation from an ordinary account to administrative functions.",
+      "to_confirm": false
+     },
+     {
+      "action_ids": [
+       "act_fx_3"
+      ],
+      "attack_path_ids": [
+       "path_1",
+       "path_2"
+      ],
+      "classes": [
+       "access_control"
+      ],
+      "control_id": "A.8.3",
+      "finding_ids": [
+       "vuln_cwe"
+      ],
+      "key": "iso27001:A.8.3",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 1,
+       "exploited": 0,
+       "unconfirmed": 0
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Reading or changing records of other users or tenants without authorisation.",
+      "to_confirm": false
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "source_code_exposure"
+      ],
+      "control_id": "A.8.4",
+      "finding_ids": [],
+      "key": "iso27001:A.8.4",
+      "state": "none_observed_in_tested_scope",
+      "state_label": "No weakness observed in the tested scope",
+      "text": "Source code or repositories exposed through the tested surface (.git, backups, source maps)."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "authentication",
+       "session"
+      ],
+      "control_id": "A.8.5",
+      "finding_ids": [
+       "vuln_attack"
+      ],
+      "key": "iso27001:A.8.5",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 1,
+       "exploited": 0,
+       "unconfirmed": 0
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Login and session handling: authentication bypass, brute-force resistance, session token handling.",
+      "to_confirm": false
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "availability"
+      ],
+      "control_id": "A.8.6",
+      "finding_ids": [],
+      "key": "iso27001:A.8.6",
+      "state": "not_tested",
+      "state_label": "Not tested by this campaign",
+      "text": "Resource exhaustion or missing rate limits observed (Darkmoon runs no load or denial-of-service test).",
+      "why": "No dispatched agent covers: availability."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.7",
+      "finding_ids": [],
+      "key": "iso27001:A.8.7",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Anti-malware measures.",
+      "why": "Anti-malware measures are not observable from the tested surface."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "vulnerable_component"
+      ],
+      "control_id": "A.8.8",
+      "finding_ids": [
+       "vuln_closed"
+      ],
+      "key": "iso27001:A.8.8",
+      "open_findings": 0,
+      "proof": {
+       "confirmed": 0,
+       "exploited": 0,
+       "unconfirmed": 1
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Known-vulnerable or end-of-life components found on the tested surface (version evidence, CVE references).",
+      "to_confirm": true,
+      "to_confirm_note": "Only unconfirmed findings: reported by the agent, to be confirmed."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "configuration"
+      ],
+      "control_id": "A.8.9",
+      "finding_ids": [],
+      "key": "iso27001:A.8.9",
+      "state": "none_observed_in_tested_scope",
+      "state_label": "No weakness observed in the tested scope",
+      "text": "Insecure settings observed: debug modes, default pages, missing security headers, permissive CORS, exposed admin consoles."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.10",
+      "finding_ids": [],
+      "key": "iso27001:A.8.10",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Deletion of data that is no longer needed.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.11",
+      "finding_ids": [],
+      "key": "iso27001:A.8.11",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Masking of data by policy.",
+      "why": "Whether data is masked by policy cannot be established by a test; data exposure observed is reported under A.8.12."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "information_disclosure"
+      ],
+      "control_id": "A.8.12",
+      "finding_ids": [],
+      "key": "iso27001:A.8.12",
+      "state": "none_observed_in_tested_scope",
+      "state_label": "No weakness observed in the tested scope",
+      "text": "Sensitive data returned or exposed to an unauthorised party (credentials, personal or internal data in responses, errors or files)."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.13",
+      "finding_ids": [],
+      "key": "iso27001:A.8.13",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Copies of data kept for restore.",
+      "why": "Backups and restores are not exercised by a security test."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.14",
+      "finding_ids": [],
+      "key": "iso27001:A.8.14",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Duplicate processing capacity.",
+      "why": "Redundancy is not exercised by a security test."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "cited_by_findings": [
+       "vuln_log"
+      ],
+      "cited_note": "Cited by the testing agent; a technical test cannot assess this control, the findings are listed under the controls of their weakness class.",
+      "classes": [],
+      "control_id": "A.8.15",
+      "finding_ids": [],
+      "key": "iso27001:A.8.15",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Recording of security events.",
+      "why": "Log content is not visible to the test; whether the test was recorded is not checked."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.16",
+      "finding_ids": [],
+      "key": "iso27001:A.8.16",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Detection of anomalous activity.",
+      "why": "Whether the campaign was detected or alerted on is not recorded by Darkmoon."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.17",
+      "finding_ids": [],
+      "key": "iso27001:A.8.17",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Clocks set to a common time source.",
+      "why": "Not observable from the tested surface."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.18",
+      "finding_ids": [],
+      "key": "iso27001:A.8.18",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Programs able to override system safeguards.",
+      "why": "Not observable from the tested surface."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.19",
+      "finding_ids": [],
+      "key": "iso27001:A.8.19",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Software installation on production systems.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "network_exposure"
+      ],
+      "control_id": "A.8.20",
+      "finding_ids": [],
+      "key": "iso27001:A.8.20",
+      "state": "not_tested",
+      "state_label": "Not tested by this campaign",
+      "text": "Network services reachable from the tested position that should not be (exposed management or data ports).",
+      "why": "No dispatched agent covers: network_exposure."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.21",
+      "finding_ids": [],
+      "key": "iso27001:A.8.21",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Agreements and service levels of network services.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "ssrf"
+      ],
+      "control_id": "A.8.22",
+      "finding_ids": [],
+      "key": "iso27001:A.8.22",
+      "state": "none_observed_in_tested_scope",
+      "state_label": "No weakness observed in the tested scope",
+      "text": "Reaching internal networks from the tested surface (server-side request forgery, pivoting)."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.23",
+      "finding_ids": [],
+      "key": "iso27001:A.8.23",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Filtering of outbound web browsing by users.",
+      "why": "Users' outbound browsing is outside the scope of an application campaign."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "cryptography"
+      ],
+      "control_id": "A.8.24",
+      "finding_ids": [
+       "vuln_tls"
+      ],
+      "key": "iso27001:A.8.24",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 0,
+       "exploited": 0,
+       "unconfirmed": 1
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Weak or missing encryption observed: cleartext protocols, weak TLS, weak hashing, unsigned or predictable tokens.",
+      "to_confirm": true,
+      "to_confirm_note": "Only unconfirmed findings: reported by the agent, to be confirmed."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.25",
+      "finding_ids": [],
+      "key": "iso27001:A.8.25",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Development lifecycle practices.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [
+       "act_fx_1"
+      ],
+      "attack_path_ids": [
+       "path_1"
+      ],
+      "classes": [
+       "sql_injection",
+       "nosql_injection",
+       "xss",
+       "xxe",
+       "code_execution",
+       "file_access",
+       "file_upload",
+       "input_validation",
+       "csrf",
+       "open_redirect",
+       "business_logic"
+      ],
+      "control_id": "A.8.26",
+      "excluded_finding_ids": [
+       "vuln_xss_fp",
+       "vuln_xss_q"
+      ],
+      "excluded_note": "2 finding(s) mapped here are marked false positive or held for review: not counted.",
+      "finding_ids": [
+       "vuln_sqli",
+       "vuln_sqli2"
+      ],
+      "key": "iso27001:A.8.26",
+      "open_findings": 2,
+      "proof": {
+       "confirmed": 1,
+       "exploited": 1,
+       "unconfirmed": 0
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "How the application handles requests: injection, cross-site scripting, request forgery, unsafe file handling, business-logic abuse.",
+      "to_confirm": false
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "cited_by_findings": [
+       "vuln_sqli"
+      ],
+      "cited_note": "Cited by the testing agent; a technical test cannot assess this control, the findings are listed under the controls of their weakness class.",
+      "classes": [],
+      "control_id": "A.8.27",
+      "finding_ids": [],
+      "key": "iso27001:A.8.27",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Architecture and engineering principles.",
+      "why": "Design principles are not observable; their consequences appear as findings under A.8.26 / A.8.28."
+     },
+     {
+      "action_ids": [
+       "act_fx_1"
+      ],
+      "attack_path_ids": [
+       "path_1"
+      ],
+      "classes": [
+       "sql_injection",
+       "nosql_injection",
+       "xss",
+       "xxe",
+       "code_execution",
+       "file_access",
+       "file_upload",
+       "input_validation"
+      ],
+      "control_id": "A.8.28",
+      "excluded_finding_ids": [
+       "vuln_xss_fp",
+       "vuln_xss_q"
+      ],
+      "excluded_note": "2 finding(s) mapped here are marked false positive or held for review: not counted.",
+      "finding_ids": [
+       "vuln_sqli",
+       "vuln_sqli2"
+      ],
+      "key": "iso27001:A.8.28",
+      "open_findings": 2,
+      "proof": {
+       "confirmed": 1,
+       "exploited": 1,
+       "unconfirmed": 0
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Flaws whose root cause is in the code: injection, unsafe deserialisation, path traversal, missing output encoding.",
+      "to_confirm": false
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.29",
+      "finding_ids": [],
+      "key": "iso27001:A.8.29",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Testing during development and acceptance.",
+      "why": "A development process: this campaign is an input to it, not an assessment of it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.30",
+      "finding_ids": [],
+      "key": "iso27001:A.8.30",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Development by suppliers.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.31",
+      "finding_ids": [],
+      "key": "iso27001:A.8.31",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Non-production environments kept apart from the live one.",
+      "why": "Environments outside the tested scope are not visible to the test."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.32",
+      "finding_ids": [],
+      "key": "iso27001:A.8.32",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Change handling.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.33",
+      "finding_ids": [],
+      "key": "iso27001:A.8.33",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Data used for testing.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "A.8.34",
+      "finding_ids": [],
+      "key": "iso27001:A.8.34",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Safeguards for systems while they are being audited.",
+      "why": "Applies to the test itself (rules of engagement), not assessed by it."
+     }
+    ],
+    "counts": {
+     "none_observed_in_tested_scope": 4,
+     "not_technically_assessable": 23,
+     "not_tested": 2,
+     "weakness_observed": 10
+    },
+    "finding_ids": [
+     "vuln_attack",
+     "vuln_closed",
+     "vuln_cwe",
+     "vuln_sqli",
+     "vuln_sqli2",
+     "vuln_tls"
+    ],
+    "framework": "iso27001",
+    "kind": "standard",
+    "label": "ISO/IEC 27001:2022 Annex A",
+    "limitations": [
+     "One campaign, its tested scope only; a control is never declared satisfied.",
+     "A finding is linked to a control by its weakness class, CWE, ATT&CK technique or the ISO control the agent cited: a mislabelled category lands under another control.",
+     "« No weakness observed » requires server-recorded coverage of the control's weakness classes by a dispatched agent; it does not prove that every test of that class was run.",
+     "Applicability uses only facts declared or verified by the organisation; detection never decides it.",
+     "Clauses 4-10 and the organisational, people and physical controls are not assessed.",
+     "Agents' ISO citations are indicative; 2013 identifiers are mapped to 2022 identifiers by number."
+    ],
+    "scope_note": "Annex A controls a technical test can produce evidence for, plus the technological controls it cannot assess. Clauses 4 to 10 (the management system) are not assessed.",
+    "source": {
+     "publisher": "ISO/IEC",
+     "reference": "ISO/IEC 27001:2022, Annex A",
+     "reuse": "Control identifiers only: the titles and text of ISO/IEC 27001 are not reproduced; the description is Darkmoon's own summary of what a technical test can observe.",
+     "url": "https://www.iso.org/standard/27001"
+    }
+   },
+   {
+    "action_ids": [
+     "act_fx_1",
+     "act_fx_3"
+    ],
+    "applicability": {
+     "basis_at": "2026-10-20",
+     "basis_field": "personal_data",
+     "basis_provenance": "verified",
+     "basis_value": "yes",
+     "label": "Applicable, as declared by the organisation",
+     "status": "declared_by_customer",
+     "text": "The organisation declares that the application processes personal data."
+    },
+    "controls": [
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "cryptography"
+      ],
+      "control_id": "Art.32(1)(a)",
+      "finding_ids": [
+       "vuln_tls"
+      ],
+      "key": "gdpr:Art.32(1)(a)",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 0,
+       "exploited": 0,
+       "unconfirmed": 1
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Encryption observed on the tested surface (transport, stored secrets); pseudonymisation is not observable.",
+      "to_confirm": true,
+      "to_confirm_note": "Only unconfirmed findings: reported by the agent, to be confirmed."
+     },
+     {
+      "action_ids": [
+       "act_fx_1",
+       "act_fx_3"
+      ],
+      "attack_path_ids": [
+       "path_1",
+       "path_2"
+      ],
+      "classes": [
+       "access_control",
+       "authentication",
+       "session",
+       "information_disclosure",
+       "source_code_exposure",
+       "sql_injection",
+       "nosql_injection",
+       "xss",
+       "csrf",
+       "ssrf",
+       "xxe",
+       "code_execution",
+       "file_access",
+       "file_upload"
+      ],
+      "control_id": "Art.32(1)(b)-ci",
+      "excluded_finding_ids": [
+       "vuln_xss_fp",
+       "vuln_xss_q"
+      ],
+      "excluded_note": "2 finding(s) mapped here are marked false positive or held for review: not counted.",
+      "finding_ids": [
+       "vuln_attack",
+       "vuln_cwe",
+       "vuln_sqli",
+       "vuln_sqli2"
+      ],
+      "key": "gdpr:Art.32(1)(b)-ci",
+      "open_findings": 4,
+      "proof": {
+       "confirmed": 3,
+       "exploited": 1,
+       "unconfirmed": 0
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Confidentiality and integrity of the systems processing the data: weaknesses that let an attacker read or alter data or take over the system.",
+      "to_confirm": false
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "availability"
+      ],
+      "control_id": "Art.32(1)(b)-ar",
+      "finding_ids": [],
+      "key": "gdpr:Art.32(1)(b)-ar",
+      "state": "not_tested",
+      "state_label": "Not tested by this campaign",
+      "text": "Availability and resilience: resource exhaustion observed (no load or denial-of-service test is run).",
+      "why": "No dispatched agent covers: availability."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.32(1)(c)",
+      "finding_ids": [],
+      "key": "gdpr:Art.32(1)(c)",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Restoring the data and services after an incident.",
+      "why": "A restore capability is a process; it is not exercised by a security test."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.32(1)(d)",
+      "finding_ids": [],
+      "key": "gdpr:Art.32(1)(d)",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Recurring testing of the security measures.",
+      "why": "A process: this campaign can be one of its inputs, it does not assess the process."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.25",
+      "finding_ids": [],
+      "key": "gdpr:Art.25",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Data protection by design and by default.",
+      "why": "Design and default choices are a governance obligation; a technical test can only report weaknesses, listed under art. 32."
+     }
+    ],
+    "counts": {
+     "none_observed_in_tested_scope": 0,
+     "not_technically_assessable": 3,
+     "not_tested": 1,
+     "weakness_observed": 2
+    },
+    "finding_ids": [
+     "vuln_attack",
+     "vuln_cwe",
+     "vuln_sqli",
+     "vuln_sqli2",
+     "vuln_tls"
+    ],
+    "framework": "gdpr",
+    "kind": "regulation",
+    "label": "GDPR (EU) 2016/679, art. 32 and 25",
+    "limitations": [
+     "One campaign, its tested scope only; a control is never declared satisfied.",
+     "A finding is linked to a control by its weakness class, CWE, ATT&CK technique or the ISO control the agent cited: a mislabelled category lands under another control.",
+     "« No weakness observed » requires server-recorded coverage of the control's weakness classes by a dispatched agent; it does not prove that every test of that class was run.",
+     "Applicability uses only facts declared or verified by the organisation; detection never decides it.",
+     "Only the technical side of art. 32 is covered; art. 33-34 and the other obligations are not.",
+     "Personal data categories are never inferred from findings."
+    ],
+    "scope_note": "Only the technical side of the security of processing (art. 32) is covered. Breach notification (art. 33-34), records, impact assessments and the other obligations are organisational and not covered. An authorised test is not a personal data breach.",
+    "source": {
+     "celex": "32016R0679",
+     "reference": "Regulation (EU) 2016/679, articles 25 and 32",
+     "reuse": "Article references only; descriptions are Darkmoon's own summary.",
+     "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
+    }
+   },
+   {
+    "action_ids": [
+     "act_fx_1",
+     "act_fx_3"
+    ],
+    "applicability": {
+     "basis_at": null,
+     "basis_field": "nis2_entity_type",
+     "basis_provenance": "unknown",
+     "basis_value": null,
+     "label": "Applicability to be confirmed by the organisation",
+     "status": "to_confirm",
+     "text": "Sector declared (health) but no NIS2 entity type: the size and national transposition decide, the organisation must declare it."
+    },
+    "controls": [
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.21(2)(a)",
+      "finding_ids": [],
+      "key": "nis2:Art.21(2)(a)",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Risk analysis and security policies.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.21(2)(b)",
+      "finding_ids": [],
+      "key": "nis2:Art.21(2)(b)",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Incident handling.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.21(2)(c)",
+      "finding_ids": [],
+      "key": "nis2:Art.21(2)(c)",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Continuity, backups, recovery and crisis handling.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.21(2)(d)",
+      "finding_ids": [],
+      "key": "nis2:Art.21(2)(d)",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Security of suppliers and service providers.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [
+       "act_fx_1"
+      ],
+      "attack_path_ids": [
+       "path_1"
+      ],
+      "classes": [
+       "vulnerable_component",
+       "configuration",
+       "sql_injection",
+       "nosql_injection",
+       "xss",
+       "xxe",
+       "code_execution",
+       "file_access",
+       "file_upload",
+       "input_validation",
+       "csrf",
+       "open_redirect",
+       "business_logic",
+       "ssrf"
+      ],
+      "control_id": "Art.21(2)(e)",
+      "excluded_finding_ids": [
+       "vuln_xss_fp",
+       "vuln_xss_q"
+      ],
+      "excluded_note": "2 finding(s) mapped here are marked false positive or held for review: not counted.",
+      "finding_ids": [
+       "vuln_closed",
+       "vuln_sqli",
+       "vuln_sqli2"
+      ],
+      "key": "nis2:Art.21(2)(e)",
+      "open_findings": 2,
+      "proof": {
+       "confirmed": 1,
+       "exploited": 1,
+       "unconfirmed": 1
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Security of the systems as built and maintained: vulnerabilities found in the tested scope (the vulnerability handling process itself is not assessed).",
+      "to_confirm": false
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.21(2)(f)",
+      "finding_ids": [],
+      "key": "nis2:Art.21(2)(f)",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Assessing whether the security measures work.",
+      "why": "A process: this campaign can be one of its inputs, it does not assess it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.21(2)(g)",
+      "finding_ids": [],
+      "key": "nis2:Art.21(2)(g)",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Hygiene practices and security training of staff.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "cryptography"
+      ],
+      "control_id": "Art.21(2)(h)",
+      "finding_ids": [
+       "vuln_tls"
+      ],
+      "key": "nis2:Art.21(2)(h)",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 0,
+       "exploited": 0,
+       "unconfirmed": 1
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Cryptography and encryption weaknesses observed on the tested surface.",
+      "to_confirm": true,
+      "to_confirm_note": "Only unconfirmed findings: reported by the agent, to be confirmed."
+     },
+     {
+      "action_ids": [
+       "act_fx_3"
+      ],
+      "attack_path_ids": [
+       "path_1",
+       "path_2"
+      ],
+      "classes": [
+       "access_control"
+      ],
+      "control_id": "Art.21(2)(i)",
+      "finding_ids": [
+       "vuln_cwe"
+      ],
+      "key": "nis2:Art.21(2)(i)",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 1,
+       "exploited": 0,
+       "unconfirmed": 0
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Authorisation enforcement observed on the tested surface (human resources security and asset management are not assessed).",
+      "to_confirm": false
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "authentication",
+       "session"
+      ],
+      "control_id": "Art.21(2)(j)",
+      "finding_ids": [
+       "vuln_attack"
+      ],
+      "key": "nis2:Art.21(2)(j)",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 1,
+       "exploited": 0,
+       "unconfirmed": 0
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Authentication strength observed where the tested surface offers a login (secured voice, video, text and emergency communications are not assessed).",
+      "to_confirm": false
+     }
+    ],
+    "counts": {
+     "none_observed_in_tested_scope": 0,
+     "not_technically_assessable": 6,
+     "not_tested": 0,
+     "weakness_observed": 4
+    },
+    "finding_ids": [
+     "vuln_attack",
+     "vuln_closed",
+     "vuln_cwe",
+     "vuln_sqli",
+     "vuln_sqli2",
+     "vuln_tls"
+    ],
+    "framework": "nis2",
+    "kind": "directive",
+    "label": "NIS2 Directive (EU) 2022/2555, art. 21(2)",
+    "limitations": [
+     "One campaign, its tested scope only; a control is never declared satisfied.",
+     "A finding is linked to a control by its weakness class, CWE, ATT&CK technique or the ISO control the agent cited: a mislabelled category lands under another control.",
+     "« No weakness observed » requires server-recorded coverage of the control's weakness classes by a dispatched agent; it does not prove that every test of that class was run.",
+     "Applicability uses only facts declared or verified by the organisation; detection never decides it.",
+     "Entity type and sector are declared by the organisation; national transposition is not covered.",
+     "Measures (a)-(d), (f), (g) are organisational and not assessed."
+    ],
+    "scope_note": "Only measures a test can produce technical evidence for. Whether the organisation is an essential or important entity is declared by the organisation, never deduced.",
+    "source": {
+     "celex": "32022L2555",
+     "reference": "Directive (EU) 2022/2555, article 21(2)(a)-(j)",
+     "reuse": "Article references only; national transposition may differ and is not covered.",
+     "url": "https://eur-lex.europa.eu/eli/dir/2022/2555/oj"
+    }
+   },
+   {
+    "action_ids": [
+     "act_fx_2"
+    ],
+    "applicability": {
+     "basis_at": null,
+     "basis_field": "ai_risk_class",
+     "basis_provenance": "unknown",
+     "basis_value": null,
+     "label": "Applicability to be confirmed by the organisation",
+     "status": "to_confirm",
+     "text": "No declaration of a high-risk AI system; art. 15 applies only to one."
+    },
+    "controls": [
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.15(1)",
+      "finding_ids": [],
+      "key": "ai_act:Art.15(1)",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Accuracy and consistent performance of the AI system.",
+      "why": "Accuracy is measured against the intended purpose and declared metrics; out of scope of a security test."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.15(3)",
+      "finding_ids": [],
+      "key": "ai_act:Art.15(3)",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Accuracy figures published for users of the system.",
+      "why": "An organisational process or document: a technical test of the application cannot observe it."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.15(4)",
+      "finding_ids": [],
+      "key": "ai_act:Art.15(4)",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Resilience to errors, faults and inconsistencies, including feedback loops.",
+      "why": "Not exercised by a security test."
+     },
+     {
+      "action_ids": [
+       "act_fx_2"
+      ],
+      "attack_path_ids": [],
+      "classes": [
+       "ai_manipulation"
+      ],
+      "control_id": "Art.15(5)-manipulation",
+      "finding_ids": [
+       "vuln_pi"
+      ],
+      "key": "ai_act:Art.15(5)-manipulation",
+      "open_findings": 1,
+      "proof": {
+       "confirmed": 0,
+       "exploited": 1,
+       "unconfirmed": 0
+      },
+      "state": "weakness_observed",
+      "state_label": "Weakness observed",
+      "text": "Attempts to alter use, outputs or behaviour through crafted inputs (prompt injection, jailbreak, evasion) and unsafe handling of model output or tool use.",
+      "to_confirm": false
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "ai_confidentiality"
+      ],
+      "control_id": "Art.15(5)-confidentiality",
+      "finding_ids": [],
+      "key": "ai_act:Art.15(5)-confidentiality",
+      "state": "none_observed_in_tested_scope",
+      "state_label": "No weakness observed in the tested scope",
+      "text": "Confidentiality attacks through the model: extraction of system instructions, training data, model information or sensitive data."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [
+       "ai_exposure"
+      ],
+      "control_id": "Art.15(5)-exposure",
+      "finding_ids": [],
+      "key": "ai_act:Art.15(5)-exposure",
+      "state": "none_observed_in_tested_scope",
+      "state_label": "No weakness observed in the tested scope",
+      "text": "Exploitation of the AI system's exposed interfaces (unauthenticated inference endpoint, unbounded resource consumption)."
+     },
+     {
+      "action_ids": [],
+      "attack_path_ids": [],
+      "classes": [],
+      "control_id": "Art.15(5)-poisoning",
+      "finding_ids": [],
+      "key": "ai_act:Art.15(5)-poisoning",
+      "state": "not_technically_assessable",
+      "state_label": "Not assessable by a technical test",
+      "text": "Manipulation of training data or pre-trained components.",
+      "why": "Requires access to the training pipeline; not exercised by a black-box campaign."
+     }
+    ],
+    "counts": {
+     "none_observed_in_tested_scope": 2,
+     "not_technically_assessable": 4,
+     "not_tested": 0,
+     "weakness_observed": 1
+    },
+    "detection": {
+     "ai_component_detected": true,
+     "ai_finding_ids": [
+      "vuln_pi"
+     ],
+     "node_ids": [
+      "n_ai"
+     ],
+     "note": "Detection is shown for information: it never decides applicability."
+    },
+    "finding_ids": [
+     "vuln_pi"
+    ],
+    "framework": "ai_act",
+    "kind": "regulation",
+    "label": "EU AI Act (EU) 2024/1689, art. 15",
+    "limitations": [
+     "One campaign, its tested scope only; a control is never declared satisfied.",
+     "A finding is linked to a control by its weakness class, CWE, ATT&CK technique or the ISO control the agent cited: a mislabelled category lands under another control.",
+     "« No weakness observed » requires server-recorded coverage of the control's weakness classes by a dispatched agent; it does not prove that every test of that class was run.",
+     "Applicability uses only facts declared or verified by the organisation; detection never decides it.",
+     "Applies only to a system the organisation declares high-risk; an AI component detected by the campaign does not make it one.",
+     "Accuracy, poisoning and the risk-management system are not assessed by a security test."
+    ],
+    "scope_note": "Applies to high-risk AI systems only. Whether a system is a high-risk AI system is declared by the organisation; an AI component detected by the campaign never makes it one.",
+    "source": {
+     "celex": "32024R1689",
+     "reference": "Regulation (EU) 2024/1689, article 15",
+     "reuse": "Article references only; application dates are not stated here.",
+     "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    }
+   }
+  ],
+  "inputs_digest": "794e80f25bbc1025",
+  "navigation": {
+   "actions": {
+    "act_fx_1": {
+     "attack_path_ids": [
+      "path_1"
+     ],
+     "control_keys": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.8.26",
+      "iso27001:A.8.28",
+      "nis2:Art.21(2)(e)"
+     ],
+     "finding_ids": [
+      "vuln_sqli",
+      "vuln_sqli2"
+     ]
+    },
+    "act_fx_2": {
+     "attack_path_ids": [],
+     "control_keys": [
+      "ai_act:Art.15(5)-manipulation"
+     ],
+     "finding_ids": [
+      "vuln_pi"
+     ]
+    },
+    "act_fx_3": {
+     "attack_path_ids": [
+      "path_1",
+      "path_2"
+     ],
+     "control_keys": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.5.15",
+      "iso27001:A.8.2",
+      "iso27001:A.8.3",
+      "nis2:Art.21(2)(i)"
+     ],
+     "finding_ids": [
+      "vuln_cwe"
+     ]
+    }
+   },
+   "attack_paths": {
+    "path_1": {
+     "action_ids": [
+      "act_fx_1",
+      "act_fx_3"
+     ],
+     "control_keys": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.5.15",
+      "iso27001:A.8.2",
+      "iso27001:A.8.26",
+      "iso27001:A.8.28",
+      "iso27001:A.8.3",
+      "nis2:Art.21(2)(e)",
+      "nis2:Art.21(2)(i)"
+     ]
+    },
+    "path_2": {
+     "action_ids": [
+      "act_fx_3"
+     ],
+     "control_keys": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.5.15",
+      "iso27001:A.8.2",
+      "iso27001:A.8.3",
+      "nis2:Art.21(2)(i)"
+     ]
+    }
+   },
+   "controls": {
+    "ai_act:Art.15(1)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "ai_act",
+     "state": "not_technically_assessable"
+    },
+    "ai_act:Art.15(3)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "ai_act",
+     "state": "not_technically_assessable"
+    },
+    "ai_act:Art.15(4)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "ai_act",
+     "state": "not_technically_assessable"
+    },
+    "ai_act:Art.15(5)-confidentiality": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "ai_act",
+     "state": "none_observed_in_tested_scope"
+    },
+    "ai_act:Art.15(5)-exposure": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "ai_act",
+     "state": "none_observed_in_tested_scope"
+    },
+    "ai_act:Art.15(5)-manipulation": {
+     "action_ids": [
+      "act_fx_2"
+     ],
+     "attack_path_ids": [],
+     "finding_ids": [
+      "vuln_pi"
+     ],
+     "framework": "ai_act",
+     "state": "weakness_observed"
+    },
+    "ai_act:Art.15(5)-poisoning": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "ai_act",
+     "state": "not_technically_assessable"
+    },
+    "gdpr:Art.25": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "gdpr",
+     "state": "not_technically_assessable"
+    },
+    "gdpr:Art.32(1)(a)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [
+      "vuln_tls"
+     ],
+     "framework": "gdpr",
+     "state": "weakness_observed"
+    },
+    "gdpr:Art.32(1)(b)-ar": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "gdpr",
+     "state": "not_tested"
+    },
+    "gdpr:Art.32(1)(b)-ci": {
+     "action_ids": [
+      "act_fx_1",
+      "act_fx_3"
+     ],
+     "attack_path_ids": [
+      "path_1",
+      "path_2"
+     ],
+     "finding_ids": [
+      "vuln_attack",
+      "vuln_cwe",
+      "vuln_sqli",
+      "vuln_sqli2"
+     ],
+     "framework": "gdpr",
+     "state": "weakness_observed"
+    },
+    "gdpr:Art.32(1)(c)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "gdpr",
+     "state": "not_technically_assessable"
+    },
+    "gdpr:Art.32(1)(d)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "gdpr",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.5.14": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [
+      "vuln_tls"
+     ],
+     "framework": "iso27001",
+     "state": "weakness_observed"
+    },
+    "iso27001:A.5.15": {
+     "action_ids": [
+      "act_fx_3"
+     ],
+     "attack_path_ids": [
+      "path_1",
+      "path_2"
+     ],
+     "finding_ids": [
+      "vuln_cwe"
+     ],
+     "framework": "iso27001",
+     "state": "weakness_observed"
+    },
+    "iso27001:A.5.17": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [
+      "vuln_attack"
+     ],
+     "framework": "iso27001",
+     "state": "weakness_observed"
+    },
+    "iso27001:A.5.18": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.5.34": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.1": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.10": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.11": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.12": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "none_observed_in_tested_scope"
+    },
+    "iso27001:A.8.13": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.14": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.15": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.16": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.17": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.18": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.19": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.2": {
+     "action_ids": [
+      "act_fx_3"
+     ],
+     "attack_path_ids": [
+      "path_1",
+      "path_2"
+     ],
+     "finding_ids": [
+      "vuln_cwe"
+     ],
+     "framework": "iso27001",
+     "state": "weakness_observed"
+    },
+    "iso27001:A.8.20": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_tested"
+    },
+    "iso27001:A.8.21": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.22": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "none_observed_in_tested_scope"
+    },
+    "iso27001:A.8.23": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.24": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [
+      "vuln_tls"
+     ],
+     "framework": "iso27001",
+     "state": "weakness_observed"
+    },
+    "iso27001:A.8.25": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.26": {
+     "action_ids": [
+      "act_fx_1"
+     ],
+     "attack_path_ids": [
+      "path_1"
+     ],
+     "finding_ids": [
+      "vuln_sqli",
+      "vuln_sqli2"
+     ],
+     "framework": "iso27001",
+     "state": "weakness_observed"
+    },
+    "iso27001:A.8.27": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.28": {
+     "action_ids": [
+      "act_fx_1"
+     ],
+     "attack_path_ids": [
+      "path_1"
+     ],
+     "finding_ids": [
+      "vuln_sqli",
+      "vuln_sqli2"
+     ],
+     "framework": "iso27001",
+     "state": "weakness_observed"
+    },
+    "iso27001:A.8.29": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.3": {
+     "action_ids": [
+      "act_fx_3"
+     ],
+     "attack_path_ids": [
+      "path_1",
+      "path_2"
+     ],
+     "finding_ids": [
+      "vuln_cwe"
+     ],
+     "framework": "iso27001",
+     "state": "weakness_observed"
+    },
+    "iso27001:A.8.30": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.31": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.32": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.33": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.34": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.4": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "none_observed_in_tested_scope"
+    },
+    "iso27001:A.8.5": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [
+      "vuln_attack"
+     ],
+     "framework": "iso27001",
+     "state": "weakness_observed"
+    },
+    "iso27001:A.8.6": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_tested"
+    },
+    "iso27001:A.8.7": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "not_technically_assessable"
+    },
+    "iso27001:A.8.8": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [
+      "vuln_closed"
+     ],
+     "framework": "iso27001",
+     "state": "weakness_observed"
+    },
+    "iso27001:A.8.9": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "iso27001",
+     "state": "none_observed_in_tested_scope"
+    },
+    "nis2:Art.21(2)(a)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "nis2",
+     "state": "not_technically_assessable"
+    },
+    "nis2:Art.21(2)(b)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "nis2",
+     "state": "not_technically_assessable"
+    },
+    "nis2:Art.21(2)(c)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "nis2",
+     "state": "not_technically_assessable"
+    },
+    "nis2:Art.21(2)(d)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "nis2",
+     "state": "not_technically_assessable"
+    },
+    "nis2:Art.21(2)(e)": {
+     "action_ids": [
+      "act_fx_1"
+     ],
+     "attack_path_ids": [
+      "path_1"
+     ],
+     "finding_ids": [
+      "vuln_closed",
+      "vuln_sqli",
+      "vuln_sqli2"
+     ],
+     "framework": "nis2",
+     "state": "weakness_observed"
+    },
+    "nis2:Art.21(2)(f)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "nis2",
+     "state": "not_technically_assessable"
+    },
+    "nis2:Art.21(2)(g)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
+     "framework": "nis2",
+     "state": "not_technically_assessable"
+    },
+    "nis2:Art.21(2)(h)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [
+      "vuln_tls"
+     ],
+     "framework": "nis2",
+     "state": "weakness_observed"
+    },
+    "nis2:Art.21(2)(i)": {
+     "action_ids": [
+      "act_fx_3"
+     ],
+     "attack_path_ids": [
+      "path_1",
+      "path_2"
+     ],
+     "finding_ids": [
+      "vuln_cwe"
+     ],
+     "framework": "nis2",
+     "state": "weakness_observed"
+    },
+    "nis2:Art.21(2)(j)": {
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [
+      "vuln_attack"
+     ],
+     "framework": "nis2",
+     "state": "weakness_observed"
+    }
+   },
+   "findings": {
+    "vuln_attack": {
+     "action_ids": [],
+     "control_keys": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.5.17",
+      "iso27001:A.8.5",
+      "nis2:Art.21(2)(j)"
+     ],
+     "evidence": {
+      "evidence_recorded": false,
+      "finding_id": "vuln_attack",
+      "recorded_fields": [],
+      "ref": "finding:vuln_attack#evidence"
+     }
+    },
+    "vuln_closed": {
+     "action_ids": [],
+     "control_keys": [
+      "iso27001:A.8.8",
+      "nis2:Art.21(2)(e)"
+     ],
+     "evidence": {
+      "evidence_recorded": false,
+      "finding_id": "vuln_closed",
+      "recorded_fields": [],
+      "ref": "finding:vuln_closed#evidence"
+     }
+    },
+    "vuln_cwe": {
+     "action_ids": [
+      "act_fx_3"
+     ],
+     "control_keys": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.5.15",
+      "iso27001:A.8.2",
+      "iso27001:A.8.3",
+      "nis2:Art.21(2)(i)"
+     ],
+     "evidence": {
+      "evidence_recorded": false,
+      "finding_id": "vuln_cwe",
+      "recorded_fields": [],
+      "ref": "finding:vuln_cwe#evidence"
+     }
+    },
+    "vuln_log": {
+     "action_ids": [],
+     "control_keys": [],
+     "evidence": {
+      "evidence_recorded": false,
+      "finding_id": "vuln_log",
+      "recorded_fields": [],
+      "ref": "finding:vuln_log#evidence"
+     }
+    },
+    "vuln_pi": {
+     "action_ids": [
+      "act_fx_2"
+     ],
+     "control_keys": [
+      "ai_act:Art.15(5)-manipulation"
+     ],
+     "evidence": {
+      "evidence_recorded": true,
+      "finding_id": "vuln_pi",
+      "recorded_fields": [
+       "evidence_commands"
+      ],
+      "ref": "finding:vuln_pi#evidence"
+     }
+    },
+    "vuln_sqli": {
+     "action_ids": [
+      "act_fx_1"
+     ],
+     "control_keys": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.8.26",
+      "iso27001:A.8.28",
+      "nis2:Art.21(2)(e)"
+     ],
+     "evidence": {
+      "evidence_recorded": true,
+      "finding_id": "vuln_sqli",
+      "recorded_fields": [
+       "raw_request"
+      ],
+      "ref": "finding:vuln_sqli#evidence"
+     }
+    },
+    "vuln_sqli2": {
+     "action_ids": [
+      "act_fx_1"
+     ],
+     "control_keys": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.8.26",
+      "iso27001:A.8.28",
+      "nis2:Art.21(2)(e)"
+     ],
+     "evidence": {
+      "evidence_recorded": false,
+      "finding_id": "vuln_sqli2",
+      "recorded_fields": [],
+      "ref": "finding:vuln_sqli2#evidence"
+     }
+    },
+    "vuln_tls": {
+     "action_ids": [],
+     "control_keys": [
+      "gdpr:Art.32(1)(a)",
+      "iso27001:A.5.14",
+      "iso27001:A.8.24",
+      "nis2:Art.21(2)(h)"
+     ],
+     "evidence": {
+      "evidence_recorded": false,
+      "finding_id": "vuln_tls",
+      "recorded_fields": [],
+      "ref": "finding:vuln_tls#evidence"
+     }
+    }
+   }
+  },
+  "project_id": "proj_fx",
+  "reading": "Technical findings relevant to these frameworks, from one campaign in its tested scope. This is not an audit, a certification or a legal opinion: « No weakness observed in the tested scope » is not a proof of absence, and organisational measures are not assessed.",
+  "schema_version": "darkmoon-framework-assessment/1",
+  "states": [
+   {
+    "label": "Weakness observed",
+    "value": "weakness_observed"
+   },
+   {
+    "label": "No weakness observed in the tested scope",
+    "value": "none_observed_in_tested_scope"
+   },
+   {
+    "label": "Not tested by this campaign",
+    "value": "not_tested"
+   },
+   {
+    "label": "Not assessable by a technical test",
+    "value": "not_technically_assessable"
+   }
+  ],
+  "unchanged_views": [
+   "MITRE ATT&CK",
+   "MITRE ATLAS",
+   "IEC 62443-3-3",
+   "EBIOS RM"
+  ],
+  "unmapped_finding_ids": [
+   "vuln_log"
+  ]
+ },
+ "profile": {
+  "detected": {
+   "campaign_id": "camp_fx_fw",
+   "confirmed": false,
+   "items": [
+    {
+     "field": "databases",
+     "name": "MySQL",
+     "version": "8.0"
+    },
+    {
+     "field": "frameworks",
+     "name": "Laravel",
+     "version": ""
+    },
+    {
+     "field": "infrastructure",
+     "name": "nginx",
+     "version": ""
+    },
+    {
+     "field": "infrastructure",
+     "name": "ollama",
+     "version": ""
+    },
+    {
+     "field": "languages",
+     "name": "PHP",
+     "version": "8.1"
+    }
+   ],
+   "note": "Detected by the campaign's agents; not confirmed by the organisation.",
+   "provenance": "detected"
+  },
+  "fields": {
+   "ai_risk_class": {
+    "allowed": [
+     "high_risk",
+     "limited_risk",
+     "minimal_risk",
+     "not_ai_system",
+     "unknown"
+    ],
+    "at": null,
+    "by_role": null,
+    "group": "regulatory",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "ai_system_declared": {
+    "allowed": [
+     "yes",
+     "no",
+     "unknown"
+    ],
+    "at": null,
+    "by_role": null,
+    "group": "regulatory",
+    "provenance": "declared_by_customer",
+    "provenance_label": "Declared by the organisation",
+    "value": "yes"
+   },
+   "availability_requirement": {
+    "allowed": [
+     "low",
+     "medium",
+     "high",
+     "critical",
+     "unknown"
+    ],
+    "at": null,
+    "by_role": null,
+    "group": "resilience",
+    "note": "Declared, not assessed by Darkmoon.",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "business_owner": {
+    "at": null,
+    "by_role": null,
+    "group": "ownership",
+    "note": "A role or team, not a person's name.",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "business_processes": {
+    "at": null,
+    "by_role": null,
+    "group": "application",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "business_purpose": {
+    "at": null,
+    "by_role": null,
+    "group": "application",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "criticality": {
+    "allowed": [
+     "low",
+     "medium",
+     "high",
+     "critical",
+     "unknown"
+    ],
+    "at": null,
+    "by_role": null,
+    "group": "resilience",
+    "provenance": "declared_by_customer",
+    "provenance_label": "Declared by the organisation",
+    "value": "high"
+   },
+   "data_categories": {
+    "at": null,
+    "by_role": null,
+    "group": "data",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "data_residency": {
+    "at": null,
+    "by_role": null,
+    "group": "data",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "databases": {
+    "at": null,
+    "by_role": null,
+    "campaign_id": "camp_fx_fw",
+    "group": "technology",
+    "provenance": "detected",
+    "provenance_label": "Detected by a campaign, not confirmed",
+    "value": [
+     "MySQL 8.0"
+    ]
+   },
+   "description": {
+    "at": null,
+    "by_role": null,
+    "group": "application",
+    "provenance": "declared_by_customer",
+    "provenance_label": "Declared by the organisation",
+    "value": "Customer self-service portal"
+   },
+   "external_dependencies": {
+    "at": null,
+    "by_role": null,
+    "group": "technology",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "frameworks": {
+    "at": null,
+    "by_role": null,
+    "campaign_id": "camp_fx_fw",
+    "group": "technology",
+    "provenance": "detected",
+    "provenance_label": "Detected by a campaign, not confirmed",
+    "value": [
+     "Laravel"
+    ]
+   },
+   "infrastructure": {
+    "at": null,
+    "by_role": null,
+    "campaign_id": "camp_fx_fw",
+    "group": "technology",
+    "provenance": "detected",
+    "provenance_label": "Detected by a campaign, not confirmed",
+    "value": [
+     "nginx",
+     "ollama"
+    ]
+   },
+   "iso27001_isms_scope": {
+    "allowed": [
+     "in_scope",
+     "out_of_scope",
+     "unknown"
+    ],
+    "at": null,
+    "by_role": null,
+    "group": "regulatory",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "languages": {
+    "at": null,
+    "by_role": null,
+    "group": "technology",
+    "provenance": "declared_by_customer",
+    "provenance_label": "Declared by the organisation",
+    "value": [
+     "PHP"
+    ]
+   },
+   "last_verification_date": {
+    "at": null,
+    "by_role": null,
+    "group": "governance",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "nis2_entity_type": {
+    "allowed": [
+     "essential",
+     "important",
+     "not_in_scope",
+     "unknown"
+    ],
+    "at": null,
+    "by_role": null,
+    "group": "regulatory",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "personal_data": {
+    "allowed": [
+     "yes",
+     "no",
+     "unknown"
+    ],
+    "at": "2026-10-20",
+    "by_role": "DPO",
+    "group": "data",
+    "provenance": "verified",
+    "provenance_label": "Declared and verified by the organisation",
+    "value": "yes"
+   },
+   "rpo": {
+    "at": null,
+    "by_role": null,
+    "group": "resilience",
+    "note": "Declared, not assessed by Darkmoon.",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "rto": {
+    "at": null,
+    "by_role": null,
+    "group": "resilience",
+    "note": "Declared, not assessed by Darkmoon.",
+    "provenance": "declared_by_customer",
+    "provenance_label": "Declared by the organisation",
+    "value": "4h"
+   },
+   "sector": {
+    "allowed": [
+     "energy",
+     "transport",
+     "banking",
+     "financial_market_infrastructure",
+     "health",
+     "drinking_water",
+     "waste_water",
+     "digital_infrastructure",
+     "ict_service_management",
+     "public_administration",
+     "space",
+     "postal_and_courier",
+     "waste_management",
+     "chemicals",
+     "food",
+     "manufacturing",
+     "digital_providers",
+     "research",
+     "other",
+     "unknown"
+    ],
+    "at": null,
+    "by_role": null,
+    "group": "regulatory",
+    "provenance": "declared_by_customer",
+    "provenance_label": "Declared by the organisation",
+    "value": "health"
+   },
+   "sla": {
+    "at": null,
+    "by_role": null,
+    "group": "resilience",
+    "note": "Declared, not assessed by Darkmoon.",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "technical_owner": {
+    "at": null,
+    "by_role": null,
+    "group": "ownership",
+    "note": "A role or team, not a person's name.",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   },
+   "user_categories": {
+    "at": null,
+    "by_role": null,
+    "group": "data",
+    "provenance": "unknown",
+    "provenance_label": "Not provided",
+    "value": null
+   }
+  },
+  "project_id": "proj_fx",
+  "provenance_counts": {
+   "declared_by_customer": 6,
+   "detected": 3,
+   "inferred": 0,
+   "unknown": 15,
+   "verified": 1
+  },
+  "reading": "Business facts come only from the organisation. Detected technologies are what the agents reported, not confirmed. Resilience figures (RTO, RPO, SLA) are declared, never assessed.",
+  "schema_version": "darkmoon-application-profile/1"
+ }
+}

@@ -78,8 +78,13 @@
     "text": "Use parameterised queries for the q parameter."
    },
    "related_attack_paths": [],
-   "related_controls": [],
-   "related_controls_note": "Control mapping is not available yet.",
+   "related_controls": [
+    "gdpr:Art.32(1)(b)-ci",
+    "iso27001:A.8.26",
+    "iso27001:A.8.28",
+    "nis2:Art.21(2)(e)"
+   ],
+   "related_controls_note": "Framework controls these findings are technical evidence for (relevance only, not an audit opinion).",
    "risk_accepted_until": {
     "provenance": null,
     "value": "unknown"
@@ -191,8 +196,13 @@
     "text": "Encode output in the comment template."
    },
    "related_attack_paths": [],
-   "related_controls": [],
-   "related_controls_note": "Control mapping is not available yet.",
+   "related_controls": [
+    "gdpr:Art.32(1)(b)-ci",
+    "iso27001:A.8.26",
+    "iso27001:A.8.28",
+    "nis2:Art.21(2)(e)"
+   ],
+   "related_controls_note": "Framework controls these findings are technical evidence for (relevance only, not an audit opinion).",
    "risk_accepted_until": {
     "provenance": null,
     "value": "unknown"
@@ -283,8 +293,11 @@
     "text": "Upgrade jQuery to a supported version."
    },
    "related_attack_paths": [],
-   "related_controls": [],
-   "related_controls_note": "Control mapping is not available yet.",
+   "related_controls": [
+    "iso27001:A.8.8",
+    "nis2:Art.21(2)(e)"
+   ],
+   "related_controls_note": "Framework controls these findings are technical evidence for (relevance only, not an audit opinion).",
    "risk_accepted_until": {
     "provenance": null,
     "value": "unknown"
@@ -385,8 +398,11 @@
     "text": null
    },
    "related_attack_paths": [],
-   "related_controls": [],
-   "related_controls_note": "Control mapping is not available yet.",
+   "related_controls": [
+    "iso27001:A.8.9",
+    "nis2:Art.21(2)(e)"
+   ],
+   "related_controls_note": "Framework controls these findings are technical evidence for (relevance only, not an audit opinion).",
    "risk_accepted_until": {
     "at": "2026-11-03T11:00:00Z",
     "by_role": "admin",

@@ -76,7 +76,9 @@ def test_one_action_many_findings_and_stable_ids():
     assert "quoted" in a["recommended_treatment"]["label"]
     assert a["status"] == "proposed" and a["owner"]["value"] == "unknown"
     assert a["approval_required"]["value"] == a["service_interruption_risk"]["value"] == "unknown"
-    assert a["related_controls"] == [] and a["dependencies"] == []
+    assert a["related_controls"] == ["gdpr:Art.32(1)(b)-ci", "iso27001:A.8.26", "iso27001:A.8.28",
+                                     "nis2:Art.21(2)(e)"]
+    assert a["dependencies"] == []
     assert "%" not in a["expected_impact"]["text"]
 
 

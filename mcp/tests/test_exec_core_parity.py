@@ -7,7 +7,8 @@
 3. exec_core stays pure: standard library only, no file, network or process access.
 4. Community: the copy vendored for the terminal explorer matches the manifest too.
 5. The other modules both editions must ship identically (``SHARED_SHA256``: coverage recorder, score adapter,
-   fix triage) match the hashes below, and so do the treatment-plan parity fixture and its test. This file itself is shipped identically, so a change in one edition only
+   fix triage) match the hashes below, and so do the treatment-plan and framework-assessment parity fixtures and
+   their tests. This file itself is shipped identically, so a change in one edition only
    fails the other edition's run once the file is copied (no cross-repository access from a test).
 
 After a deliberate change: ``python3 tests/test_exec_core_parity.py`` prints the new values (regenerate the expected
@@ -33,16 +34,18 @@ CORE = MCP / "api" / "exec_core"
 FIXTURES = MCP / "tests" / "fixtures" / "exec_core"
 VENDORED = MCP.parent / "conf" / "plugins" / "darkmoon-explorer" / "_vendor" / "exec_core"
 
-INIT_SHA256 = "df24c03b603703933970c14675ac86af3cc741601c40dbf2cce280b54cc2b177"
+INIT_SHA256 = "e7c65ae6ebdfe87d130b54340d19e8659db173028f2e6a0db707a7c4dd7b939e"
 SHARED_SHA256 = {
     "coverage_signals.py": "c800cf3d5ba6f3c873ec01b9991a35b4e43d9219b13da79d655f17366017ac64",
     "exec_score.py": "94e6bd24282becd2e382dc02556cd4ae90eea7ba5b898473516d112615b3bd94",
     "fix_triage.py": "341b8dda61b3dd080f8dcbbae9366e204e53f9211475d610cc3041e19a6a38bb",
 }
 SHARED_TESTS_SHA256 = {
-    "test_exec_core_actions.py": "0fb3cd100ae4413450473737ab0c77339d225299b16b1b955f06190323190f37",
+    "test_exec_core_actions.py": "3bea2178676f730838a1edddf68078ab0e517827488bd7be549f91b63aab049e",
+    "test_exec_core_frameworks.py": "091668ed431a5b98efc7944cc5cd3d0ef69f07483cf86333e80f262d8fd81639",
 }
-TREATMENT_FIXTURES_SHA256 = "5da6db46196f7ff78382de209280d1eddf8894e05eb60eb1abacbfad4f6de946"
+TREATMENT_FIXTURES_SHA256 = "3ea1f25ed7e7f9799f6ee0e30196f673d2b6097fdd49b998c6fd26b8676773c5"
+FRAMEWORK_FIXTURES_SHA256 = "962b3c57a2d9a5a561d61940b56e9ec412fa248492fd9df900e9d385fc228a33"
 FIXTURES_SHA256 = "40443c8253d7900390de4abf34167f6d8ae35c8c032e4fa4ca01760111c55a8d"
 
 STDLIB_ALLOWED = {"__future__", "datetime", "hashlib", "json", "math", "re", "typing", "urllib.parse"}
@@ -99,6 +102,11 @@ def test_treatment_plan_fixtures_and_tests_are_identical():
     assert _fixtures_digest(FIXTURES / "treatment") == TREATMENT_FIXTURES_SHA256
     for name, sha in SHARED_TESTS_SHA256.items():
         assert _sha(MCP / "tests" / name) == sha, f"tests/{name} differs from the other edition"
+
+
+def test_framework_assessment_fixtures_are_identical():
+    """The framework-assessment / profile parity fixture and its expected output run unchanged in both editions."""
+    assert _fixtures_digest(FIXTURES / "frameworks") == FRAMEWORK_FIXTURES_SHA256
 
 
 def _expected_for(doc):
@@ -163,4 +171,5 @@ if __name__ == "__main__":
         print(f'    "{name}": "{_sha(MCP / "tests" / name)}",')
     print("}")
     print(f'TREATMENT_FIXTURES_SHA256 = "{_fixtures_digest(FIXTURES / "treatment")}"')
+    print(f'FRAMEWORK_FIXTURES_SHA256 = "{_fixtures_digest(FIXTURES / "frameworks")}"')
     print(f'FIXTURES_SHA256 = "{_fixtures_digest()}"')
