@@ -1,5 +1,5 @@
 # Vendored from the Darkmoon redaction engine (mcp/api/evidence_redaction.py),
-# distributed here under GPL-3.0 with the rest of Darkmoon Community. Used by darkmoon_explore.py to mask
+# distributed here under AGPL-3.0 with the rest of Darkmoon Community. Used by darkmoon_explore.py to mask
 # evidence before the Terminal Explorer shows it; if it cannot load, evidence is withheld (fail closed).
 """P6 (phase B1.1) — server-side redaction of every output that carries findings,
 pull requests, reports or run logs.

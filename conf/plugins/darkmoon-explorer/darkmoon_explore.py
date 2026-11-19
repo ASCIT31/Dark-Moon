@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Darkmoon Terminal Explorer, local data adapter (Community edition, GPL-3.0).
+"""Darkmoon Terminal Explorer, local data adapter (Community edition, AGPL-3.0).
 
 Read-only. Reads the local Darkmoon JSON store and prints, on stdout, the same JSON shapes as the Pro API
 routes the TUI uses, so one renderer serves both editions. No daemon, no cache file, no write, no network,

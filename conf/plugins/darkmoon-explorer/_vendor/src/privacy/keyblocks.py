@@ -1,4 +1,4 @@
-# Vendored from Darkmoon (mcp/src/privacy/keyblocks.py), GPL-3.0 here.
+# Vendored from Darkmoon (mcp/src/privacy/keyblocks.py), AGPL-3.0 here.
 """Private-key blocks and table-cell secrets, whatever the wrapping (cycle 3, 18/11/2026).
 
 Campaign 7 incident: ``SELECT * FROM ops_secrets`` printed an OpenSSH private key as a psql TABLE CELL::

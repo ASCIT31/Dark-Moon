@@ -79,7 +79,16 @@ Rules:
 - transparency
 - security before ego
 
-## 8. Conclusion
+## 8. Licensing of Contributions
+
+Darkmoon Community is distributed under the GNU Affero General Public License v3.0 (AGPL-3.0-only).
+By opening a pull request you agree that your contribution is licensed under the same terms.
+A Contributor License Agreement (individual and corporate) is being prepared; once published, it will be
+required for new pull requests. See [LICENSING.md](LICENSING.md).
+
+---
+
+## 9. Conclusion
 
 Darkmoon is a serious project.
 
