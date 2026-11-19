@@ -15,10 +15,13 @@ Safety
 - Prioritized Treatment Plan (``plan``): the MCP server's ``api.treatment_local`` (exec_core plan + the owner's own
   declarations file ``<data>/treatments/<campaign_id>.json``, validated on read). Without the server or the redaction
   engine nothing is printed (exit 2). Read-only: statuses are never written from here.
+- Framework technical assessment (``frameworks``) and application profile (``profile``): the MCP server's
+  ``api.framework_local`` / ``api.profile_local`` (exec_core, the owner's own file ``<data>/profiles/<project_id>.json``
+  validated on read). Same fail-closed rule as ``plan``; nothing is written from here.
 
 Usage: darkmoon_explore.py [--data DIR] [--reports DIR] [--mcp DIR] <command> [args]
   projects | campaigns | campaign ID | finding ID | vulnerabilities [--project ID] [--campaign ID]
-  | report CAMPAIGN_ID | paths CAMPAIGN_ID | plan CAMPAIGN_ID
+  | report CAMPAIGN_ID | paths CAMPAIGN_ID | plan CAMPAIGN_ID | frameworks CAMPAIGN_ID | profile PROJECT_ID
 Exit codes: 0 ok, 2 not found / refused, 1 error.
 """
 from __future__ import annotations
@@ -338,6 +341,38 @@ def cmd_plan(st: Store, red, cid: str) -> dict:
     return safe_obj(doc, red)
 
 
+def cmd_frameworks(st: Store, red, cid: str) -> dict:
+    """Framework technical assessment (exec_core, through the MCP server's read model). Fail closed like ``plan``."""
+    st.campaign(cid)
+    if red is None:
+        raise NotFound("assessment withheld: the redaction engine is not available")
+    try:
+        from api.framework_local import assessment_doc  # type: ignore
+    except Exception:  # noqa: BLE001
+        raise NotFound("assessment unavailable: the Darkmoon MCP server is not installed")
+    doc = assessment_doc(cid, finding_filter=lambda v: safe_obj(v, red))
+    if doc is None:
+        raise NotFound(cid)
+    return safe_obj(doc, red)
+
+
+def cmd_profile(st: Store, red, pid: str) -> dict:
+    """Application profile: the owner's file validated on read + the detected stack. Fail closed like ``plan``."""
+    check_id(pid)
+    if not any(isinstance(p, dict) and p.get("id") == pid for p in st.projects()):
+        raise NotFound(pid)
+    if red is None:
+        raise NotFound("profile withheld: the redaction engine is not available")
+    try:
+        from api.profile_local import profile_doc  # type: ignore
+    except Exception:  # noqa: BLE001
+        raise NotFound("profile unavailable: the Darkmoon MCP server is not installed")
+    doc = profile_doc(pid)
+    if doc is None:
+        raise NotFound(pid)
+    return safe_obj(doc, red)
+
+
 # C0 controls (but tab/newline), DEL, C1 controls (8-bit CSI/OSC/DCS...) and bidi overrides: a stored title or
 # report can never drive the terminal the explorer renders in.
 _CONTROLS = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]")
@@ -387,6 +422,10 @@ def main(argv: list[str]) -> int:
             out = cmd_paths(st, red, a.arg or "")
         elif a.cmd == "plan":
             out = cmd_plan(st, red, a.arg or "")
+        elif a.cmd == "frameworks":
+            out = cmd_frameworks(st, red, a.arg or "")
+        elif a.cmd == "profile":
+            out = cmd_profile(st, red, a.arg or "")
         else:
             print(f"unknown command: {a.cmd}", file=sys.stderr)
             return 1
