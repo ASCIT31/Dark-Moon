@@ -39,6 +39,7 @@ operators who want it (`DARKMOON_PRIVACY_POLICY=strict`).
 from __future__ import annotations
 
 import os
+import ipaddress
 import re
 import shlex
 from dataclasses import dataclass, field
@@ -459,6 +460,31 @@ def _writes_key_file(tool: str, argv: Sequence[str], segment: str, creds: Sequen
         return False
     # the key may only appear as a printed argument, never as the redirect target or a format string with a %
     return not any(PLACEHOLDER_ANY_RE.search(a) and "%" in a for a in argv[1:])
+
+
+# /proc/net/{tcp,udp,tcp6,udp6} print addresses as little-endian hex (« 020014AC:1395 » = 172.20.0.2:5013), which the
+# IP patterns cannot see and a model decodes at once. In those tables (recognised by their « local_address » header)
+# the addresses are rewritten in dotted / colon notation first, so the normal IP pass turns them into placeholders.
+_PROC_NET_HEADER_RE = re.compile(r"\blocal_address\s+rem_address\b")
+_PROC_NET_V4_RE = re.compile(r"\b([0-9A-Fa-f]{8}):([0-9A-Fa-f]{4})\b")
+_PROC_NET_V6_RE = re.compile(r"\b([0-9A-Fa-f]{32}):([0-9A-Fa-f]{4})\b")
+
+
+def decode_proc_net_addresses(text: str) -> str:
+    if not text or not _PROC_NET_HEADER_RE.search(text):
+        return text
+
+    def v4(m: "re.Match[str]") -> str:
+        b = bytes.fromhex(m.group(1))[::-1]
+        return f"{b[0]}.{b[1]}.{b[2]}.{b[3]}:{int(m.group(2), 16)}"
+
+    def v6(m: "re.Match[str]") -> str:
+        h = m.group(1)
+        words = [bytes.fromhex(h[i:i + 8])[::-1].hex() for i in range(0, 32, 8)]
+        groups = [w[j:j + 4] for w in words for j in (0, 4)]
+        return f"[{str(ipaddress.IPv6Address(':'.join(groups)))}]:{int(m.group(2), 16)}"
+
+    return _PROC_NET_V4_RE.sub(v4, _PROC_NET_V6_RE.sub(v6, text))
 
 
 class CommandGateway:
@@ -971,6 +997,7 @@ class CommandGateway:
         # Strip ANSI first: colour codes glue to values and defeat the \b-anchored
         # category patterns (a coloured IP/host would otherwise leak to the model).
         out = _ANSI_STRIP_RE.sub("", text)
+        out = decode_proc_net_addresses(out)
         out = vault.register_credentials(out)
         out = vault.tokenize(out)
         # Belt-and-braces pass for values the patterns cannot match: only the
