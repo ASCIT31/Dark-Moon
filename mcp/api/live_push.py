@@ -740,7 +740,13 @@ def _push_finding_unlocked(
     finding["project_id"] = campaign.get("project_id")
     finding["target_id"] = campaign.get("target_id")
     finding["severity"] = str(finding.get("severity", "info")).strip().lower()
-    finding["status"] = str(finding.get("status", "unconfirmed")).strip().lower()
+    # an agent pushes only exploited / confirmed / unconfirmed: false_positive, quarantined, remediated… are operator
+    # decisions. Anything else is stored as unconfirmed, the agent's word kept in ``status_reported``, with a warning.
+    from api.exec_core import identity as _push_identity
+    _raw_status = finding.get("status", "unconfirmed")
+    finding["status"], status_warning = _push_identity.agent_push_status(_raw_status)
+    if status_warning:
+        finding["status_reported"] = str(_raw_status or "").strip()[:40]
 
     # `enabled_by` = earlier findings whose result this exploitation used. Resolved HERE against the
     # findings already stored (so a forward reference cannot exist): vuln_id, then a unique short_title / dedup_key /
@@ -843,6 +849,8 @@ def _push_finding_unlocked(
         "total_findings": len(vulns),
         "status": "finding_pushed",
     }
+    if status_warning:
+        result["status_warning"] = status_warning
     if enabled_warnings:
         result["enabled_by_warnings"] = enabled_warnings
     try:  # advice only: never fails a push

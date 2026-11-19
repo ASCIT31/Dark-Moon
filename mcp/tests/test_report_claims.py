@@ -16,8 +16,17 @@ def store(monkeypatch, tmp_path):
 
 def _report(findings):
     r = lp.init_live_campaign("bbbbbbbb", "app.example.test", "192.0.2.10", project_name="P")
+    operator_fp = []
     for f in findings:
-        lp.push_finding(r["campaign_id"], dict(f))
+        out = lp.push_finding(r["campaign_id"], dict(f))
+        if f.get("status") == "false_positive":   # an operator decision: an agent cannot push it (stored unconfirmed)
+            operator_fp.append(out["vuln_id"])
+    if operator_fp:
+        vs = js.load_vulnerabilities(r["campaign_id"])
+        for v in vs:
+            if v["id"] in operator_fp:
+                v["status"] = "false_positive"
+        js.save_vulnerabilities(r["campaign_id"], vs)
     camp = js.load_campaign(r["campaign_id"])
     return lp._generate_report_from_db(r["campaign_id"], camp, "")
 
