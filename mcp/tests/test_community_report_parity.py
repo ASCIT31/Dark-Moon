@@ -20,7 +20,7 @@ from api import json_storage, live_push  # noqa: E402
 CID = "camp_20261119_parity01"
 PRO_HEADINGS = ["MANAGEMENT SUMMARY", "1. EXECUTIVE SUMMARY", "2. FINDINGS TABLE", "3. VULNERABILITY DETAILS",
                 "4. REMEDIATION ROADMAP"]
-ANNEX_HEADINGS = ["REMEDIATION PRIORITIES & ATTACK PATHS", "ATTACK PATHS", "INFRASTRUCTURE MAP", "FIX FIRST",
+ANNEX_HEADINGS = ["REMEDIATION PRIORITIES & ATTACK PATHS", "ATTACK PATHS", "INFRASTRUCTURE MAP", "PRIORITIZED TREATMENT PLAN",
                   "FRAMEWORK MAPPING"]
 
 
@@ -104,7 +104,7 @@ def test_declared_only_campaign_is_never_worded_as_proven(store):
     # the diagram never draws a thick (observed / declared-ranked) arrow
     fence = paths.split("```mermaid", 1)[1].split("```", 1)[0]
     assert "==>" not in fence
-    fix = _section(md, "FIX FIRST")
+    fix = _section(md, "PRIORITIZED TREATMENT PLAN")
     assert "No attack-path ranking for this campaign" in fix and "Paths interrupted" not in fix
     # EBIOS sequences: each status is the honest per-path word, never « observed » nor a bare « proven »
     fw = _section(md, "FRAMEWORK MAPPING")
