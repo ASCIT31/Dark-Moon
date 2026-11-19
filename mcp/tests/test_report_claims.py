@@ -57,3 +57,16 @@ def test_cvss_recomputed_from_the_vector_and_reported_value_marked(store):
 def test_report_counts_match_the_one_stats_function(store):
     md = _report([F(1, "critical", "exploited"), F(2, "high", "false_positive")])
     assert "| **TOTAL** | **1** | **1** | **0** |" in md
+
+
+def test_false_positives_are_neither_listed_nor_counted(store):
+    md = _report([F(1, "high", "confirmed"), dict(F(2, "critical", "false_positive"), title="Retracted finding")])
+    assert "Retracted finding" not in md
+    assert "**Not listed:** 1 finding(s) marked false positive" in md
+    assert "| **TOTAL** | **1** |" in md
+
+
+def test_unrecognised_severities_never_read_as_no_significant_finding(store):
+    md = _report([F(1, "very high", "exploited"), F(2, "P1", "confirmed")])
+    assert "NO SIGNIFICANT FINDING" not in md and "not a proof that none exists" not in md
+    assert "SEVERITY NOT RECOGNISED" in md and "2 finding(s)" in md

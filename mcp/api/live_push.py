@@ -1098,9 +1098,11 @@ def _generate_report_from_db(
 
     # the one stats function (exec_core.stats): held (quarantined) and false-positive findings are counted
     # nowhere, so the report, the campaign record and the API give the same numbers
-    from api.exec_core import stats as _core_stats
+    from api.exec_core import identity as _identity, stats as _core_stats
     stats = _core_stats.compute_stats(vulns)
-    counted = _core_stats.split(vulns)[0]
+    # the report lists what it counts: a finding marked false positive is left out of every section (noted below)
+    fp_n = int((stats.get("excluded") or {}).get("false_positive", 0) or 0)
+    vulns = [v for v in vulns if _identity.exclusion_reason(v) is None]
     exploited = stats.get("exploited", 0)
     confirmed = stats.get("confirmed", 0)
     now = _now_iso()
@@ -1156,6 +1158,13 @@ def _generate_report_from_db(
         posture_text = (
             f"The system tested (**{host}**) has moderate security issues that should be addressed."
         )
+    elif int(stats.get("total_findings", 0) or 0) > int(stats.get("info", 0) or 0):
+        _n_unrated = int(stats.get("total_findings", 0) or 0) - int(stats.get("info", 0) or 0)
+        posture = "⚪ SEVERITY NOT RECOGNISED — Review Required"
+        posture_text = (
+            f"{_n_unrated} finding(s) on **{host}** were reported without a recognised severity level; review them "
+            "in the findings table before drawing any conclusion."
+        )
     else:
         posture = "⚪ NO SIGNIFICANT FINDING — in the tested scope"
         posture_text = (
@@ -1201,8 +1210,8 @@ def _generate_report_from_db(
     A("| Severity | Count | Exploited | Confirmed |\n|----------|-------|-----------|----------|\n")
     for s, label in [("critical","CRITICAL"),("high","HIGH"),("medium","MEDIUM"),("low","LOW"),("info","INFO")]:
         n   = stats.get(s, 0)
-        exp = sum(1 for v in counted if str(v.get("severity","")).lower()==s and v.get("status")=="exploited")
-        con = sum(1 for v in counted if str(v.get("severity","")).lower()==s and v.get("status")=="confirmed")
+        exp = int((stats.get("exploited_by_severity") or {}).get(s, 0) or 0)
+        con = sum(1 for v in vulns if _identity.severity_of(v) == s and _identity.status_of(v) == "confirmed")
         A(f"| {label} | {n} | {exp} | {con} |\n")
     A(f"| **TOTAL** | **{n_total}** | **{exploited}** | **{confirmed}** |\n\n---\n\n")
 
@@ -1273,6 +1282,9 @@ def _generate_report_from_db(
     if held:
         A("---\n\n> **Held for review:** " + str(len(held)) + " finding(s) are not included in this report: "
           "they are held by the privacy policy until an operator reviews them.\n\n")
+    if fp_n:
+        A("---\n\n> **Not listed:** " + str(fp_n) + " finding(s) marked false positive are not included in this "
+          "report nor in its counts.\n\n")
 
     # ── REMEDIATION ROADMAP ──────────────────────────────────────────
     A("---\n\n## 4. REMEDIATION ROADMAP\n\n")
