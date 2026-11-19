@@ -396,3 +396,92 @@ class FrameworkProfileTests(unittest.TestCase):
         os.symlink(outside, d / "p1.json")
         p = json.loads(self.cmd("profile", "p1").stdout)
         self.assertEqual(p["declarations"]["status"], "unreadable")
+
+
+class ExecutiveTests(unittest.TestCase):
+    """``executive`` (campaign / ``--project``) and ``legend``: exec_core documents, read-only, redacted, fail closed;
+    Darkmoon's own catalogue texts are never masked while evidence still is."""
+
+    setUp = AdapterTests.setUp
+    tearDown = AdapterTests.tearDown
+    MCP = LocalEngineTests.MCP
+    cmd = FrameworkProfileTests.cmd
+
+    def test_help_lists_every_command(self):
+        out = io.StringIO()
+        with redirect_stdout(out), self.assertRaises(SystemExit):
+            dx.main(["--help"])
+        for c in ("plan CAMPAIGN_ID", "frameworks CAMPAIGN_ID", "profile PROJECT_ID", "executive CAMPAIGN_ID",
+                  "executive --project PROJECT_ID", "legend"):
+            self.assertIn(c, out.getvalue())
+
+    def test_legend_needs_no_data(self):
+        code, out, _ = run(self.root, "legend")
+        self.assertEqual(code, 0)
+        d = json.loads(out)
+        self.assertEqual(d["path_kind"]["possible"]["label"], "Possible Attack Path")
+        self.assertEqual(d["path_kind"]["evidence_backed"]["label"], "Evidence-Backed Attack Path")
+
+    def test_fail_closed_without_server_or_redaction(self):
+        self.assertEqual(run(self.root, "executive", "c1")[0], 2)            # --mcp /nonexistent: no executive module
+        real = dx.load_redaction
+        dx.load_redaction = lambda *_: None
+        self.addCleanup(setattr, dx, "load_redaction", real)
+        for args in (("executive", "c1"), ("executive", "--project", "p1")):
+            code, out, err = run(self.root, *args)
+            self.assertEqual((code, out), (2, ""), args)
+            self.assertIn("withheld", err)
+        self.assertEqual(run(self.root, "executive", "../etc")[0], 2)
+        self.assertEqual(run(self.root, "executive", "--project", "nope")[0], 2)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_campaign_block(self):
+        r = self.cmd("executive", "c1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        self.assertEqual(d["schema_version"], "darkmoon-executive/1")
+        self.assertEqual((d["score"]["score_status"], d["score"]["score"], d["score"]["status_label"]), ("not_rated", None, "Not rated"))
+        self.assertLessEqual(len(d["treatment_plan"]["top_actions"]), 3)
+        self.assertEqual(d["attack_paths"]["evidence_backed"], 0)      # Community: declared paths stay possible
+        self.assertTrue(d["frameworks"]["summary_line"])
+        self.assertNotIn("compliant", r.stdout.lower())
+        self.assertNotIn(SECRET, r.stdout)
+        self.assertFalse((self.root / "treatments").exists() or (self.root / "profiles").exists())   # read-only
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_project_block(self):
+        r = self.cmd("executive", "--project", "p1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        self.assertEqual(d["schema_version"], "darkmoon-project-executive/1")
+        self.assertIsNone(d["reference_campaign_id"])                    # no rated full campaign in this store
+        self.assertEqual(d["latest_campaign"]["campaign_id"], "c1")
+        self.assertEqual(d["plan_campaign_id"], "c1")
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_catalogue_text_kept_evidence_masked(self):
+        """The ISO A.8.5 description (« Login and session handling: authentication bypass… ») reads like a credential
+        pair to the redaction engine: it is Darkmoon's own text and is shown as written; the secret is still masked."""
+        vulns = json.loads((self.root / "vulnerabilities" / "c1.json").read_text())
+        vulns.append({"id": "v3", "title": "Login bypass", "severity": "high", "status": "confirmed",
+                      "category": "authentication_bypass", "endpoint": "http://10.0.0.5/login",
+                      "description": f"default credentials admin:{SECRET}"})
+        (self.root / "vulnerabilities" / "c1.json").write_text(json.dumps(vulns))
+        r = self.cmd("frameworks", "c1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        a85 = next(c for f in d["frameworks"] for c in f["controls"] if c["key"] == "iso27001:A.8.5")
+        self.assertIn("authentication bypass", a85["text"])
+        self.assertNotIn("redacted", a85["text"])
+        self.assertNotIn(SECRET, r.stdout)
+
+    def test_report_keeps_catalogue_cells_and_masks_secrets(self):
+        a85 = "Login and session handling: authentication bypass, brute-force resistance, session token handling."
+        (self.root / "reports" / "r1.md").write_text(
+            "# Report\n\n| Control | State | Findings | What a test observes / why |\n|---|---|---|---|\n"
+            f"| A.8.5 | Weakness observed | 6 | {a85} |\n\npassword={SECRET}\n")
+        code, out, _ = run(self.root, "report", "c1")
+        self.assertEqual(code, 0)
+        content = json.loads(out)["content"]
+        self.assertIn(f"| {a85} |", content)
+        self.assertNotIn(SECRET, content)
