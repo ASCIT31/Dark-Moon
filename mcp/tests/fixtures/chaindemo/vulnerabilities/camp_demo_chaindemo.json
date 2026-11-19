@@ -1,0 +1,294 @@
+[
+  {
+    "id": "vuln_reg01",
+    "severity": "high",
+    "cvss_score": 7.3,
+    "status": "exploited",
+    "category": "broken_authentication",
+    "description": "Synthetic finding for the chain-data demo.",
+    "endpoint": "https://forge.demo.test/user/sign_up",
+    "discovered_by_agent": "nodejs",
+    "remediation": "Disable public sign-up or require admin approval.",
+    "evidence": {
+      "commands": [],
+      "payloads": [],
+      "raw_request": "",
+      "raw_response": "",
+      "extracted_data": null,
+      "screenshots": [],
+      "logs": [],
+      "explanation": ""
+    },
+    "title": "Open user registration",
+    "node_id": "forge-web",
+    "produced_artifacts": [
+      {
+        "ref": "98d692e90d431334",
+        "type": "token",
+        "privilege": "user"
+      }
+    ],
+    "dedup_key": "open-registration:/user/sign_up",
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a",
+    "dedup_group_id": "dup_94a539316fc0"
+  },
+  {
+    "id": "vuln_reg02",
+    "severity": "medium",
+    "cvss_score": 5.3,
+    "status": "exploited",
+    "category": "authentication_bypass",
+    "description": "Synthetic finding for the chain-data demo.",
+    "endpoint": "https://forge.demo.test/user/sign_up",
+    "discovered_by_agent": "headless-browser",
+    "remediation": "Synthetic.",
+    "evidence": {
+      "commands": [],
+      "payloads": [],
+      "raw_request": "",
+      "raw_response": "",
+      "extracted_data": null,
+      "screenshots": [],
+      "logs": [],
+      "explanation": ""
+    },
+    "title": "Self sign-up allowed without approval",
+    "node_id": "forge-web",
+    "dedup_key": "open-registration:/user/sign_up",
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a",
+    "dedup_group_id": "dup_94a539316fc0",
+    "duplicate_of": "vuln_reg01"
+  },
+  {
+    "id": "vuln_adm01",
+    "severity": "critical",
+    "cvss_score": 9.1,
+    "status": "exploited",
+    "category": "broken_access_control",
+    "description": "Synthetic finding for the chain-data demo.",
+    "endpoint": "https://forge.demo.test/api/v1/admin/users",
+    "discovered_by_agent": "nodejs",
+    "remediation": "Synthetic.",
+    "evidence": {
+      "commands": [],
+      "payloads": [],
+      "raw_request": "",
+      "raw_response": "",
+      "extracted_data": null,
+      "screenshots": [],
+      "logs": [],
+      "explanation": ""
+    },
+    "title": "Admin API lists every user (missing role check)",
+    "node_id": "forge-api",
+    "prerequisites": [
+      {
+        "artifact_ref": "98d692e90d431334",
+        "produced_by_finding_id": "vuln_reg01"
+      }
+    ],
+    "negative_control": {
+      "unauthenticated_reproducible": false,
+      "proof_ref": "HTTP 401 without the token"
+    },
+    "reached_assets": [
+      {
+        "node_id": "forge-db",
+        "access": "db_read",
+        "proof_ref": "raw_response: 3 user rows"
+      }
+    ],
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  },
+  {
+    "id": "vuln_rep01",
+    "severity": "high",
+    "cvss_score": 7.7,
+    "status": "exploited",
+    "category": "broken_access_control",
+    "description": "Synthetic finding for the chain-data demo.",
+    "endpoint": "https://forge.demo.test/api/v1/repos/search?private=true",
+    "discovered_by_agent": "nodejs",
+    "remediation": "Synthetic.",
+    "evidence": {
+      "commands": [],
+      "payloads": [],
+      "raw_request": "",
+      "raw_response": "",
+      "extracted_data": null,
+      "screenshots": [],
+      "logs": [],
+      "explanation": ""
+    },
+    "title": "Private repositories readable by any account",
+    "node_id": "forge-api",
+    "prerequisites": [
+      {
+        "artifact_ref": "98d692e90d431334"
+      }
+    ],
+    "negative_control": {
+      "unauthenticated_reproducible": false,
+      "proof_ref": "HTTP 404 without the token"
+    },
+    "reached_assets": [
+      {
+        "node_id": "forge-repos",
+        "access": "file_read",
+        "proof_ref": "raw_response: repo listing"
+      }
+    ],
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  },
+  {
+    "id": "vuln_hook01",
+    "severity": "high",
+    "cvss_score": 8.2,
+    "status": "exploited",
+    "category": "ssrf",
+    "description": "Synthetic finding for the chain-data demo.",
+    "endpoint": "https://forge.demo.test/api/v1/repos/x/hooks",
+    "discovered_by_agent": "nodejs",
+    "remediation": "Synthetic.",
+    "evidence": {
+      "commands": [],
+      "payloads": [],
+      "raw_request": "",
+      "raw_response": "",
+      "extracted_data": null,
+      "screenshots": [],
+      "logs": [],
+      "explanation": ""
+    },
+    "title": "Webhook SSRF to the metadata service",
+    "node_id": "forge-api",
+    "prerequisites": [
+      {
+        "artifact_ref": "98d692e90d431334"
+      }
+    ],
+    "negative_control": {
+      "unauthenticated_reproducible": false
+    },
+    "reached_assets": [
+      {
+        "node_id": "metadata-svc",
+        "access": "ssrf_response",
+        "proof_ref": "raw_response: instance-id"
+      }
+    ],
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a",
+    "chain_data_warnings": [
+      "prerequisites[0]: raw secret received, hashed server-side and discarded"
+    ]
+  },
+  {
+    "id": "vuln_pkg01",
+    "severity": "high",
+    "cvss_score": 7.0,
+    "status": "exploited",
+    "category": "information_disclosure",
+    "description": "Synthetic finding for the chain-data demo.",
+    "endpoint": "https://forge.demo.test/api/packages",
+    "discovered_by_agent": "nodejs",
+    "remediation": "Synthetic.",
+    "evidence": {
+      "commands": [],
+      "payloads": [],
+      "raw_request": "",
+      "raw_response": "",
+      "extracted_data": null,
+      "screenshots": [],
+      "logs": [],
+      "explanation": ""
+    },
+    "title": "Package index leaks internal versions",
+    "node_id": "forge-api",
+    "prerequisites": [
+      {
+        "artifact_ref": "98d692e90d431334"
+      }
+    ],
+    "negative_control": {
+      "unauthenticated_reproducible": true,
+      "proof_ref": "same 200 without the token"
+    },
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  },
+  {
+    "id": "vuln_sqli01",
+    "severity": "critical",
+    "cvss_score": 9.8,
+    "status": "exploited",
+    "category": "sql_injection",
+    "description": "Synthetic finding for the chain-data demo.",
+    "endpoint": "https://forge.demo.test/explore/search?q=",
+    "discovered_by_agent": "nodejs",
+    "remediation": "Synthetic.",
+    "evidence": {
+      "commands": [],
+      "payloads": [],
+      "raw_request": "",
+      "raw_response": "",
+      "extracted_data": null,
+      "screenshots": [],
+      "logs": [],
+      "explanation": ""
+    },
+    "title": "SQL injection in public search",
+    "node_id": "forge-web",
+    "prerequisites": [
+      {
+        "kind": "anonymous"
+      }
+    ],
+    "reached_assets": [
+      {
+        "node_id": "forge-db",
+        "access": "db_read",
+        "proof_ref": "raw_response: version() + rows"
+      }
+    ],
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  },
+  {
+    "id": "vuln_hdr01",
+    "severity": "low",
+    "cvss_score": 3.1,
+    "status": "confirmed",
+    "category": "security_misconfiguration",
+    "description": "Synthetic finding for the chain-data demo.",
+    "endpoint": "https://forge.demo.test/",
+    "discovered_by_agent": "nodejs",
+    "remediation": "Synthetic.",
+    "evidence": {
+      "commands": [],
+      "payloads": [],
+      "raw_request": "",
+      "raw_response": "",
+      "extracted_data": null,
+      "screenshots": [],
+      "logs": [],
+      "explanation": ""
+    },
+    "title": "Missing Content-Security-Policy",
+    "node_id": "forge-web",
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  }
+]

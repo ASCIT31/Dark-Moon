@@ -1,0 +1,81 @@
+[
+  {
+    "id": "target_tgt_60f37a",
+    "node_type": "target",
+    "label": "forge.demo.test",
+    "title": "forge.demo.test",
+    "host": "forge.demo.test",
+    "ip": "10.99.0.10",
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  },
+  {
+    "id": "forge-host",
+    "node_type": "host",
+    "label": "forge.demo.test",
+    "host": "forge.demo.test",
+    "technology": "Linux",
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  },
+  {
+    "id": "forge-web",
+    "node_type": "application",
+    "label": "Forge web app",
+    "host": "forge.demo.test",
+    "port": 443,
+    "technology": "Forge 1.20",
+    "parent_node_id": "forge-host",
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  },
+  {
+    "id": "forge-api",
+    "node_type": "endpoint",
+    "label": "Admin API /api/v1/admin",
+    "host": "forge.demo.test",
+    "port": 443,
+    "technology": "REST",
+    "parent_node_id": "forge-web",
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  },
+  {
+    "id": "forge-repos",
+    "node_type": "file_exposed",
+    "label": "Private repositories",
+    "host": "forge.demo.test",
+    "technology": "git",
+    "parent_node_id": "forge-web",
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  },
+  {
+    "id": "forge-db",
+    "node_type": "service_internal",
+    "label": "Users database",
+    "host": "forge.demo.test",
+    "port": 5432,
+    "technology": "PostgreSQL",
+    "parent_node_id": "forge-host",
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  },
+  {
+    "id": "metadata-svc",
+    "node_type": "service_internal",
+    "label": "Internal metadata service",
+    "host": "169.254.169.254",
+    "technology": "HTTP",
+    "parent_node_id": "forge-host",
+    "campaign_id": "camp_demo_chaindemo",
+    "project_id": "proj_4f1835",
+    "target_id": "tgt_60f37a"
+  }
+]
