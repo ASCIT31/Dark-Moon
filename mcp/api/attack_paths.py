@@ -56,7 +56,7 @@ SCHEMA_VERSION = "darkmoon-attack-paths/v1"
 # additive revisions: 1.1 insights (critical assets, choke points, blast radius, toxic combinations, per-edge
 # technique/proof); 1.2 the single « Fix first » (fix_first) and the secondary triage view (api/fix_triage.py);
 # 1.3 provenance « inferred » (hypotheses from topology + findings, api/attack_paths_inferred.py); additive, same
-# revision: observed_links (two columns « usage » / « necessity » per observed link, docs/research/observed-paths.md)
+# revision: observed_links (two columns « usage » / « necessity » per observed link, 
 SCHEMA_REVISION = "1.3"
 SIMULATION_LABEL = "SIMULATION · not applied"
 PROVENANCES = ("declared", "derived", "observed", "inferred", "agent-declared")
@@ -70,11 +70,11 @@ DECLARED_PROVENANCES = ("declared", AGENT_DECLARED)
 # 40-paths-v2 (CONTRACT.md): levels of a link / of a path built from links, weakest first. R1-R3 server rules keep the
 # level « observed »; « summary.proven_paths » counts paths whose every link is at least an observed flow.
 DECLARED_UNVERIFIED, OBSERVED_FLOW, CAUSAL = "declared_unverified", "observed_flow", "causal_necessity_demonstrated"
-# architecture D (CONTRACT-D.md): a declared link the server did not qualify is « declared_by_agent » (the paths-v2 value
+# architecture D: a declared link the server did not qualify is « declared_by_agent » (the paths-v2 value
 # declared_unverified is read the same, for documents and tests of that version)
 DECLARED_BY_AGENT = "declared_by_agent"
 _DECLARED_LEVELS = (DECLARED_BY_AGENT, DECLARED_UNVERIFIED)
-# architecture D final review (reports/52-arch-d-final-review/R2-ISOLATION.md): an R2 link (open registration matched by
+# architecture D final review: an R2 link (open registration matched by
 # endpoint) is a historical INFERENCE: a path resting on one is provenance « inferred », a hypothesis, never proven
 INFERRED_LEVEL = "inferred"
 R2_PATH_NOTE = ("Inferred · not proven: at least one step rests on the historical server rule R2 (an open registration "
@@ -319,12 +319,12 @@ def _analyse(campaign: Dict[str, Any], nodes: List[Dict[str, Any]], edges: List[
     for s in server.get("scenarios") or []:
         prov = "declared" if s.get("source") == "attack_chains_block" else "derived"
         if prov == "declared" and not campaign.get("demo") and not feature_flags.enabled("DM_FINALIZE_CHAINS_AS_PATHS"):
-            # architecture D (CONTRACT-D.md): the end-of-campaign narrative (ATTACK_CHAINS block) is report text only;
+            # architecture D: the end-of-campaign narrative (ATTACK_CHAINS block) is report text only;
             # paths are assembled from the per-finding declarations (enabled_by). The labelled DEMO keeps its chains;
             # DM_FINALIZE_CHAINS_AS_PATHS=1 restores the paths-v2 behaviour (rollback).
             continue
         steps = [{"node_id": st["node_id"], "satisfied_by": [list(a) for a in st["satisfied_by"]], "rationale": st.get("rationale") or ""} for st in s["steps"]]
-        # final pass (owner): a chain DECLARED at finalisation (ATTACK_CHAINS block) links its steps by the agent's word,
+        # a chain DECLARED at finalisation (ATTACK_CHAINS block) links its steps by the agent's word,
         # exactly like enabled_by — never proven, whatever its steps' status. When every step is exploited / confirmed
         # it gets the stronger label (DECLARED_CHAIN_LABEL); proven stays server-verified only (observed R1-R3 / verified D, derived
         # corroborated). The labelled synthetic DEMO keeps its documented paths.
@@ -534,7 +534,7 @@ def _ranking(a: Dict[str, Any]) -> Dict[str, Any]:
     off_path = [{"finding_id": o["id"], "reason": o["reason"], "reason_label": OFF_PATH_REASON_LABELS[o["reason"]]} for o in result.get("off_path") or []]
     common = {"provenance": label, "gate_reason": gate["reason"], "off_path": off_path,
               "multi_fix_path_ids": sorted(pid(s) for s in result.get("multi_fix_scenario_ids") or []),
-              # owner RELEASE GATE: routes with no admissible (certified) correction, and findings whose actionability
+              # RELEASE GATE: routes with no admissible (certified) correction, and findings whose actionability
               # is indeterminate (leads to investigate, never certified coverage) — surfaced so the UI/report can show
               # « no established actionable remediation » instead of recommending a consequence.
               "paths_without_established_fix": sorted(pid(s) for s in result.get("paths_without_established_fix") or []),
@@ -566,7 +566,7 @@ _ARTEFACT_LABELS = {"jwt": "JWT", "basic-auth": "Basic credentials", "vendor-key
                     "private-key": "Private key", "hex-secret": "Secret", "labeled-secret": "Secret",
                     "credential": "Credential"}
 _STATUS_WORD = {"exploited": "exploited", "confirmed": "confirmed"}
-# the two columns of an observed link (docs/research/observed-paths.md); never stronger than what the server saw
+# the two columns of an observed link; never stronger than what the server saw
 USAGE_LABELS = {"observed": "Usage observed by the server", "evidence": "Shown in the finding evidence (server rule)"}
 R2_USAGE_LABEL = "Inferred by a historical server rule (open registration matched by endpoint) · not proven"
 NECESSITY_LABELS = {"demonstrated": "Necessity demonstrated (refused without it, accepted with it)",

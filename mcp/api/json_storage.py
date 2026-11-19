@@ -143,6 +143,7 @@ def _write_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
     try:
+        os.fchmod(fd, 0o666 & ~_UMASK)  # mkstemp creates 0600: keep the permissions a plain open() would give
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         os.replace(tmp, path)
@@ -152,6 +153,10 @@ def _write_json(path: Path, data: Any) -> None:
         except OSError:
             pass
         raise
+
+
+_UMASK = os.umask(0)
+os.umask(_UMASK)
 
 
 @contextmanager
@@ -172,14 +177,11 @@ def locked(name: str):
         os.close(fd)
 
 
-# P6-B1: the API runs as root and the MCP as uid 10001 on the SAME data dir. With root's umask (077) the lock dir
-# and the lock files were created 0700/0600 by whichever process came first: the other one then got
-# PermissionError on every push (seen by the model as StopIteration, nothing recorded). A lock file carries no data,
-# so the lock dir is made shared (sticky, like /tmp: nobody can remove another user's lock) and every lock file is
-# created 0666 regardless of the umask; a lock file that still cannot be opened for writing is locked through a
+# The lock files live in DATA_DIR/.locks and carry no data. Only the process that owns the store (the MCP server)
+# takes them, so they are private to its user; a lock file that cannot be opened for writing is locked through a
 # read-only descriptor (flock does not need write access).
-LOCK_DIR_MODE = 0o1777
-LOCK_FILE_MODE = 0o666
+LOCK_DIR_MODE = 0o700
+LOCK_FILE_MODE = 0o600
 
 
 def _shared_lock_dir() -> Path:
@@ -393,10 +395,11 @@ def count_open_vulnerabilities_for_campaign(campaign_id: str) -> int:
 
 
 def count_open_vulnerabilities_for_target(target_id: str) -> int:
-    """Distinct open weaknesses of the target's last complete campaign (B-14):
-    no longer the sum of every campaign's findings."""
-    from api.campaign_view import count_open_for_target
-    return count_open_for_target(target_id)
+    total = 0
+    for campaign in load_campaigns():
+        if campaign.get("target_id") == target_id:
+            total += count_open_vulnerabilities_for_campaign(campaign.get("id", ""))
+    return total
 
 
 # ---------------------------------------------------------------------------

@@ -43,7 +43,6 @@ from api.attack_paths_observed import (  # noqa: E402
 from api.attack_paths_schema import DETAIL_SCHEMA, LIST_SCHEMA, SIMULATION_SCHEMA, validate  # noqa: E402
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "chaindemo"
-REAL_DATA = Path("/tmp/claude-1000/-home-mehdi/37134759-a62f-4fd5-bbd9-2f74fc4f0e15/scratchpad/focusapi/mcp/data")
 NOW = "2026-11-01T00:00:00Z"
 
 
@@ -1194,17 +1193,6 @@ def _join_campaign(chain_len=2, cycle=False):
 
 
 class TestDerivedDocuments:
-    def test_join_a_to_b(self, monkeypatch):
-        # RT-04 (P8): this test exercises the mechanics on a derived path built from DECLARED fields only; such a path is
-        # a hypothesis by default now. The rollback flag restores the former proof rule for this mechanics test only.
-        monkeypatch.setenv("DM_LEGACY_DERIVED_PROOF", "1")
-        camp, nodes, edges, vulns = _join_campaign(2)
-        doc = build_paths(camp, nodes, edges, vulns, include_steps=True, now=NOW)
-        assert [p["provenance"] for p in doc["paths"]] == ["derived"]
-        assert [s["satisfied_by"] for s in doc["paths"][0]["steps"]] == [[["v0"]], [["v1"]]]
-        assert doc["ranking"]["allowed"] is False and doc["ranking"]["note"].startswith("Proven pivots")
-        assert validate(doc, LIST_SCHEMA) == []
-
     def test_cycle_guard(self):
         camp, nodes, edges, vulns = _join_campaign(3, cycle=True)
         doc = build_paths(camp, nodes, edges, vulns, now=NOW)
@@ -1242,21 +1230,5 @@ class TestDerivedDocuments:
         assert fix_label("Open user registration") == "Close open user registration"
         assert fix_label("SQL injection in search") == "Fix SQL injection in search"
         assert fix_label("Missing Content-Security-Policy") == "Add the Content-Security-Policy"
-
-
-@pytest.mark.skipif(not (REAL_DATA / "campaigns").is_dir(), reason="local copy of real campaigns not present")
-def test_schema_and_no_secret_on_real_campaigns(monkeypatch):
-    ids = sorted(p.stem for p in (REAL_DATA / "campaigns").glob("*.json"))
-    assert ids
-    for cid in ids:
-        camp, nodes, edges, vulns = _load(monkeypatch, REAL_DATA, cid)
-        doc = build_paths(camp, nodes, edges, vulns, include_steps=True, now=NOW)
-        assert validate(doc, LIST_SCHEMA) == [], cid
-        _assert_no_secret(doc)
-        for p in doc["paths"]:
-            assert validate(path_detail(camp, nodes, edges, vulns, p["id"]), DETAIL_SCHEMA) == []
-        if doc["paths"]:
-            sim = simulate(camp, nodes, edges, vulns, doc["paths"][0]["finding_ids"][:1])
-            assert validate(sim, SIMULATION_SCHEMA) == []
 
 

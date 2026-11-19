@@ -673,8 +673,25 @@ def dashboard_init_campaign(
 
 # Attack paths: earlier findings whose result this exploitation used. Stored as declared by the agent; the
 # attack-path view shows them as hypotheses, never as proof (api/declared_links.py, api/attack_paths.py).
-_ENABLED_BY = ("Optional: findings of this campaign whose result this exploitation used (token, credential or access "
-               "obtained there), by vuln_id, dedup_key, short_title or exact endpoint. Leave empty when it used none.")
+_ENABLED_BY = ("Optional: list of findings of this campaign whose result this exploitation used (token, credential "
+               "or access obtained there), by vuln_id (as returned by the push), exact title or exact endpoint. "
+               "Leave empty when it used none.")
+
+
+def _enabled_by_refs(value: Any) -> List[str]:
+    """At most 16 non-empty references of at most 120 characters, whatever shape the model sent."""
+    items = value if isinstance(value, (list, tuple)) else [value]
+    flat: List[Any] = []
+    for x in items:
+        flat.extend(x if isinstance(x, (list, tuple)) else [x])
+    out: List[str] = []
+    for x in flat:
+        if x is None or isinstance(x, (dict, bool)):
+            continue
+        ref = str(x).strip()[:120]
+        if ref and ref not in out:
+            out.append(ref)
+    return out[:16]
 
 
 @mcp.tool()
@@ -701,7 +718,8 @@ def dashboard_push_finding(
     plugin_or_component: Optional[str] = None,
     raw_request: Optional[str] = None,
     raw_response: Optional[str] = None,
-    enabled_by: Annotated[Optional[List[str]], Field(description=_ENABLED_BY)] = None,
+    # Any: a malformed value (a bare string, numbers, nested lists) must never make the tool reject the whole finding
+    enabled_by: Annotated[Optional[Any], Field(description=_ENABLED_BY)] = None,
 ) -> Dict[str, Any]:
     """
     Push a single vulnerability finding to the Darkmoon Dashboard in real-time.
@@ -791,7 +809,7 @@ def dashboard_push_finding(
             __import__("datetime").timezone.utc
         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
-    refs = [str(x).strip()[:120] for x in (enabled_by or []) if str(x).strip()][:16]
+    refs = _enabled_by_refs(enabled_by)
     if refs:
         finding["enabled_by"] = refs
 

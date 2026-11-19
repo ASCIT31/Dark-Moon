@@ -1,5 +1,5 @@
 """
-Edge verification of declared links (40-paths-v2, architecture C — reports/40-paths-v2/CONTRACT.md).
+Edge verification of declared links (40-paths-v2, architecture C).
 
 The agent declares (``enabled_by`` + ``evidence_execution_ids``); the server's own execution records decide. Pure
 functions, stdlib only, no I/O:
@@ -338,7 +338,7 @@ def _necessity(fp: str, eb: Dict[str, Any], keys: List[str], run: List[Dict[str,
 
 
 # ---------------------------------------------------------------------------------------------------- architecture D
-# reports/51-architecture-d-implementation/CONTRACT-D.md. The agent declares the link (B.enabled_by contains A); the
+# . The agent declares the link (B.enabled_by contains A); the
 # server shows it at once as « declared by the agent » and may QUALIFY it, at zero token, only by exact value
 # attribution: a value v (salted fingerprint) that A's and B's OWN pushed evidence present in full, produced by one
 # recorded execution e_a and consumed FROM it by a successful recorded execution e_b. Session identity and chronology
@@ -382,7 +382,7 @@ def _same(f: Dict[str, Any], ids: Set[str]) -> bool:
 
 def qualify_edge(a: Dict[str, Any], b: Dict[str, Any], ledger: Any, findings: Optional[List[Dict[str, Any]]] = None,
                  sessions: Optional[int] = None) -> Tuple[str, Optional[str], Dict[str, Any]]:
-    """State of the declared link A -> B under CONTRACT-D: (``declared_by_agent`` + reason) | ``observed_flow`` |
+    """State of the declared link A -> B under architecture D: (``declared_by_agent`` + reason) | ``observed_flow`` |
     ``causal_necessity_demonstrated``, with evidence refs. ``a`` / ``b``: findings with ``id``, ``run_id``,
     ``push_seq``, ``value_fps`` (server-computed at push), ``status``, ``enabled_by``. ``ledger``: contract execution
     records (or ``{"executions", "findings"}``). ``findings``: every finding of the campaign (« several possible
@@ -397,7 +397,7 @@ def qualify_edge(a: Dict[str, Any], b: Dict[str, Any], ledger: Any, findings: Op
     if (a_id == b_id or a.get("duplicate_of") or b.get("duplicate_of")
             or (a.get("dedup_key") and a.get("dedup_key") == b.get("dedup_key"))):
         return DECLARED_BY_AGENT, "duplicate_finding", {}
-    # CONTRACT-D final-review clarification: an edge is qualified on ITS OWN evidence only. Belonging to a declared
+    # architecture D final-review clarification: an edge is qualified on ITS OWN evidence only. Belonging to a declared
     # cycle never demotes it (a cycle is a property of the declared graph, reported by path assembly, never walked).
     if any(str(f.get("status") or "").strip().lower() in NOT_LIVE for f in (a, b)):
         return DECLARED_BY_AGENT, "finding_not_live", {}
@@ -407,7 +407,7 @@ def qualify_edge(a: Dict[str, Any], b: Dict[str, Any], ledger: Any, findings: Op
     pa, pb = _push(a), _push(b)
     if not run or run != b.get("run_id") or pa is None or pb is None:
         return DECLARED_BY_AGENT, "missing_data", {}
-    # a record without an id (missing, empty or blank) is never a link end (CONTRACT-D clarification K2)
+    # a record without an id (missing, empty or blank) is never a link end (architecture D clarification K2)
     execs = [_exec(e) for e in raw if isinstance(e, dict) and str(e.get("execution_id") or "").strip()]
     seen: Dict[str, int] = {}
     for e in execs:

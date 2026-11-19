@@ -157,3 +157,109 @@ def test_report_checks_links_in_push_order_not_severity_order(store):
     report = live_push._generate_report_from_db(CID, json_storage.load_campaign(CID), "summary")
     section = report[report.index("## 5. ATTACK PATHS AND DECLARED LINKS"):]
     assert "forward" not in section and "Declared by the agent · not verified by the server" in section
+
+
+JWT = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiJ9.Qm9ndXNTaWduYXR1cmVYWFhYWFhYWFg"
+
+
+def _push_ev(title, cat, ep, req, resp, enabled_by=None):
+    f = {"title": title, "severity": "critical", "status": "exploited", "category": cat, "endpoint": ep,
+         "evidence": {"commands": [f"curl -H 'Authorization: Bearer {JWT}' {ep}"], "raw_request": req,
+                      "raw_response": resp, "logs": [], "extracted_data": None}}
+    if enabled_by:
+        f["enabled_by"] = enabled_by
+    return live_push.push_finding(CID, f)
+
+
+@pytest.mark.parametrize("declare", [False, True])
+def test_a_value_shared_by_two_agent_written_evidences_is_never_a_proof(store, declare):
+    # the same token in the response of one finding and the request of another: written by the agent, not observed
+    from api.attack_paths_local import attack_paths_doc
+    a = _push_ev("SQL injection in login", "sql_injection", "/api/login", "user=' OR 1=1--", '{"token":"%s"}' % JWT)
+    _push_ev("Admin panel access", "broken_access_control", "/admin/users",
+             f"GET /admin/users\nAuthorization: Bearer {JWT}", "[{\"user\":\"root\"}]",
+             enabled_by=[a["vuln_id"]] if declare else None)
+    doc = attack_paths_doc(CID)
+    assert doc["summary"]["proven_paths"] == 0
+    assert all(p["hypothesis"] is True for p in doc["paths"])
+    assert not [l for l in doc.get("observed_links") or [] if l.get("kind") in ("R1", "R2", "R3")]
+    assert JWT not in __import__("json").dumps(doc)  # evidence text never reaches the path document
+    report = live_push._generate_report_from_db(CID, json_storage.load_campaign(CID), "s")
+    if declare:
+        section = report[report.index("## 5."):]
+        assert not re.search(r"proven by the server", section, re.I)
+
+
+def test_evidence_counts_survive_without_the_text(store):
+    from api.attack_paths_local import attack_paths_doc
+    a = _push("Default credentials")
+    _push("Authenticated RCE", enabled_by=[a["vuln_id"]])
+    vulns = json_storage.load_vulnerabilities(CID)
+    vulns[0]["evidence"] = {"commands": ["c1", "c2"], "raw_request": "GET /", "extracted_data": "x"}
+    json_storage.save_vulnerabilities(CID, vulns)
+    doc = attack_paths_doc(CID)
+    metas = [f["evidence_meta"] for p in doc["paths"] for s in p.get("steps") or [] for f in s.get("findings") or []
+             if f.get("id") == a["vuln_id"]]
+    assert metas and metas[0] == {"commands": 2, "requests": 1, "has_extracted_data": True}
+
+
+def test_a_repush_that_changes_the_finding_keeps_both_versions(store):
+    a = _push("Default credentials")
+    first = _push("Admin upload", status="confirmed")
+    again = live_push.push_finding(CID, {"title": "Admin upload", "severity": "critical", "status": "exploited",
+                                         "category": "admin_upload", "endpoint": "/adminupload",
+                                         "evidence": {"commands": ["new proof"]}, "enabled_by": [a["vuln_id"]]})
+    assert again["status"] == "finding_pushed" and again["vuln_id"] != first["vuln_id"]
+    stored = {v["id"]: v for v in json_storage.load_vulnerabilities(CID)}
+    assert stored[again["vuln_id"]]["status"] == "exploited" and stored[again["vuln_id"]]["severity"] == "critical"
+    assert stored[first["vuln_id"]]["status"] == "confirmed"
+
+
+def test_section_5_lists_links_even_if_the_path_engine_fails(store, monkeypatch):
+    import api.attack_paths_local as apl
+    a = _push("Default credentials")
+    _push("Authenticated RCE", enabled_by=[a["vuln_id"]])
+    monkeypatch.setattr(apl, "attack_paths_doc", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("engine bug")))
+    report = live_push._generate_report_from_db(CID, json_storage.load_campaign(CID), "s")
+    assert "Declared by the agent · not verified by the server" in report[report.index("## 5."):]
+
+
+def test_init_with_a_crafted_session_id_writes_nothing(store):
+    def files():
+        return sorted(p.name for p in store.rglob("*") if ".locks" not in p.parts)
+    before = files()
+    r = live_push.init_live_campaign(session_id="../../x", target_host="h.test", target_ip="10.0.0.9")
+    assert "error" in r and files() == before
+
+
+def test_store_files_follow_the_umask(store):
+    import os
+    old = os.umask(0o022)
+    try:
+        monkey = json_storage._UMASK
+        json_storage._UMASK = 0o022
+        json_storage._write_json(store / "probe.json", {})
+        assert (store / "probe.json").stat().st_mode & 0o777 == 0o644
+    finally:
+        json_storage._UMASK = monkey
+        os.umask(old)
+
+
+@pytest.mark.parametrize("value,expected", [
+    ("vuln_a", ["vuln_a"]), ([1, 2], ["1", "2"]), ([["vuln_a"], None, "", "  "], ["vuln_a"]),
+    ([None], []), ("", []), ({"id": "x"}, []), (["x" * 300], ["x" * 120]), ([f"v{i}" for i in range(40)], [f"v{i}" for i in range(16)]),
+])
+def test_enabled_by_of_any_shape_never_loses_the_finding(value, expected):
+    pytest.importorskip("fastmcp")
+    from unittest import mock
+    import docker
+    with mock.patch.object(docker, "from_env", lambda *a, **k: mock.MagicMock()):
+        from src import server as srv
+    assert srv._enabled_by_refs(value) == expected
+
+
+@pytest.mark.parametrize("flag", ["DM_LEGACY_DERIVED_PROOF", "DM_FINALIZE_CHAINS_AS_PATHS", "DM_TOOL_PROVENANCE"])
+def test_proof_rollback_flags_cannot_be_enabled(monkeypatch, flag):
+    from api import feature_flags
+    monkeypatch.setenv(flag, "1")
+    assert feature_flags.enabled(flag) is False

@@ -1,10 +1,10 @@
 """
-Declared links between findings (`enabled_by`, round 4 — docs/research/observed-paths.md).
+Declared links between findings (`enabled_by`, round 4).
 
 The agent says, on the finding it pushes, which EARLIER findings of the campaign produced what this exploitation used
 (a token, a credential, a hash, a session, an access). The server does not take it on trust:
 - references are kept as written (vuln_id, dedup_key, short_title or exact endpoint) and resolved LAZILY when the paths
-  are built (round 5); the push only gives feedback (push_warnings). Architecture D (CONTRACT-D.md): an unknown (or
+  are built (round 5); the push only gives feedback (push_warnings). Architecture D: an unknown (or
   other-campaign), ambiguous, self or FORWARD reference (the producer was pushed after the declaration; a late addition is
   dated by its re-push, ``enabled_by_at``) is a ``rejected_declaration``, listed with its reason, never a path edge; a link
   whose producer or consumer is false_positive / remediated / withdrawn / merged is ``invalidated`` (kept, never counted);
@@ -112,8 +112,9 @@ _ALL_ACTIVE = frozenset({"initial-access", "execution", "persistence", "privileg
 # a tampered object reused), persistence may give a new initial access (web shell).
 UNUSUAL: Dict[str, frozenset] = {t: frozenset({"reconnaissance", "resource-development"}) for t in _ALL_ACTIVE}
 UNUSUAL.update({"reconnaissance": frozenset(), "resource-development": frozenset({"reconnaissance"})})
-# ATT&CK for ICS and Mobile tactics (ids, names: MITRE ATT&CK®, same terms of use as the vendored Enterprise extract —
-# see api/vendor/mitre_attack/LICENSE.txt and NOTICE); mapped to the Enterprise stage they play in a chain.
+# ATT&CK for ICS and Mobile tactics, mapped to the Enterprise stage they play in a chain. Tactic ids and names:
+# MITRE ATT&CK®, © The MITRE Corporation. This work is reproduced and distributed with the permission of The MITRE
+# Corporation (ATT&CK Terms of Use, https://attack.mitre.org/resources/legal-and-branding/terms-of-use/).
 ICS_MOBILE_TACTICS: Dict[str, Tuple[str, str]] = {
     # ICS
     "TA0108": ("Initial Access", "initial-access"), "TA0104": ("Execution", "execution"),
@@ -223,7 +224,7 @@ def validate(vulns: List[Dict[str, Any]], known_nodes: Optional[Set[str]] = None
         for ref in clean_refs(refs):
             flags: List[str] = []           # blocking: the link is not used for paths
             warnings: List[str] = []        # plausibility only: shown, never blocking
-            state, reason = DECLARED_BY_AGENT, None   # architecture D (CONTRACT-D.md)
+            state, reason = DECLARED_BY_AGENT, None   # architecture D
             rid, st = resolve_one(ref, vulns, c)
             p = rid or ref
             if rid in seen_p:
@@ -270,7 +271,7 @@ def validate(vulns: List[Dict[str, Any]], known_nodes: Optional[Set[str]] = None
             out.append({"producer": p, "consumer": c, "valid": not flags, "flags": flags, "warnings": warnings,
                         "producer_tactics": tac.get(p, ([], ""))[0], "consumer_tactics": tac.get(c, ([], ""))[0],
                         "level": LEVEL_DECLARED, "state": state, "reason": reason})
-    # a cycle among valid links needs a late re-push (or an edited store). CONTRACT-D final-review clarification: a
+    # a cycle among valid links needs a late re-push (or an edited store). architecture D final-review clarification: a
     # cycle is a property of the declared graph, never evidence against an edge. Its links keep their state and stay
     # usable; the « cycle » WARNING says so (non-blocking, never promoting) and path assembly walks simple paths only
     # (edge_verifier.bounded_chains), reporting the cycle as a cycle.
@@ -285,7 +286,7 @@ def validate(vulns: List[Dict[str, Any]], known_nodes: Optional[Set[str]] = None
     return out
 
 
-RETRACTED_STATUSES = ("false_positive", "withdrawn")   # CONTRACT-D: a remediated finding existed — its links stay declared (not live), never « invalidated »
+RETRACTED_STATUSES = ("false_positive", "withdrawn")   # architecture D: a remediated finding existed — its links stay declared (not live), never « invalidated »
 
 
 def _retraction(v: Dict[str, Any]) -> Optional[str]:

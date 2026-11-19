@@ -18,13 +18,13 @@ PATH_ID = {"type": "string", "pattern": "^ap_[0-9a-f]{12}$"}
 STR_LIST = {"type": "array", "items": {"type": "string"}}
 NODE_REF = {"type": "object", "required": ["node_id", "label"], "properties": {"node_id": {"type": "string"}, "label": {"type": "string"}}}
 
-# 40-paths-v2 (reports/40-paths-v2/CONTRACT.md): level of a declared link (decided by api/edge_verifier), of an R1-R3
+# 40-paths-v2: level of a declared link (decided by api/edge_verifier), of an R1-R3
 # server rule (« observed ») and of a finalisation chain (« declared »)
 LINK_STATES = ["declared_unverified", "observed_flow", "causal_necessity_demonstrated"]
 LINK_REASONS = ["not_declared", "cross_run", "unknown_execution", "execution_after_push", "no_execution_ids",
                 "value_not_consumed", "ambiguous_origin", "exogenous_value", "consumer_not_success", "duplicate_finding",
                 "cycle", "depth_exceeded"]
-# architecture D (reports/51-architecture-d-implementation/CONTRACT-D.md), additive: the default state of a declared link,
+# architecture D, additive: the default state of a declared link,
 # the two states of a declaration that is never an edge of a path, and their closed reason sets
 D_LINK_STATES = ["declared_by_agent", "invalidated", "rejected_declaration"]
 D_LINK_REASONS = ["finding_not_live", "missing_data", "run_compacted", "session_unknown", "no_shared_value",

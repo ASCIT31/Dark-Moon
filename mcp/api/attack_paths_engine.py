@@ -1,8 +1,7 @@
 """
 Darkmoon — deterministic fix prioritisation over causal attack scenarios.
 
-Python port of ``attack-path.engine.ts`` and ``observed/ranking-gate.ts`` (branch
-``fe/base-secu-attackpaths``), adversarial fixes F1, F2, F8, F12, F13 included.
+Port of the Darkmoon attack-path engine and its ranking gate, adversarial fixes F1, F2, F8, F12, F13 included.
 
 Semantics:
 - a fix set F breaks an AND-set when it contains at least one of its findings;
@@ -124,8 +123,7 @@ def is_consequence_category(category: Any) -> bool:
 
 # A candidate is a recommendable remediation only when a distinct, identifiable TECHNICAL ACTION exists. A finding whose
 # remediation is absent or a bare placeholder (« n/a », « monitor », « investigate ») carries no established control, so
-# it cannot be used as a certain correction (owner: « si une correction technique ne peut pas être identifiée … conserve
-# l'impact … ne l'utilise pas comme une correction certaine »). Several field names are accepted (scanners differ).
+# it cannot be used as a certain correction . Several field names are accepted (scanners differ).
 _WEAK_REMEDIATION = frozenset({"", "n/a", "na", "none", "null", "tbd", "todo", "unknown", "-", "—", "investigate",
                                "monitor", "review", "see above", "as needed"})
 
@@ -375,7 +373,7 @@ def _prioritize(scenarios: List[Any], findings_in: List[Any], groups: Optional[L
         for si in lst:
             scenario_candidates[si].append(cid)
 
-    # Audit P1 (owner « ne confonds plus une vulnérabilité à corriger avec les conséquences qu'elle provoque »): decide
+    # Audit P1 (a weakness to fix is not the consequence it causes): decide
     # GENERICALLY — NOT from a closed category list — whether a finding is a remediable WEAKNESS or a pure CONSEQUENCE
     # (an impact/outcome you cannot patch directly). The primary signal is the finding's ROLE/POSITION in the graph,
     # corroborated by the remediation evidence and, only as a last reinforcement, the category:
@@ -419,7 +417,7 @@ def _prioritize(scenarios: List[Any], findings_in: List[Any], groups: Optional[L
             # not a fixable control; anything else (a public .env, a misconfiguration, an exposure) is a remediable
             # standalone control.
             return "consequence" if is_consequence_category(cat) else "weakness"
-        # TERMINAL-after-prerequisite (release gate, owner phase 1/2): tri-state. A recognised fixable WEAKNESS/technique
+        # TERMINAL-after-prerequisite (release gate, phase 1/2): tri-state. A recognised fixable WEAKNESS/technique
         # (e.g. OS command execution AS the objective) stays a « weakness ». An explicit impact or OUTCOME category
         # (read/leak/tamper/exfiltrate/destroy …) is a « consequence » (impact, NOT a correction). A category that is
         # PRESENT but UNRECOGNISED is « indeterminate » — the scanner tagged it with something we cannot certify, so
@@ -479,7 +477,7 @@ def _prioritize(scenarios: List[Any], findings_in: List[Any], groups: Optional[L
     def _is_pure_consequence(cid: str) -> bool:
         return _candidate_class(cid) == "consequence"
 
-    # Owner RELEASE GATE phase 1/2: ONLY ADMISSIBLE candidates (a fixable weakness) are certified corrections and count
+    # RELEASE GATE phase 1/2: ONLY ADMISSIBLE candidates (a fixable weakness) are certified corrections and count
     # toward coverage. A pure CONSEQUENCE (terminal impact — a data read/exfiltration/compromise) is NEVER a correction,
     # even when it is the only finding that « interrupts » the path in the graph abstraction: a realised breach is not a
     # remediation. An INDETERMINATE candidate (unknown/untyped, no established control) does not produce guaranteed
@@ -789,7 +787,7 @@ def _prioritize(scenarios: List[Any], findings_in: List[Any], groups: Optional[L
             reason = "never-decisive"
         off_path.append({"id": fid, "reason": reason})
 
-    # Owner RELEASE GATE: an OPEN route that NO admissible (certified) correction interrupts is reported honestly — it
+    # RELEASE GATE: an OPEN route that NO admissible (certified) correction interrupts is reported honestly — it
     # is never counted as closed and no artificial coverage is attributed. « unverified_remediations » surfaces the
     # indeterminate findings as leads to investigate (separate from the certified Top corrections).
     open_scenarios = [si for sid, si in sorted_eligible if open_[si]]
@@ -822,7 +820,7 @@ def _prioritize(scenarios: List[Any], findings_in: List[Any], groups: Optional[L
 
 
 def ranking_gate(result: Optional[Dict[str, Any]], real_provenances: tuple = ("observed", "server")) -> Dict[str, Any]:
-    """Display gate for "fix X interrupts N of M" (ranking-gate.ts)."""
+    """Display gate for "fix X interrupts N of M"."""
     result = result or {}
     scenario_count = len(result.get("eligible_scenario_ids") or [])
     ranking = result.get("ranking") or []

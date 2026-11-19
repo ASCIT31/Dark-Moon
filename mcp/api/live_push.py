@@ -434,6 +434,8 @@ def _init_live_campaign_unlocked(
     Initialize a live campaign. Creates project + target + campaign skeleton.
     Rule: 1 project = 1 target.
     """
+    if not is_safe_id(f"camp_x_{session_id}"):  # refused before anything is written (no orphan project/target)
+        return {"error": f"invalid session_id {str(session_id)[:40]!r}"}
     now = _now_iso()
     today = _today_compact()
 
@@ -645,10 +647,20 @@ def _same_finding(finding: Dict[str, Any], vulns: List[Dict[str, Any]]) -> Optio
                                        str(v.get("category") or "").strip()) == t), None)
 
 
+_CONTENT_KEYS = ("status", "severity", "description", "evidence", "cvss_score", "remediation")
+
+
+def _same_content(finding: Dict[str, Any], stored: Dict[str, Any]) -> bool:
+    """True when a re-push carries nothing new besides its references (the fields an agent re-sends unchanged)."""
+    def norm(v: Any) -> Any:
+        return str(v).strip().lower() if isinstance(v, str) else v
+    return all(norm(finding.get(k)) == norm(stored.get(k)) for k in _CONTENT_KEYS if k in finding)
+
+
 # Lever 1 (enabled_by fill rate): the push reply reminds the agent of the last EXPLOITED findings of the campaign, by
 # vuln_id (the form the enabled_by resolver always accepts; a cut title would not resolve). Built from the findings
 # already loaded for the push: no extra read. One short line, at most RECENT_EXPLOITED_MAX chars, at most 3 items.
-# Architecture D (17/11/2026, CONTRACT-D): same item count per reply (never a hint where there was none); the finding
+# Architecture D (17/11/2026, architecture D): same item count per reply (never a hint where there was none); the finding
 # JUST pushed (when exploited) comes first — the oracle showed it is the most frequent true parent of the NEXT push and
 # the old order excluded it — then the most recent exploited findings of the campaign. Measured on c5 / c6: +17 / -9
 # characters over a whole campaign. The hint can only help the next push (it is in this push's reply).
@@ -719,7 +731,7 @@ def _push_finding_unlocked(
     finding["severity"] = str(finding.get("severity", "info")).strip().lower()
     finding["status"] = str(finding.get("status", "unconfirmed")).strip().lower()
 
-    # round 4 (owner): `enabled_by` = earlier findings whose result this exploitation used. Resolved HERE against the
+    # `enabled_by` = earlier findings whose result this exploitation used. Resolved HERE against the
     # findings already stored (so a forward reference cannot exist): vuln_id, then a unique short_title / dedup_key /
     # title. Unknown or ambiguous refs and self-references are dropped with a warning; validation (ATT&CK order, nodes)
     # happens at analysis time (api/declared_links.py).
@@ -728,8 +740,12 @@ def _push_finding_unlocked(
         from api.declared_links import clean_refs, push_warnings
         finding["enabled_by"] = clean_refs(finding.get("enabled_by"))
         enabled_warnings = push_warnings(finding["enabled_by"], vulns, finding["id"])
-        # round 5: re-pushing the SAME finding to add what enabled it updates it — no duplicate is created
+        # re-pushing the SAME finding only to add what enabled it updates it: no duplicate is created. A re-push
+        # that also changes the finding (status, severity, description, evidence) is stored as a new finding, as
+        # before, so nothing it carries is lost.
         same = _same_finding(finding, vulns)
+        if same is not None and not _same_content(finding, same):
+            same = None
         if same is not None and finding["enabled_by"]:
             from api.declared_links import resolve_one
             mine = [r for r in finding["enabled_by"] if resolve_one(r, vulns, str(same["id"]))[1] != "self"]
@@ -908,12 +924,16 @@ def _append_attack_paths_section(A: Callable[[str], None], campaign_id: str, vul
         return
     try:
         from api.declared_links import LEVEL_LABELS, validate
-        from api.attack_paths_local import attack_paths_doc
         links = validate(vulns)
+    except Exception:
+        logging.getLogger("darkmoon.report").warning("declared-link section skipped", exc_info=True)
+        return
+    try:  # the path counts are advisory: the declared links are listed even if the path engine fails
+        from api.attack_paths_local import attack_paths_doc
         doc = attack_paths_doc(campaign_id) or {}
     except Exception:
-        logging.getLogger("darkmoon.report").warning("attack-path section skipped", exc_info=True)
-        return
+        logging.getLogger("darkmoon.report").warning("attack-path counts skipped", exc_info=True)
+        doc = {}
     titles = {str(v.get("id")): str(v.get("title") or "") for v in vulns}
 
     def cell(text: str, n: int = 60) -> str:
@@ -930,7 +950,7 @@ def _append_attack_paths_section(A: Callable[[str], None], campaign_id: str, vul
     if summary:
         A(f"- Attack paths resting on declared links: **{summary.get('declared_paths', 0)}**"
           f" (of which critical: {summary.get('declared_critical_paths', 0)})\n")
-        A(f"- Paths proven by the server: **{summary.get('proven_paths', 0)}**\n\n")
+        A("- Darkmoon Community does not verify links itself: no path is counted as proven.\n\n")
     A("| Enabling finding | Used by | Status |\n|---|---|---|\n")
     for link in links:
         producer, consumer = str(link.get("producer") or ""), str(link.get("consumer") or "")

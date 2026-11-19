@@ -1,9 +1,6 @@
 """
-Darkmoon — observed attack paths (Python port of the frontend derivation).
-
-Port of ``client-app/src/app/_common/attack-paths/observed/{evidence-text,observed-paths,
-remediation-groups}.ts`` (branch ``fe/base-secu-attackpaths``), including the adversarial fixes
-F1-F15. Scenarios are built ONLY from transitions proven verbatim by the campaign evidence:
+Darkmoon — observed attack paths (evidence text, observed paths, remediation groups), including the adversarial
+fixes F1-F15. Scenarios are built ONLY from transitions proven verbatim by the campaign evidence:
 
 - R1 artefact: a typed secret appears in A's output (target response), not in A's input, and is
   presented as a credential in B's executable input (A exploited, A's category can grant access,
@@ -11,9 +8,9 @@ F1-F15. Scenarios are built ONLY from transitions proven verbatim by the campaig
 - R2 mechanism (HISTORICAL INFERENCE, architecture D final review): B's evidence shows a POST to exactly the
   endpoint of an open-registration finding, with a success status in status position, and the identity it created
   appears in one of B's authenticated requests; otherwise the link is auxiliary. R2 attributes by ENDPOINT, which
-  CONTRACT-D does not admit as proof: its links keep their fields but carry ``level: inferred`` /
+  architecture D does not admit as proof: its links keep their fields but carry ``level: inferred`` /
   ``provenance: inferred``; a path resting on one is an inferred hypothesis, never proven / observed / ranked, and
-  an R2 link never corroborates a claim nor promotes a declared (D) link (reports/52-arch-d-final-review/R2-ISOLATION.md).
+  an R2 link never corroborates a claim nor promotes a declared (D) link.
 - R3 reach: an exploited finding's response proves access to ANOTHER node (``root:x:0:0`` -> its
   host node; SQL rows + engine named by the response -> that unique database node).
 
@@ -78,7 +75,7 @@ def _r3_host_capability(raw_response: str, requested: str, commands: str = "") -
 
 
 def _declared_ledger(vulns: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Server facts of the runs the findings were pushed in (architecture D, CONTRACT-D.md): the execution records,
+    """Server facts of the runs the findings were pushed in (architecture D): the execution records,
     the FULL-value fingerprints each finding's own evidence shares with its run ledger (computed at push time) and the
     number of agent sessions of each run. Read only when a finding has a run; never raises (no record = no evidence)."""
     out: Dict[str, Any] = {"executions": [], "fps": {}, "push_seq": {}, "sessions": {}}
@@ -107,7 +104,7 @@ def lc_key(value: str) -> Tuple[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# Evidence text (evidence-text.ts)
+# Evidence text 
 # ---------------------------------------------------------------------------
 
 def as_text(x: Any) -> str:
@@ -453,7 +450,7 @@ def parse_endpoint(raw: Any) -> Optional[Dict[str, Optional[str]]]:
 
 
 # ---------------------------------------------------------------------------
-# Remediation groups (remediation-groups.ts)
+# Remediation groups 
 # ---------------------------------------------------------------------------
 
 _INJECTION = re.compile(r"inject|xss|ssti|sqli|crlf|xpath|ldap|template", re.I)
@@ -537,7 +534,7 @@ def group_duplicate_findings(findings: Iterable[Dict[str, Any]]) -> List[Dict[st
 
 
 # ---------------------------------------------------------------------------
-# Observed derivation (observed-paths.ts)
+# Observed derivation 
 # ---------------------------------------------------------------------------
 
 GRANTING = {
@@ -1081,7 +1078,7 @@ def derive_observed_input(nodes_list: Optional[List[Dict[str, Any]]], vulns: Opt
                 "proof": f"{' | '.join(producers)} output contains {shown}; {consumer_id} presents it as a credential",
             })
 
-    # ---------- D declared (enabled_by) — architecture D (reports/51-architecture-d-implementation/CONTRACT-D.md) ----------
+    # ---------- D declared (enabled_by) — architecture D ----------
     # The agent named, on a finding, the earlier findings whose result it used. Every reference becomes a link at once:
     # « rejected_declaration » (unknown / other campaign, self, ambiguous, forward in time, same weakness: never a path
     # edge), « invalidated » (a finding of the link was withdrawn: kept, never counted) or « declared_by_agent », which
@@ -1265,7 +1262,7 @@ def derive_observed_input(nodes_list: Optional[List[Dict[str, Any]]], vulns: Opt
                                    f"(rejected reference, withdrawn finding, status or nodes): listed with their reason.")})
     cyclic = sorted({x for l in links if l["kind"] == "D" and "cycle" in (l.get("warnings") or []) for x in (*l["producers"], l["consumer"])})
     if cyclic:
-        # CONTRACT-D final-review clarification: a declared cycle is reported as a cycle; path assembly walks simple
+        # architecture D final-review clarification: a declared cycle is reported as a cycle; path assembly walks simple
         # paths only (no repeated finding) and each edge keeps the state of its own evidence
         issues.append({"kind": "declared-cycle", "finding_ids": cyclic,
                        "message": (f"{len(cyclic)} finding(s) form a cycle of declared links (enabled_by): the cycle is never "
@@ -1324,7 +1321,7 @@ def derive_observed_input(nodes_list: Optional[List[Dict[str, Any]]], vulns: Opt
                       observed_only: bool = False) -> None:
         steps, evidence, stop = prerequisite_steps(consumer, observed_only)
         if not observed_only and any((s.get("impact") or {}).get("level") in NOT_PROVEN_LEVELS for s in steps):
-            # 17/11 (owner): a path takes the level of its weakest step, so a chain mixing declared (or R2-inferred) and
+            # a path takes the level of its weakest step, so a chain mixing declared (or R2-inferred) and
             # server-observed steps is « declared » / « inferred » as a whole; its fully OBSERVED part is a proven path
             # of its own — shown beside it (a reach is such a part even without any observed prerequisite: its R3 step
             # is the server's own observation)
@@ -1381,7 +1378,7 @@ def derive_observed_input(nodes_list: Optional[List[Dict[str, Any]]], vulns: Opt
     } for f in findings]
     groups = group_duplicate_findings([f["v"] for f in findings])
 
-    # two columns on every link (docs/research/observed-paths.md): « usage » (shown in the stored evidence and checked by
+    # two columns on every link: « usage » (shown in the stored evidence and checked by
     # a server rule = R1-R3; declared = D) and « necessity » (D: demonstrated only by the edge verifier's negative
     # control; R3 is an intrinsic reach; R1/R2 are not assessed)
     for l in links:
