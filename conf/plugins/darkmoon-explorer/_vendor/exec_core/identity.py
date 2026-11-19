@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 from urllib.parse import ParseResult, urlparse
 
 SEVERITIES = ("critical", "high", "medium", "low", "info")
@@ -99,6 +99,22 @@ def exclusion_reason(v: Dict[str, Any]) -> Optional[str]:
     if _FALSE_POSITIVE.match(status_of(v)):
         return "false_positive"
     return None
+
+
+AGENT_STATUS_WARNING = ("status {raw!r} cannot be set by an agent (allowed: exploited, confirmed, unconfirmed): "
+                        "stored as unconfirmed. False positive, quarantine and closure are operator decisions.")
+
+
+def agent_push_status(raw: Any) -> Tuple[str, Optional[str]]:
+    """The status an agent may push (``dashboard_push_finding``): exploited, confirmed or unconfirmed. Anything else
+    (false_positive, quarantined, remediated, fixed…) is stored as ``unconfirmed`` with a warning, so an agent can
+    neither hide a finding from the counts nor close it; the finding stays visible."""
+    s = re.sub(r"[\s-]+", "_", _text(raw).lower())
+    if not s:
+        return "unconfirmed", None
+    if s in PROOF_STATUSES:
+        return s, None
+    return "unconfirmed", AGENT_STATUS_WARNING.format(raw=_text(raw)[:40])
 
 
 def is_closed(v: Dict[str, Any]) -> bool:

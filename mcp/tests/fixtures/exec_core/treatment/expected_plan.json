@@ -1,0 +1,455 @@
+{
+ "actions": [
+  {
+   "action_id": "act_7d281598351ae41b",
+   "approval_required": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "basis": "reported-severity-x-proof",
+   "dependencies": [],
+   "due_date": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "expected_impact": {
+    "attack_paths_interrupted": 0,
+    "attack_paths_total": null,
+    "findings_covered": 2,
+    "text": "Findings covered: 2"
+   },
+   "explanation": "Ordered by reported severity, then proof: critical (reported); exploited. Addresses 2 findings. 2 reports grouped by the server (same injection parameter).",
+   "finding_ids": [
+    "vuln_sq1",
+    "vuln_sq2"
+   ],
+   "fix_id": "fp_8dcd42ef5caccdf4",
+   "head_finding_id": "vuln_sq1",
+   "history": [
+    {
+     "at": "2026-11-03T10:00:00Z",
+     "by_role": "admin",
+     "from": "proposed",
+     "source": "declaration",
+     "to": "applied"
+    },
+    {
+     "at": "2026-11-05T12:00:00Z",
+     "by_role": "retest",
+     "from": "applied",
+     "source": "retest",
+     "to": "failed_verification",
+     "verification": {
+      "at": "2026-11-05T12:00:00Z",
+      "not_checked": [],
+      "not_reproduced": [],
+      "reproduced": [
+       "vuln_sq1",
+       "vuln_sq2"
+      ],
+      "retest_campaign_id": "camp_fx_retest",
+      "retest_id": "retest_fx01",
+      "status": "failed_verification"
+     }
+    }
+   ],
+   "interrupts_attack_paths": [],
+   "last_retest": {
+    "at": "2026-11-05T12:00:00Z",
+    "label": "Reproduced at retest",
+    "result": "failed_verification",
+    "retest_campaign_id": "camp_fx_retest",
+    "retest_id": "retest_fx01",
+    "text": "Reproduced at retest (2026-11-05)"
+   },
+   "owner": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "priority": 1,
+   "proof": "exploited",
+   "proven_attack_paths": [],
+   "rank": 1,
+   "recommended_treatment": {
+    "finding_id": "vuln_sq1",
+    "label": "Recommended by the testing agent (quoted as written, not verified); 1 other finding text on the related findings",
+    "other_texts": 1,
+    "source": "testing_agent",
+    "text": "Use parameterised queries for the q parameter."
+   },
+   "related_attack_paths": [],
+   "related_controls": [],
+   "related_controls_note": "Control mapping is not available yet.",
+   "risk_accepted_until": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "service_interruption_risk": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "severity": "critical",
+   "status": "failed_verification",
+   "status_label": "Reproduced at retest",
+   "status_text": "Reproduced at retest (2026-11-05)",
+   "status_verified": true,
+   "tie_size": 1,
+   "title": "Fix SQL injection in search",
+   "treatment_type": {
+    "basis": "derived from the weakness class; to confirm by the system owner",
+    "label": "Code change",
+    "value": "code_change",
+    "weakness_class": "sql_injection"
+   }
+  },
+  {
+   "action_id": "act_964ec336409f740d",
+   "approval_required": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "basis": "reported-severity-x-proof",
+   "dependencies": [],
+   "due_date": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "expected_impact": {
+    "attack_paths_interrupted": 0,
+    "attack_paths_total": null,
+    "findings_covered": 1,
+    "text": "Findings covered: 1"
+   },
+   "explanation": "Ordered by reported severity, then proof: high (reported); exploited. Addresses 1 finding.",
+   "finding_ids": [
+    "vuln_xs1"
+   ],
+   "fix_id": "fp_82bcfa0f6d75a3d3",
+   "head_finding_id": "vuln_xs1",
+   "history": [
+    {
+     "at": "2026-11-02T09:00:00Z",
+     "by_role": "admin",
+     "declared": {
+      "owner": "web team"
+     },
+     "from": "proposed",
+     "source": "declaration",
+     "to": "approved"
+    },
+    {
+     "at": "2026-11-03T09:00:00Z",
+     "by_role": "admin",
+     "from": "approved",
+     "note": "Template patched in release 4.2",
+     "source": "declaration",
+     "to": "applied"
+    },
+    {
+     "at": "2026-11-05T12:00:00Z",
+     "by_role": "retest",
+     "from": "applied",
+     "source": "retest",
+     "to": "verified_resolved",
+     "verification": {
+      "at": "2026-11-05T12:00:00Z",
+      "not_checked": [],
+      "not_reproduced": [
+       "vuln_xs1"
+      ],
+      "reproduced": [],
+      "retest_campaign_id": "camp_fx_retest",
+      "retest_id": "retest_fx01",
+      "status": "verified_resolved"
+     }
+    }
+   ],
+   "interrupts_attack_paths": [],
+   "last_retest": {
+    "at": "2026-11-05T12:00:00Z",
+    "label": "Not reproduced at retest",
+    "result": "verified_resolved",
+    "retest_campaign_id": "camp_fx_retest",
+    "retest_id": "retest_fx01",
+    "text": "Not reproduced at retest (2026-11-05)"
+   },
+   "owner": {
+    "at": "2026-11-02T09:00:00Z",
+    "by_role": "admin",
+    "provenance": "declared",
+    "value": "web team"
+   },
+   "priority": 2,
+   "proof": "exploited",
+   "proven_attack_paths": [],
+   "rank": 2,
+   "recommended_treatment": {
+    "finding_id": "vuln_xs1",
+    "label": "Recommended by the testing agent (quoted as written, not verified)",
+    "other_texts": 0,
+    "source": "testing_agent",
+    "text": "Encode output in the comment template."
+   },
+   "related_attack_paths": [],
+   "related_controls": [],
+   "related_controls_note": "Control mapping is not available yet.",
+   "risk_accepted_until": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "service_interruption_risk": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "severity": "high",
+   "status": "verified_resolved",
+   "status_label": "Not reproduced at retest",
+   "status_text": "Not reproduced at retest (2026-11-05)",
+   "status_verified": true,
+   "tie_size": 1,
+   "title": "Fix stored XSS in comments",
+   "treatment_type": {
+    "basis": "derived from the weakness class; to confirm by the system owner",
+    "label": "Code change",
+    "value": "code_change",
+    "weakness_class": "xss"
+   }
+  },
+  {
+   "action_id": "act_22113fe0ab731b95",
+   "approval_required": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "basis": "reported-severity-x-proof",
+   "dependencies": [],
+   "due_date": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "expected_impact": {
+    "attack_paths_interrupted": 0,
+    "attack_paths_total": null,
+    "findings_covered": 1,
+    "text": "Findings covered: 1"
+   },
+   "explanation": "Ordered by reported severity, then proof: medium (reported); confirmed. Addresses 1 finding.",
+   "finding_ids": [
+    "vuln_cmp"
+   ],
+   "fix_id": "fp_926ce0ec49b4aa74",
+   "head_finding_id": "vuln_cmp",
+   "history": [
+    {
+     "at": "2026-11-05T12:00:00Z",
+     "by_role": "retest",
+     "observation": "failed_verification",
+     "source": "retest",
+     "verification": {
+      "at": "2026-11-05T12:00:00Z",
+      "not_checked": [],
+      "not_reproduced": [],
+      "reproduced": [
+       "vuln_cmp"
+      ],
+      "retest_campaign_id": "camp_fx_retest",
+      "retest_id": "retest_fx01",
+      "status": "failed_verification"
+     }
+    }
+   ],
+   "interrupts_attack_paths": [],
+   "last_retest": {
+    "at": "2026-11-05T12:00:00Z",
+    "label": "Reproduced at retest",
+    "result": "failed_verification",
+    "retest_campaign_id": "camp_fx_retest",
+    "retest_id": "retest_fx01",
+    "text": "Reproduced at retest (2026-11-05)"
+   },
+   "owner": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "priority": 3,
+   "proof": "confirmed",
+   "proven_attack_paths": [],
+   "rank": 3,
+   "recommended_treatment": {
+    "finding_id": "vuln_cmp",
+    "label": "Recommended by the testing agent (quoted as written, not verified)",
+    "other_texts": 0,
+    "source": "testing_agent",
+    "text": "Upgrade jQuery to a supported version."
+   },
+   "related_attack_paths": [],
+   "related_controls": [],
+   "related_controls_note": "Control mapping is not available yet.",
+   "risk_accepted_until": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "service_interruption_risk": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "severity": "medium",
+   "status": "proposed",
+   "status_label": "Proposed",
+   "status_text": "Proposed",
+   "status_verified": false,
+   "tie_size": 1,
+   "title": "Fix outdated jQuery 1.8",
+   "treatment_type": {
+    "basis": "derived from the weakness class; to confirm by the system owner",
+    "label": "Update or replace the component",
+    "value": "update_component",
+    "weakness_class": "vulnerable_component"
+   }
+  },
+  {
+   "action_id": "act_8939c43d22667576",
+   "approval_required": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "basis": "reported-severity-x-proof",
+   "dependencies": [],
+   "due_date": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "expected_impact": {
+    "attack_paths_interrupted": 0,
+    "attack_paths_total": null,
+    "findings_covered": 1,
+    "text": "Findings covered: 1"
+   },
+   "explanation": "Ordered by reported severity, then proof: low (reported); confirmed. Addresses 1 finding.",
+   "finding_ids": [
+    "vuln_hdr"
+   ],
+   "fix_id": "fp_d195864a067eb64a",
+   "head_finding_id": "vuln_hdr",
+   "history": [
+    {
+     "at": "2026-11-03T11:00:00Z",
+     "by_role": "admin",
+     "declared": {
+      "risk_accepted_until": "2027-03-31"
+     },
+     "from": "proposed",
+     "source": "declaration",
+     "to": "risk_accepted"
+    },
+    {
+     "at": "2026-11-05T12:00:00Z",
+     "by_role": "retest",
+     "observation": "verified_resolved",
+     "source": "retest",
+     "verification": {
+      "at": "2026-11-05T12:00:00Z",
+      "not_checked": [],
+      "not_reproduced": [
+       "vuln_hdr"
+      ],
+      "reproduced": [],
+      "retest_campaign_id": "camp_fx_retest",
+      "retest_id": "retest_fx01",
+      "status": "verified_resolved"
+     }
+    }
+   ],
+   "interrupts_attack_paths": [],
+   "last_retest": {
+    "at": "2026-11-05T12:00:00Z",
+    "label": "Not reproduced at retest",
+    "result": "verified_resolved",
+    "retest_campaign_id": "camp_fx_retest",
+    "retest_id": "retest_fx01",
+    "text": "Not reproduced at retest (2026-11-05)"
+   },
+   "owner": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "priority": 4,
+   "proof": "confirmed",
+   "proven_attack_paths": [],
+   "rank": 4,
+   "recommended_treatment": {
+    "finding_id": null,
+    "label": "No remediation text was recorded by the testing agent for these findings.",
+    "other_texts": 0,
+    "source": null,
+    "text": null
+   },
+   "related_attack_paths": [],
+   "related_controls": [],
+   "related_controls_note": "Control mapping is not available yet.",
+   "risk_accepted_until": {
+    "at": "2026-11-03T11:00:00Z",
+    "by_role": "admin",
+    "provenance": "declared",
+    "value": "2027-03-31"
+   },
+   "service_interruption_risk": {
+    "provenance": null,
+    "value": "unknown"
+   },
+   "severity": "low",
+   "status": "risk_accepted",
+   "status_label": "Risk accepted",
+   "status_text": "Risk accepted by admin, 2026-11-03 (until 2027-03-31)",
+   "status_verified": false,
+   "tie_size": 1,
+   "title": "Add the security headers",
+   "treatment_type": {
+    "basis": "derived from the weakness class; to confirm by the system owner",
+    "label": "Configuration change",
+    "value": "configuration_change",
+    "weakness_class": "configuration"
+   }
+  }
+ ],
+ "basis": "reported-severity-x-proof",
+ "basis_label": "By reported severity × proof",
+ "basis_note": "Not an attack-path ranking. Order: severity reported by the agent, then proof level (exploited, confirmed, unconfirmed), then proven attack chains of several findings broken, then regression after a retest, then the CVSS score computed from the finding's vector. Equal keys share the same rank. Severity is the agent's rating, not an impact on your business assets.",
+ "campaign_id": "camp_fx_plan",
+ "definition": "Actions recommended in priority order to reduce security exposure, address related findings and interrupt relevant attack paths.",
+ "issues": [
+  {
+   "action_id": "act_8939c43d22667576",
+   "index": 1,
+   "problems": [
+    "status: verified_resolved is set only by a completed retest"
+   ]
+  }
+ ],
+ "label": "Prioritized Treatment Plan",
+ "orphaned_states": [],
+ "plain": "Start at the top: each action lists the findings it addresses and the attack paths it interrupts. Recording a treatment does not change the rating: only a new campaign or a completed retest shows its effect.",
+ "schema_version": "darkmoon-treatment-plan/1",
+ "score_effect": "none",
+ "score_note": "Treatment statuses never change the findings, the counts or the rating of this campaign.",
+ "summary": {
+  "actions": 4,
+  "by_status": {
+   "applied": 0,
+   "approved": 0,
+   "deferred": 0,
+   "failed_verification": 1,
+   "in_progress": 0,
+   "partially_resolved": 0,
+   "proposed": 1,
+   "risk_accepted": 1,
+   "scheduled": 0,
+   "verification_pending": 0,
+   "verified_resolved": 1
+  },
+  "findings_covered": 5,
+  "open_findings": 6
+ },
+ "verification": "retest",
+ "verification_note": "Verified statuses come only from a completed retest: « Not reproduced at retest » is not a proof of resolution."
+}

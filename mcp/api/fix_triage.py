@@ -62,6 +62,8 @@ _SEVERITY_ALIAS = {
 PROOF_LEVEL = {"exploited": 4, "confirmed": 3, "unconfirmed": 1}             # unknown status -> 1, labelled
 ORDER_KEYS = ["reported_severity", "proof", "proven_chains_broken", "retest_regressed", "cvss_from_vector"]
 MAX_ITEMS = 20
+_GROUP_KEYS = ("fix_id", "rank", "tie_size", "finding_ids", "head_finding_id", "label", "severity", "proof",
+               "breaks_paths", "reasons", "fold")
 BASIS = "reported-severity-x-proof"
 LABEL = "By reported severity × proof"
 PATHS_LABEL = "By attack paths"
@@ -328,6 +330,8 @@ def triage(a: Dict[str, Any], label_of: Callable[[str, List[str]], str], path_in
                        "excluded_from_order": ["info (informational)"]},
             "total": len(items), "fingerprints": len(by_fp), "open_findings": open_total,
             "items": items[:MAX_ITEMS], "_top": top, "_all": items, "excluded": excluded,
+            # every group (not only the first MAX_ITEMS), compact: what the treatment plan (exec_core.actions) reads
+            "groups_all": [{k: i.get(k) for k in _GROUP_KEYS} for i in items],
             "unknown_severity_ids": sorted(unknown_ids)}
 
 
