@@ -62,6 +62,13 @@ class Store:
         with p.open(encoding="utf-8") as f:
             return json.load(f)
 
+    def _json_or(self, base: Path, rel: str, default):
+        """Listings: one unreadable, malformed or escaping file is skipped, it never empties the whole view."""
+        try:
+            return self._json(base, rel, default)
+        except (NotFound, OSError, ValueError):
+            return default
+
     def projects(self) -> list:
         d = self._json(self.root, "projects.json", [])
         return d if isinstance(d, list) else list(d.values()) if isinstance(d, dict) else []
@@ -78,7 +85,7 @@ class Store:
         for p in sorted(base.glob("*.json")):
             if not ID_RE.match(p.stem):
                 continue
-            c = self._json(base, p.name, None)
+            c = self._json_or(base, p.name, None)
             if isinstance(c, dict):
                 out.append(c)
         return out
@@ -102,7 +109,11 @@ class Store:
         out = []
         for p in sorted(base.glob("*.json")):
             if ID_RE.match(p.stem):
-                for v in self.vulns(p.stem):
+                try:
+                    vs = self.vulns(p.stem)
+                except (NotFound, OSError, ValueError):
+                    continue
+                for v in vs:
                     if isinstance(v, dict):
                         out.append({**v, "campaign_id": v.get("campaign_id") or p.stem})
         return out
@@ -207,8 +218,25 @@ def cmd_campaigns(st: Store, red) -> dict:
     return {"data": out, "total": len(out)}
 
 
+def safe_obj(o, red):
+    """Every string of a record through the redaction; without the engine, free-text fields are withheld."""
+    if red is not None:
+        try:
+            return red.redact_obj(o)
+        except Exception:  # noqa: BLE001
+            pass
+    if isinstance(o, dict):
+        return {k: ("[withheld]" if k in FREE_TEXT_KEYS else safe_obj(v, None)) for k, v in o.items()}
+    if isinstance(o, list):
+        return [safe_obj(v, None) for v in o]
+    return o
+
+
+FREE_TEXT_KEYS = ("executive_summary", "prompt", "description", "remediation", "note", "why", "plain", "raw")
+
+
 def cmd_campaign(st: Store, red, cid: str) -> dict:
-    c = st.campaign(cid)
+    c = safe_obj(st.campaign(cid), red)
     vs = [safe_finding(v, red, True) for v in st.vulns(cid) if isinstance(v, dict)]
     return {"data": {**c, "stats": severity_counts(vs), "vulnerabilities": vs}}
 
@@ -246,9 +274,9 @@ def cmd_paths(st: Store, red, cid: str) -> dict:
     try:  # the attack-path read model of the MCP server (local store, no web server), when it is installed
         from api.attack_paths_local import attack_paths_doc  # type: ignore
 
-        doc = attack_paths_doc(cid, "all", True)
+        doc = attack_paths_doc(cid, "all", True, finding_filter=lambda v: safe_obj(v, red))
         if doc is not None:
-            return doc
+            return safe_obj(doc, red)
     except Exception:  # noqa: BLE001 — fall back to the declarations, never to an invented path
         pass
     vs = {v.get("id"): v for v in st.vulns(cid) if isinstance(v, dict)}
@@ -269,8 +297,23 @@ def cmd_paths(st: Store, red, cid: str) -> dict:
                     {"n": 2, "node_label": b.get("title", v.get("id")), "finding_id": v.get("id"), "proof": b.get("status"), "kind": "declared"},
                 ],
             })
-    return {"schema_version": "darkmoon-attack-paths/v1", "campaign_id": cid, "paths": paths,
-            "summary": {"paths_total": len(paths), "proven_paths": 0, "declared_paths": len(paths), "inferred_paths": 0}}
+    return safe_obj({"schema_version": "darkmoon-attack-paths/v1", "campaign_id": cid, "paths": paths,
+            "summary": {"paths_total": len(paths), "proven_paths": 0, "declared_paths": len(paths), "inferred_paths": 0}}, red)
+
+
+# C0 controls (but tab/newline), DEL, C1 controls (8-bit CSI/OSC/DCS...) and bidi overrides: a stored title or
+# report can never drive the terminal the explorer renders in.
+_CONTROLS = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]")
+
+
+def no_controls(o):
+    if isinstance(o, str):
+        return _CONTROLS.sub("", o)
+    if isinstance(o, dict):
+        return {no_controls(k): no_controls(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [no_controls(v) for v in o]
+    return o
 
 
 def main(argv: list[str]) -> int:
@@ -314,7 +357,7 @@ def main(argv: list[str]) -> int:
     except Exception as e:  # noqa: BLE001 — never print data in an error
         print(f"adapter error: {type(e).__name__}", file=sys.stderr)
         return 1
-    json.dump(out, sys.stdout, ensure_ascii=False, default=str)
+    json.dump(no_controls(out), sys.stdout, ensure_ascii=False, default=str)
     return 0
 
 

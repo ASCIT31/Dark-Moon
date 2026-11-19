@@ -53,12 +53,15 @@ if [ "${1:-}" = "--image" ]; then
 elif [ -n "${1:-}" ]; then
   BIN="$1"
 else
-  # default: the opencode binary inside the running stack
-  if docker exec opencode test -x /usr/local/libexec/opencode-real 2>/dev/null; then
-    TMPBIN="$(mktemp)"
-    docker cp opencode:/usr/local/libexec/opencode-real "$TMPBIN" >/dev/null 2>&1
-    chmod +x "$TMPBIN"; BIN="$TMPBIN"
-  fi
+  # default: the opencode binary inside the running stack (the real binary when a wrapper sits on PATH)
+  for p in /usr/local/libexec/opencode-real /usr/local/bin/opencode; do
+    if docker exec opencode test -x "$p" 2>/dev/null; then
+      TMPBIN="$(mktemp)"
+      docker cp "opencode:$p" "$TMPBIN" >/dev/null 2>&1
+      chmod +x "$TMPBIN"; BIN="$TMPBIN"
+      break
+    fi
+  done
 fi
 [ -n "$BIN" ] && [ -x "$BIN" ] || { echo "no runnable opencode binary found (arg / --image / running stack)"; exit 1; }
 [ -f "$LOGO_TS" ] || { echo "logo source of truth not found: $LOGO_TS"; exit 1; }

@@ -15,7 +15,7 @@ its text: paths then rest on agent declarations and topology inferences only, bo
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from api import attack_paths as engine
 from api.infrastructure_graph import build_infrastructure
@@ -46,8 +46,12 @@ def _without_evidence_text(v: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def attack_paths_doc(campaign_id: str, provenance: str = "all", include_steps: bool = True) -> Optional[Dict[str, Any]]:
-    """The attack-path document of ``campaign_id``, or None when the id is malformed or the campaign is unknown."""
+def attack_paths_doc(campaign_id: str, provenance: str = "all", include_steps: bool = True,
+                     finding_filter: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None) -> Optional[Dict[str, Any]]:
+    """The attack-path document of ``campaign_id``, or None when the id is malformed or the campaign is unknown.
+
+    ``finding_filter``: applied to every finding BEFORE the engine (e.g. the Terminal Explorer's redaction), so text
+    the engine derives from titles (labels, step explanations) never carries what the filter removed."""
     if not is_safe_id(campaign_id):
         return None
     campaign = load_campaign(campaign_id)
@@ -56,5 +60,7 @@ def attack_paths_doc(campaign_id: str, provenance: str = "all", include_steps: b
     infra = build_infrastructure(campaign_id, campaign)
     vulns: List[Dict[str, Any]] = [_without_evidence_text(v) if isinstance(v, dict) else v
                                    for v in infra["vulnerabilities"]]
+    if finding_filter is not None:
+        vulns = [finding_filter(v) if isinstance(v, dict) else v for v in vulns]
     return engine.build_paths(campaign, infra["nodes"], infra["edges"], vulns,
                               provenance=provenance, include_steps=include_steps, retest_verdicts={})

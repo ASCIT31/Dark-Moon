@@ -143,3 +143,41 @@ class LocalEngineTests(unittest.TestCase):
         self.assertTrue(all(p["hypothesis"] and p["level"] == "declared_by_agent" for p in declared))
         self.assertNotIn(SECRET, r.stdout)
         self.assertEqual(self.paths("../etc").returncode, 2)
+
+    @unittest.skipUnless((Path(__file__).resolve().parents[3] / "mcp" / "api" / "attack_paths_local.py").is_file(),
+                         "MCP server tree not next to the plugin")
+    def test_a_secret_repeated_in_titles_is_masked_everywhere(self):
+        vulns = json.loads((self.root / "vulnerabilities" / "c1.json").read_text())
+        vulns[1]["title"] = f"Login as admin with {SECRET}"
+        vulns[1]["remediation"] = f"rotate {SECRET}"
+        (self.root / "vulnerabilities" / "c1.json").write_text(json.dumps(vulns))
+        c = json.loads((self.root / "campaigns" / "c1.json").read_text())
+        c["executive_summary"] = f"admin password is {SECRET}"
+        (self.root / "campaigns" / "c1.json").write_text(json.dumps(c))
+        r = self.paths("c1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn(SECRET, r.stdout)
+        self.assertTrue(json.loads(r.stdout)["paths"])
+
+
+class RobustnessTests(unittest.TestCase):
+    setUp = AdapterTests.setUp
+    tearDown = AdapterTests.tearDown
+
+    def test_one_malformed_file_does_not_empty_the_listings(self):
+        (self.root / "campaigns" / "broken.json").write_text('{"id": "broken"')
+        (self.root / "vulnerabilities" / "broken.json").write_text("[{")
+        code, out, _ = run(self.root, "campaigns")
+        self.assertEqual(code, 0)
+        self.assertEqual([c["id"] for c in json.loads(out)["data"]], ["c1"])
+        code, out, _ = run(self.root, "vulnerabilities")
+        self.assertEqual((code, len(json.loads(out)["data"])), (0, 2))
+
+    def test_terminal_control_sequences_are_stripped(self):
+        vulns = json.loads((self.root / "vulnerabilities" / "c1.json").read_text())
+        vulns[0]["title"] = "A\x1b]52;c;cGF5bG9hZA==\x07B\x9d8;;http://x\x9cC‮D"
+        vulns[0]["severity"] = "high\x1b[2J"
+        (self.root / "vulnerabilities" / "c1.json").write_text(json.dumps(vulns))
+        code, out, _ = run(self.root, "vulnerabilities")
+        self.assertEqual(code, 0)
+        self.assertFalse(any(ch in out for ch in ("\x1b", "\x07", "\x9d", "\x9c", "‮")))

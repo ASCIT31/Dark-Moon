@@ -202,7 +202,8 @@ export function clean(value: unknown, max = 4000): string {
   const out = s
     .replace(/\x1b\][^\x07\x1b]*(\x07|\x1b\\)/g, "")
     .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")
-    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\x9b]/g, "")
+    .replace(/[\x9d\x90\x98\x9e\x9f][^\x07\x9c\x1b]*(\x07|\x9c|\x1b\\)?/g, "") // 8-bit OSC / DCS / SOS / PM / APC strings
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "") // C0, C1, bidi
   return out.length > max ? out.slice(0, max) + "…" : out
 }
 

@@ -259,15 +259,13 @@ class _PrivacySanitizerMiddleware(Middleware):
             sc = getattr(result, "structured_content", None)
             if sc is not None:
                 result.structured_content = _sanitize_for_model(sc, session_id)
-        except Exception:  # noqa: BLE001 — never break a successful call, never leak an unfiltered block either
-            try:
-                for block in getattr(result, "content", None) or []:
-                    if getattr(block, "type", None) == "text":
-                        block.text = _PRIVACY_WITHHELD
-                if getattr(result, "structured_content", None) is not None:
-                    result.structured_content = {"result": _PRIVACY_WITHHELD}
-            except Exception:  # noqa: BLE001
-                raise ToolError(_PRIVACY_WITHHELD) from None
+        except Exception:  # noqa: BLE001 — never leak an unfiltered block
+            raise ToolError(_PRIVACY_WITHHELD) from None
+        # Fail closed without breaking the result's shape: a withheld block or structured result turns the call into a
+        # clean tool error (the model sees the notice, never the raw value, and the client never gets a malformed result).
+        if any(getattr(b, "text", None) == _PRIVACY_WITHHELD for b in (getattr(result, "content", None) or [])) \
+                or getattr(result, "structured_content", None) == _PRIVACY_WITHHELD:
+            raise ToolError(_PRIVACY_WITHHELD)
         return result
 
 

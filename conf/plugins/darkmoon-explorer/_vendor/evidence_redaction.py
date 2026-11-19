@@ -807,11 +807,16 @@ _KNOWN_CACHE = {"sig": None, "values": frozenset(), "store": frozenset(), "check
 def _store_files():
     try:
         from api.json_storage import CAMPAIGNS_DIR, VULNERABILITIES_DIR, store_files
-        from api.pr_store import PULL_REQUESTS_DIR
     except Exception:  # pragma: no cover
         return []
+    dirs = [VULNERABILITIES_DIR, CAMPAIGNS_DIR]
+    try:  # pull-request records exist only where the remediation store is installed
+        from api.pr_store import PULL_REQUESTS_DIR
+        dirs.insert(1, PULL_REQUESTS_DIR)
+    except Exception:
+        pass
     out = []
-    for d in (VULNERABILITIES_DIR, PULL_REQUESTS_DIR, CAMPAIGNS_DIR):
+    for d in dirs:
         try:
             out += store_files(d)   # never follows a planted symlink out of the store (H1)
         except OSError:

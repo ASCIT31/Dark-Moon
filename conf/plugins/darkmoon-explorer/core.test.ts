@@ -23,6 +23,7 @@ describe("clean", () => {
   })
   test("truncates long values", () => {
     expect(clean("x".repeat(10), 4)).toBe("xxxx…")
+    expect(clean("a\x9d8;;http://x\x9cb\x9b2Jc\u202ed\x90q\x9ce")).toBe("ab2Jcde")
   })
 })
 

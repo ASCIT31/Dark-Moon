@@ -50,6 +50,26 @@ def test_middleware_error_withholds_every_block(server, monkeypatch):
     async def call_next(_):
         return result
 
-    out = asyncio.run(server._PrivacySanitizerMiddleware().on_call_tool(ctx, call_next))
-    assert all(b.text == server._PRIVACY_WITHHELD for b in out.content)
-    assert SECRET not in str(out.structured_content)
+    from fastmcp.exceptions import ToolError
+    with pytest.raises(ToolError) as e:
+        asyncio.run(server._PrivacySanitizerMiddleware().on_call_tool(ctx, call_next))
+    assert str(e.value) == server._PRIVACY_WITHHELD and SECRET not in str(e.value)
+
+
+def test_a_crash_on_structured_content_is_a_clean_tool_error(server, monkeypatch):
+    result = SimpleNamespace(content=[SimpleNamespace(type="text", text="ok")], structured_content={"result": SECRET})
+    monkeypatch.setattr(server, "_sanitize_for_model",
+                        lambda v, sid: server._PRIVACY_WITHHELD if isinstance(v, dict) else v)
+    ctx = SimpleNamespace(message=SimpleNamespace(arguments={}))
+
+    async def call_next(_):
+        return result
+
+    from fastmcp.exceptions import ToolError
+    with pytest.raises(ToolError):
+        asyncio.run(server._PrivacySanitizerMiddleware().on_call_tool(ctx, call_next))
+
+
+def test_privacy_off_returns_the_value_unchanged(server, monkeypatch):
+    monkeypatch.setattr(server, "PRIVACY_ENABLED", False)
+    assert server._sanitize_for_model(f"password={SECRET}", "ses_off") == f"password={SECRET}"
