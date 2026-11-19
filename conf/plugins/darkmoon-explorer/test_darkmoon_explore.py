@@ -92,6 +92,32 @@ class AdapterTests(unittest.TestCase):
             self.assertNotIn(SECRET, out, args)
             self.assertIn("redacted", out, args)
 
+    def test_report_rendered_from_the_model_keeps_working(self):
+        """L6: the report file is the Markdown of the exec_core report model; the report command shows it masked
+        (section markers kept for the TUI) and still withholds it without the redaction engine."""
+        vendor = str(Path(__file__).resolve().parent / "_vendor")
+        if vendor not in sys.path:
+            sys.path.insert(0, vendor)
+        from exec_core import report_markdown, report_model  # vendored, byte-identical to the MCP server's
+        vulns = json.loads((self.root / "vulnerabilities" / "c1.json").read_text())
+        md = report_markdown.render(report_model.build({"edition": "community", "campaign": {"id": "c1", "status": "completed"},
+                                                        "findings": vulns, "generated_at": "2026-11-20T00:00:00Z"}))
+        self.assertIn(SECRET, md)                       # worst case: a file written without masking
+        (self.root / "reports" / "r1.md").write_text(md)
+        if dx.load_redaction(None) is not None:
+            code, out, _ = run(self.root, "report", "c1")
+            content = json.loads(out)["content"]
+            self.assertEqual(code, 0)
+            self.assertNotIn(SECRET, content)
+            self.assertIn("<!-- dm-section: cyber-score -->", content)
+            self.assertLess(content.index("dm-section: cyber-score"), content.index("dm-section: detailed-findings"))
+        real = dx.load_redaction
+        dx.load_redaction = lambda *_: None
+        self.addCleanup(setattr, dx, "load_redaction", real)
+        out = run(self.root, "report", "c1")[1]
+        self.assertNotIn(SECRET, out)
+        self.assertIn("Report withheld", json.loads(out)["content"])
+
     def test_declared_links_stay_hypotheses(self):
         doc = json.loads(run(self.root, "paths", "c1")[1])
         self.assertEqual(doc["summary"]["proven_paths"], 0)

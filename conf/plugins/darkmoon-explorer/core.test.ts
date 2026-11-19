@@ -99,6 +99,15 @@ describe("markdown report", () => {
     const s = splitSections("# T\n| a | b\n|---\n```js\nconst x = 1\n# inside\n")
     expect(s.map((x) => x.title)).toEqual(["T"])
   })
+  test("report model metadata lines (section marker, link anchors) are never shown", () => {
+    const md = "# R\n\n<!-- dm-section: cyber-score -->\n## 1. Cyber Score\n<a id=\"cyber_score\"></a>\n\ntext\n```\n<a id=\"kept\"></a>\n```\n"
+    const s = splitSections(md)
+    expect(s.map((x) => x.title)).toEqual(["R", "1. Cyber Score"])
+    expect(s[1].body).not.toContain("<a id=\"cyber_score\">")
+    expect(s[1].body).not.toContain("dm-section")
+    expect(s[1].body).toContain("<a id=\"kept\"></a>")
+  })
+
   test("search returns matching sections", () => {
     const s = splitSections("# A\nfoo\n# B\nbar foo\n# C\nbaz")
     expect(searchSections(s, "FOO")).toEqual([0, 1])

@@ -374,6 +374,8 @@ export type Section = { title: string; level: number; body: string; key?: string
 
 /** Stable section id written by the server on the line before a heading (``<!-- dm-section: fix-first -->``). */
 const SECTION_ID = /^\s*<!--\s*dm-section:\s*([a-z0-9][a-z0-9-]{0,63})\s*-->\s*$/
+/** Internal-link target written by the report model's renderer (``<a id="finding-vuln_x"></a>``): never shown. */
+const ANCHOR_LINE = /^\s*<a id="[A-Za-z0-9_-]{1,90}"><\/a>\s*$/
 
 /** Split a report on headings outside fenced code; tolerant of malformed Markdown (unclosed fences). A section id
  *  marker is never shown: it gives its ``key`` to the heading that follows it (blank lines allowed in between). */
@@ -391,6 +393,7 @@ export function splitSections(md: string): Section[] {
       key = id[1]
       continue
     }
+    if (!fence && !f && ANCHOR_LINE.test(line)) continue
     const h = !fence && !f ? line.match(/^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/) : null
     if (h) {
       if (cur.body.trim() || cur.title) out.push(cur)
