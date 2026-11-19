@@ -54,6 +54,8 @@ EDITION_SPECIFIC = (
     "sections.evidence_methodology.masking",      # how evidence is masked on output in each edition
     "sections.treatment_plan.verification",       # Pro: completed retests; Community: declarations only
     "blocks with id verification-note / masking-note",   # the sentences stating the two edition differences above
+    "attack-path counts quoted outside attack_paths",     # executive_summary sentence, business_impact evidence_backed_paths,
+                                                          # treatment_plan related paths: each edition's own path engine
 )
 
 SEV_ORDER = ("critical", "high", "medium", "low", "info")
@@ -162,15 +164,15 @@ def _cyber_score(score: Dict[str, Any]) -> Dict[str, Any]:
         blocks.append({"type": "paragraph", "text": f"Grade {grade}: {_legend.GRADE.get(grade, '')}.".replace(": .", ".")})
     else:
         blocks.append({"type": "kpis", "items": [
-            {"id": "score", "label": "Cyber Score", "value": "Not rated", "source": "exec_core.score"},
-            {"id": "status", "label": "Status", "value": st_info["label"], "source": "exec_core.score"}]})
+            {"id": "score", "label": "Cyber Score", "value": "Not rated", "source": "exec_core.score"}]})
     blocks.append({"type": "paragraph", "text": st_info["meaning"]})
     if cov.get("sentence"):
         blocks.append({"type": "paragraph", "text": "Coverage recorded by the server: " + text(cov["sentence"])})
     else:
         blocks.append({"type": "paragraph", "text": "Coverage recorded by the server: none (the campaign predates the "
                                                     "coverage record, or it was not recorded)."})
-    reasons = [text(r.get("sentence") or r.get("code")) for r in score.get("status_reasons") or [] if isinstance(r, dict)]
+    reasons = [text(r.get("text") or r.get("sentence") or r.get("code")) for r in score.get("status_reasons") or []
+               if isinstance(r, dict)]
     if reasons:
         blocks.append({"type": "subsection", "id": "cyber-score-reasons", "title": "Why the rating is limited or absent",
                        "blocks": [{"type": "list", "items": reasons}]})
@@ -928,8 +930,8 @@ def _limitations(score: Dict[str, Any], assessment: Optional[Dict[str, Any]], ca
         items.append(f"The campaign did not complete (status: {text(st)}): the findings cover what was tested before it "
                      "ended.")
     for r in score.get("status_reasons") or []:
-        if isinstance(r, dict) and r.get("sentence"):
-            items.append(text(r["sentence"]))
+        if isinstance(r, dict) and (r.get("text") or r.get("sentence")):
+            items.append(text(r.get("text") or r.get("sentence")))
     items += [text(x) for x in score.get("limitations") or [] if x]
     items += [text(x) for x in _fa.COMMON_LIMITS]
     fcov = (assessment or {}).get("coverage") or {}

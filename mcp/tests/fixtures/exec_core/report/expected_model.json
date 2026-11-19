@@ -26,7 +26,8 @@
   "sections.evidence_methodology.privacy",
   "sections.evidence_methodology.masking",
   "sections.treatment_plan.verification",
-  "blocks with id verification-note / masking-note"
+  "blocks with id verification-note / masking-note",
+  "attack-path counts quoted outside attack_paths"
  ],
  "generated_at": "2026-11-20T11:05:00Z",
  "language": "en",
