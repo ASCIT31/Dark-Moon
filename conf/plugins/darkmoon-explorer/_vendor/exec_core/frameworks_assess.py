@@ -83,8 +83,9 @@ def control_key(framework: str, control_id: str) -> str:
 def finding_class(v: Dict[str, Any]) -> Tuple[Optional[str], str]:
     """(weakness class mapped to at least one control, basis) or (None, "unmapped")."""
     mapped = _mapped_classes()
+    key = re.sub(r"[^a-z0-9]+", "_", str(v.get("category") or v.get("type") or "").strip().lower()).strip("_")
     cls = identity.weakness_class(v)
-    cls = K.EXTRA_CLASS.get(cls, cls)
+    cls = K.EXTRA_CLASS.get(key) or K.EXTRA_CLASS.get(cls, cls)
     if cls in mapped:
         return cls, "weakness_class"
     for m in _CWE.finditer(str(v.get("cwe") or "") + " " + str(v.get("cwe_id") or "")):

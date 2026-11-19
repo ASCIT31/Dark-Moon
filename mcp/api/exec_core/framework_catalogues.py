@@ -17,6 +17,8 @@ CATALOGUE_VERSION = "darkmoon-framework-technical-catalogue/1"
 
 # Weakness classes used below that ``identity`` does not produce on its own (category -> class).
 EXTRA_CLASS = {
+    "privilege_escalation": "privilege_escalation", "vertical_privilege_escalation": "privilege_escalation",
+    "admin_privilege_escalation": "privilege_escalation",
     "source_code_disclosure": "source_code_exposure", "source_code_exposure": "source_code_exposure",
     "git_exposure": "source_code_exposure", "exposed_git": "source_code_exposure",
     "source_map_exposure": "source_code_exposure", "backup_file_exposure": "source_code_exposure",
@@ -42,7 +44,7 @@ CWE_CLASS = {
     "22": "file_access", "23": "file_access", "35": "file_access", "73": "file_access", "98": "file_access",
     "434": "file_upload",
     "284": "access_control", "285": "access_control", "639": "access_control", "862": "access_control",
-    "863": "access_control", "269": "access_control", "915": "access_control", "425": "access_control",
+    "863": "access_control", "269": "privilege_escalation", "915": "access_control", "425": "access_control",
     "287": "authentication", "288": "authentication", "306": "authentication", "307": "authentication",
     "521": "authentication", "798": "authentication", "1390": "authentication", "1391": "authentication",
     "1392": "authentication", "1393": "authentication",
@@ -65,7 +67,7 @@ ATTACK_CLASS = {
     "T1110": "authentication", "T1078": "authentication", "T1550": "authentication", "T1556": "authentication",
     "T1552": "information_disclosure", "T1213": "information_disclosure", "T1005": "information_disclosure",
     "T1040": "cryptography", "T1557": "cryptography",
-    "T1068": "access_control", "T1548": "access_control",
+    "T1068": "privilege_escalation", "T1548": "privilege_escalation",
     "T1059": "code_execution", "T1203": "code_execution", "T1505": "code_execution",
     "T1539": "session", "T1185": "session",
     "T1498": "availability", "T1499": "availability",
@@ -95,11 +97,12 @@ ISO_2013_TO_2022 = {
 
 _WEB = ["sql_injection", "nosql_injection", "xss", "csrf", "ssrf", "xxe", "code_execution", "file_access",
         "file_upload", "open_redirect", "input_validation", "business_logic", "access_control", "authentication",
-        "session", "information_disclosure", "configuration", "vulnerable_component", "source_code_exposure"]
+        "session", "information_disclosure", "configuration", "vulnerable_component", "source_code_exposure",
+        "privilege_escalation"]
 _BROWSER = ["xss", "csrf", "session", "authentication", "access_control", "information_disclosure",
             "configuration", "open_redirect", "input_validation"]
-_PLATFORM = ["authentication", "access_control", "configuration", "vulnerable_component", "information_disclosure",
-             "network_exposure", "code_execution"]
+_PLATFORM = ["authentication", "access_control", "privilege_escalation", "configuration", "vulnerable_component",
+             "information_disclosure", "network_exposure", "code_execution"]
 _TRANSPORT = _PLATFORM + ["cryptography"]
 _AI = ["ai_manipulation", "ai_confidentiality", "ai_exposure", "information_disclosure"]
 
@@ -122,7 +125,7 @@ AGENT_AREAS = {
 _INJECTION = ["sql_injection", "nosql_injection", "xss", "xxe", "code_execution", "file_access", "file_upload",
               "input_validation"]
 _REQUEST_HANDLING = _INJECTION + ["csrf", "open_redirect", "business_logic"]
-_CONF_INT = ["access_control", "authentication", "session", "information_disclosure", "source_code_exposure",
+_CONF_INT = ["access_control", "privilege_escalation", "authentication", "session", "information_disclosure", "source_code_exposure",
              "sql_injection", "nosql_injection", "xss", "csrf", "ssrf", "xxe", "code_execution", "file_access",
              "file_upload"]
 _DEV_MAINT = ["vulnerable_component", "configuration"] + _REQUEST_HANDLING + ["ssrf"]
@@ -153,7 +156,7 @@ FRAMEWORKS = [
             _c("A.5.14", "Data exchanged between the tested components and their clients travels over protected "
                          "channels.", ["cryptography"]),
             _c("A.5.15", "The application enforces who may reach which function or record (authorisation bypass, "
-                         "object references, privilege escalation).", ["access_control"]),
+                         "object references, privilege escalation).", ["access_control", "privilege_escalation"]),
             _c("A.5.17", "Default, weak, guessable or exposed login secrets, and how they are handled by the tested "
                          "surface.", ["authentication"]),
             _c("A.5.18", "Granting, review and removal of user rights.", why=_PROCESS),
@@ -162,7 +165,7 @@ FRAMEWORKS = [
                    "under the technical controls (A.8.12) and GDPR art. 32."),
             _c("A.8.1", "Protection of end-user devices.",
                why="End-user devices are outside the scope of an application campaign."),
-            _c("A.8.2", "Escalation from an ordinary account to administrative functions.", ["access_control"]),
+            _c("A.8.2", "Escalation from an ordinary account to administrative functions.", ["privilege_escalation"]),
             _c("A.8.3", "Reading or changing records of other users or tenants without authorisation.",
                ["access_control"]),
             _c("A.8.4", "Source code or repositories exposed through the tested surface (.git, backups, source "
@@ -271,7 +274,7 @@ FRAMEWORKS = [
             _c("Art.21(2)(h)", "Cryptography and encryption weaknesses observed on the tested surface.",
                ["cryptography"]),
             _c("Art.21(2)(i)", "Authorisation enforcement observed on the tested surface (human resources security "
-                               "and asset management are not assessed).", ["access_control"]),
+                               "and asset management are not assessed).", ["access_control", "privilege_escalation"]),
             _c("Art.21(2)(j)", "Authentication strength observed where the tested surface offers a login "
                                "(secured voice, video, text and emergency communications are not assessed).",
                ["authentication", "session"]),

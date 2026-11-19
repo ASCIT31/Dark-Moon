@@ -240,6 +240,10 @@ def test_mapping_bases_are_deterministic():
     cites = FA.iso_citations("ISO 27001:2013 A.14.2.5, A.9.4.2 and 8.28")
     assert {(c["cited"], c["control_id"]) for c in cites} == {("A.14.2.5", "A.8.27"), ("A.9.4.2", "A.8.5"),
                                                               ("A.8.28", "A.8.28")}
+    idor = [r["control"] for r in FA.controls_for_finding(_v("a", "idor"))]
+    pe = [r["control"] for r in FA.controls_for_finding(_v("a", "privilege_escalation"))]
+    assert "iso27001:A.8.3" in idor and "iso27001:A.8.2" not in idor      # an IDOR is not a privilege escalation
+    assert "iso27001:A.8.2" in pe and "iso27001:A.5.15" in pe
     v = _v("a", "rce", iso27001_control="A.9.4.2")
     assert FA.controls_for_finding(v) == FA.controls_for_finding(copy.deepcopy(v))
     assert any(r["control"] == "iso27001:A.8.5" and r["basis"] == ["agent_citation:iso_2013_crosswalk"]

@@ -34,7 +34,7 @@ CORE = MCP / "api" / "exec_core"
 FIXTURES = MCP / "tests" / "fixtures" / "exec_core"
 VENDORED = MCP.parent / "conf" / "plugins" / "darkmoon-explorer" / "_vendor" / "exec_core"
 
-INIT_SHA256 = "e7c65ae6ebdfe87d130b54340d19e8659db173028f2e6a0db707a7c4dd7b939e"
+INIT_SHA256 = "78b4d758bf55d30ccb80b166f8ffe8940596057dd686e7190718e9a6a6d7ee9f"
 SHARED_SHA256 = {
     "coverage_signals.py": "c800cf3d5ba6f3c873ec01b9991a35b4e43d9219b13da79d655f17366017ac64",
     "exec_score.py": "94e6bd24282becd2e382dc02556cd4ae90eea7ba5b898473516d112615b3bd94",
@@ -42,10 +42,10 @@ SHARED_SHA256 = {
 }
 SHARED_TESTS_SHA256 = {
     "test_exec_core_actions.py": "3bea2178676f730838a1edddf68078ab0e517827488bd7be549f91b63aab049e",
-    "test_exec_core_frameworks.py": "091668ed431a5b98efc7944cc5cd3d0ef69f07483cf86333e80f262d8fd81639",
+    "test_exec_core_frameworks.py": "ba9b0ba3d5dffb8cdca8d00693a18479804bb85afeae0ceedde59afa6a1a8730",
 }
 TREATMENT_FIXTURES_SHA256 = "3ea1f25ed7e7f9799f6ee0e30196f673d2b6097fdd49b998c6fd26b8676773c5"
-FRAMEWORK_FIXTURES_SHA256 = "962b3c57a2d9a5a561d61940b56e9ec412fa248492fd9df900e9d385fc228a33"
+FRAMEWORK_FIXTURES_SHA256 = "fee0eaeca54d097a7f2cfc5f51193a13fd00e1b2ae8df23cb81d1f66eec3bf0a"
 FIXTURES_SHA256 = "40443c8253d7900390de4abf34167f6d8ae35c8c032e4fa4ca01760111c55a8d"
 
 STDLIB_ALLOWED = {"__future__", "datetime", "hashlib", "json", "math", "re", "typing", "urllib.parse"}

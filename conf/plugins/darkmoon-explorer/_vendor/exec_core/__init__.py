@@ -15,8 +15,8 @@ VERSION = "1.2.0"
 
 MANIFEST = {
     "actions.py": "8c9951cecfcaac8469d77247f4dcdc20c5a643d1811441f02ef27e2eab197456",
-    "framework_catalogues.py": "cf8be4f24862af1572872c0f390d6a9c674da45ddf242b0d36651677a1f50166",
-    "frameworks_assess.py": "2ba91b7cbfc463c02aa284dd8b003d01df128600bf1bc2a7fd75b575df6f1e16",
+    "framework_catalogues.py": "f106db290849427c71d0885b600a57b64f21534944d88ec306ad5326eb9f3522",
+    "frameworks_assess.py": "53faa0df35ddd1fb9177f9b844c58a1153c4a380d24f93590ba6d3d21ed7a617",
     "identity.py": "a76e274fd1079c53b683543f98ef411b89f288f518cb38c4e59a787ada7f326f",
     "legend.py": "84df25e47eda2e4616248a1a4afa4b09f07159ef7f66ce720168649f87163ea5",
     "profile.py": "113ed9f5994cbcb2baab2263f5af635000ccc808323c93aae66fedd8d56d7279",

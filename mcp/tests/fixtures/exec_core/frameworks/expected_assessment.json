@@ -24,6 +24,7 @@
     "input_validation",
     "nosql_injection",
     "open_redirect",
+    "privilege_escalation",
     "session",
     "source_code_exposure",
     "sql_injection",
@@ -34,7 +35,7 @@
    ],
    "coverage_ok": true,
    "reasons": [],
-   "sentence": "Coverage recorded: 3 test agent(s); classes exercised: 22.",
+   "sentence": "Coverage recorded: 3 test agent(s); classes exercised: 23.",
    "unknown_agents": [
     "unknown-helper"
    ]
@@ -98,7 +99,8 @@
        "path_2"
       ],
       "classes": [
-       "access_control"
+       "access_control",
+       "privilege_escalation"
       ],
       "control_id": "A.5.15",
       "finding_ids": [
@@ -175,31 +177,17 @@
       "why": "End-user devices are outside the scope of an application campaign."
      },
      {
-      "action_ids": [
-       "act_fx_3"
-      ],
-      "attack_path_ids": [
-       "path_1",
-       "path_2"
-      ],
+      "action_ids": [],
+      "attack_path_ids": [],
       "classes": [
-       "access_control"
+       "privilege_escalation"
       ],
       "control_id": "A.8.2",
-      "finding_ids": [
-       "vuln_cwe"
-      ],
+      "finding_ids": [],
       "key": "iso27001:A.8.2",
-      "open_findings": 1,
-      "proof": {
-       "confirmed": 1,
-       "exploited": 0,
-       "unconfirmed": 0
-      },
-      "state": "weakness_observed",
-      "state_label": "Weakness observed",
-      "text": "Escalation from an ordinary account to administrative functions.",
-      "to_confirm": false
+      "state": "none_observed_in_tested_scope",
+      "state_label": "No weakness observed in the tested scope",
+      "text": "Escalation from an ordinary account to administrative functions."
      },
      {
       "action_ids": [
@@ -708,10 +696,10 @@
      }
     ],
     "counts": {
-     "none_observed_in_tested_scope": 4,
+     "none_observed_in_tested_scope": 5,
      "not_technically_assessable": 23,
      "not_tested": 2,
-     "weakness_observed": 10
+     "weakness_observed": 9
     },
     "finding_ids": [
      "vuln_attack",
@@ -789,6 +777,7 @@
       ],
       "classes": [
        "access_control",
+       "privilege_escalation",
        "authentication",
        "session",
        "information_disclosure",
@@ -1075,7 +1064,8 @@
        "path_2"
       ],
       "classes": [
-       "access_control"
+       "access_control",
+       "privilege_escalation"
       ],
       "control_id": "Art.21(2)(i)",
       "finding_ids": [
@@ -1337,7 +1327,6 @@
      "control_keys": [
       "gdpr:Art.32(1)(b)-ci",
       "iso27001:A.5.15",
-      "iso27001:A.8.2",
       "iso27001:A.8.3",
       "nis2:Art.21(2)(i)"
      ],
@@ -1355,7 +1344,6 @@
      "control_keys": [
       "gdpr:Art.32(1)(b)-ci",
       "iso27001:A.5.15",
-      "iso27001:A.8.2",
       "iso27001:A.8.26",
       "iso27001:A.8.28",
       "iso27001:A.8.3",
@@ -1370,7 +1358,6 @@
      "control_keys": [
       "gdpr:Art.32(1)(b)-ci",
       "iso27001:A.5.15",
-      "iso27001:A.8.2",
       "iso27001:A.8.3",
       "nis2:Art.21(2)(i)"
      ]
@@ -1609,18 +1596,11 @@
      "state": "not_technically_assessable"
     },
     "iso27001:A.8.2": {
-     "action_ids": [
-      "act_fx_3"
-     ],
-     "attack_path_ids": [
-      "path_1",
-      "path_2"
-     ],
-     "finding_ids": [
-      "vuln_cwe"
-     ],
+     "action_ids": [],
+     "attack_path_ids": [],
+     "finding_ids": [],
      "framework": "iso27001",
-     "state": "weakness_observed"
+     "state": "none_observed_in_tested_scope"
     },
     "iso27001:A.8.20": {
      "action_ids": [],
@@ -1929,7 +1909,6 @@
      "control_keys": [
       "gdpr:Art.32(1)(b)-ci",
       "iso27001:A.5.15",
-      "iso27001:A.8.2",
       "iso27001:A.8.3",
       "nis2:Art.21(2)(i)"
      ],
