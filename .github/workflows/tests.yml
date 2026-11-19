@@ -1,9 +1,9 @@
 name: Tests
 
-# Runs on every push and PR, in EVERY repo (no repo guard): these regression
-# tests gate the run-robustness bugs (campaign_id collision, headless OOM flags)
-# so they cannot silently come back. GitHub-hosted runner; the tests are
-# stdlib-only, so no heavy dependency install is needed.
+# Runs on every push and PR, in EVERY repo (no repo guard): the MCP server suite
+# (storage, findings push, attack paths, privacy filter, port scan, allowlist)
+# and the Terminal Explorer (local data adapter + renderer helpers).
+# GitHub-hosted runner; no secret, read-only token.
 
 on:
   push:
@@ -14,6 +14,9 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
+
+permissions:
+  contents: read
 
 jobs:
   pytest:
@@ -28,9 +31,24 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install pytest
-        run: python -m pip install --upgrade pip pytest
+      - name: Install the MCP server dependencies
+        run: python -m pip install --upgrade pip pytest -r mcp/requirements.txt
 
-      - name: Run regression tests
+      - name: MCP server tests
         working-directory: mcp
-        run: python -m pytest tests/test_live_push_fixes.py -v
+        run: python -m pytest tests -q
+
+      - name: Terminal Explorer data adapter tests
+        working-directory: conf/plugins/darkmoon-explorer
+        run: python -m pytest test_darkmoon_explore.py -q
+
+  explorer-core:
+    name: Terminal Explorer core (bun)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Run the core tests in the pinned bun image
+        working-directory: conf/plugins/darkmoon-explorer
+        run: docker run --rm -v "$PWD":/w:ro -w /w oven/bun:1.4.4@sha256:1d22548f177f4ff38e0c15baa3c2c46c6c2060ba2d1bc573bb4720b407548f1d bun test core.test.ts

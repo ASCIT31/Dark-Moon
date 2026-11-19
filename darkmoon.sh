@@ -146,6 +146,11 @@ except Exception:
       exit 3
       ;;
   esac
+  # A campaign is driven by the Darkmoon orchestrator (conf/agents/pentest.md): without --agent, `opencode run`
+  # uses opencode's generic « build » agent, which has the Darkmoon tools but none of the orchestrator's method,
+  # dispatch and safety rules. An explicit --agent given by the user still wins.
+  AGENT_ARGS=(--agent pentest)
+  for a in "$@"; do case "$a" in --agent|--agent=*) AGENT_ARGS=();; esac; done
   exec "${DC[@]}" exec "${TTY_FLAGS[@]}" "$SERVICE" \
-    bash -lc 'app="$1"; shift; exec "$app" run "$@"' bash "$APP_BIN" "$@"
+    bash -lc 'app="$1"; shift; exec "$app" run "$@"' bash "$APP_BIN" "${AGENT_ARGS[@]}" "$@"
 fi

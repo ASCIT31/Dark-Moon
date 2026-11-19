@@ -79,7 +79,19 @@ Rules:
 - transparency
 - security before ego
 
-## 8. Conclusion
+## 8. Licensing of Contributions and CLA
+
+Darkmoon Community is distributed under the GNU Affero General Public License v3.0 (AGPL-3.0-only); by opening a pull
+request you agree that your contribution is licensed under it.
+
+A [Contributor License Agreement](CLA.md) (and a [Corporate CLA](CLA-CORPORATE.md) for organisations) is being
+prepared. **Both are drafts under legal review and cannot be signed yet**; once the reviewed version is published,
+the CLA bot will ask each contributor to sign it once by a comment on their pull request. Contributions made before
+the switch to the AGPL-3.0 stay under the GPL-3.0: see [LICENSING.md](LICENSING.md).
+
+---
+
+## 9. Conclusion
 
 Darkmoon is a serious project.
 

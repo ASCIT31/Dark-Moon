@@ -197,6 +197,10 @@ RUN sed -i 's|http://archive.ubuntu.com|http://fr.archive.ubuntu.com|g' /etc/apt
     # offline cracking + wordlist gen (gcp/storage encrypted-archive chain)
     cewl \
     john \
+    \
+    # firmware / IaC tools used by the agent prompts (cpio for firmware images, xmllint)
+    cpio \
+    libxml2-utils \
     libcompress-raw-lzma-perl \
     \
     # firmware / IoT analysis (firmware agent)
@@ -299,6 +303,19 @@ ENV PATH="/opt/darkmoon/curl/bin:/opt/darkmoon/python/bin:/opt/darkmoon/ruby/bin
 RUN ln -s /opt/darkmoon/python/bin/python3 /usr/local/bin/python \
  && ln -s /opt/darkmoon/python/bin/pip3 /usr/local/bin/pip
 
+# tools referenced by the agent prompts but missing from the image (coverage audit 17/11/2026):
+# jefferson (JFFS2) + ubi_reader (UBI/UBIFS) for the firmware agent, ansible-vault (ansible-core) for the ansible agent.
+# Best effort: a failed install warns, it never breaks the toolbox build.
+RUN /opt/darkmoon/python/bin/pip3 install --no-cache-dir jefferson ubi_reader ansible-core \
+ || echo "[WARN] jefferson / ubi_reader / ansible-core unavailable"
+
+# `httpx` must be the ProjectDiscovery prober (/usr/local/bin/httpx), but the python bin
+# dir comes first in PATH and the httpx *library* (pulled by many packages) installs a
+# console script with the same name. Drop only that entrypoint: `import httpx` keeps working.
+# Kept after every pip install of the runtime stage, so nothing re-creates it.
+RUN rm -f /opt/darkmoon/python/bin/httpx \
+ && /opt/darkmoon/python/bin/python3 -c "import httpx"
+
 # ------------------------------------------------------------
 # Wordlists & data
 # ------------------------------------------------------------
@@ -342,6 +359,30 @@ RUN for bin in /out/bin/*; do \
     done
 
 # ------------------------------------------------------------
+# Packaging fixes (toolbox-observability audit, 17/11/2026)
+# ------------------------------------------------------------
+# cewl: the Debian script starts with `#!/usr/bin/env ruby`, which resolves to the
+# embedded ruby (/opt/darkmoon/ruby/bin first in PATH) that has none of its gems
+# (spider, mini_exiftool, rubyzip, mime, mime-types) -> « spider gem not installed ».
+# Pin it to the system ruby the apt package was built for, with its packaged gems.
+RUN printf '#!/bin/sh\nexec /usr/bin/ruby /usr/bin/cewl "$@"\n' > /usr/local/bin/cewl \
+ && chmod 755 /usr/local/bin/cewl \
+ && /usr/local/bin/cewl --help >/dev/null
+# zgrab2 refuses to start without $HOME/.config/zgrab2/blocklist.conf: ship an empty one
+# (no blocked ranges; scope is enforced by the platform, not by zgrab2).
+RUN install -d /root/.config/zgrab2 \
+ && : > /root/.config/zgrab2/blocklist.conf
+# wpscan aborts (rc=4, « Update required ») until its metadata DB exists in
+# ~/.cache/wpscan/db. Fetch it at build time; best effort, never fatal.
+RUN (wpscan --update --no-banner && rm -f /root/.cache/wpscan/cookie_jar.txt) \
+ || echo "[WARN] wpscan DB update failed; wpscan will fetch it on first run"
+
+# naabu ignores /etc/resolv.conf: the shim (earlier in PATH) passes the container nameservers when none is given
+COPY conf/toolbox-shims/naabu /usr/local/sbin/naabu
+RUN sed -i 's/\r$//' /usr/local/sbin/naabu \
+ && chmod 0755 /usr/local/sbin/naabu
+
+# ------------------------------------------------------------
 # Post-install validation minimale
 # ------------------------------------------------------------
 RUN command -v nuclei >/dev/null \
@@ -355,6 +396,14 @@ RUN command -v nuclei >/dev/null \
 RUN mkdir -p /root/nuclei-templates \
  && cp -a ${NUCLEI_TEMPLATES}/. /root/nuclei-templates/ || true \
  && nuclei -tl >/dev/null 2>&1 || true
+
+# ------------------------------------------------------------
+# ProjectDiscovery tools: no update check to api.pdtm.sh (O2)
+# ------------------------------------------------------------
+COPY conf/pd-disable-update-check.sh /usr/local/sbin/pd-disable-update-check
+RUN sed -i 's/\r$//' /usr/local/sbin/pd-disable-update-check \
+ && chmod 755 /usr/local/sbin/pd-disable-update-check \
+ && /usr/local/sbin/pd-disable-update-check
 
 # ------------------------------------------------------------
 # Hardening

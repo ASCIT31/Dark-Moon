@@ -12,7 +12,9 @@ Architecture:
 import os
 import threading
 import uuid
-from typing import Optional, Dict, Any
+from typing import Annotated, Optional, Dict, Any, List
+
+from pydantic import Field
 from fastmcp import FastMCP
 
 from src.docker_client import DarkmoonDockerClient
@@ -208,12 +210,15 @@ from fastmcp.server.middleware import Middleware  # noqa: E402
 from fastmcp.exceptions import ToolError  # noqa: E402
 
 
+_PRIVACY_WITHHELD = "[privacy filter error: output withheld]"
+
+
 def _sanitize_for_model(value: Any, session_id: Optional[str]) -> Any:
     """Re-tokenize any real value in a tool result/error via the session vault.
 
     Idempotent: values already turned into placeholders do not match any category
     pattern, so re-running it over already-sanitized execute_command output is a
-    no-op. Never raises — sanitization must not turn a working tool into an error.
+    no-op. Never raises; on an internal error the value is withheld (fail closed), never returned raw.
     """
     if not PRIVACY_ENABLED:
         return value
@@ -225,8 +230,8 @@ def _sanitize_for_model(value: Any, session_id: Optional[str]) -> Any:
             ):
                 return value
             return _command_gateway.sanitize_result(value, vault)
-    except Exception:  # noqa: BLE001 — sanitization must be fail-safe
-        return value
+    except Exception:  # noqa: BLE001 — fail CLOSED: a sanitizer crash must never hand the raw value to the
+        return _PRIVACY_WITHHELD  # model; the tool call still succeeds, its output is withheld
 
 
 class _PrivacySanitizerMiddleware(Middleware):
@@ -254,8 +259,13 @@ class _PrivacySanitizerMiddleware(Middleware):
             sc = getattr(result, "structured_content", None)
             if sc is not None:
                 result.structured_content = _sanitize_for_model(sc, session_id)
-        except Exception:  # noqa: BLE001 — never break a successful call
-            pass
+        except Exception:  # noqa: BLE001 — never leak an unfiltered block
+            raise ToolError(_PRIVACY_WITHHELD) from None
+        # Fail closed without breaking the result's shape: a withheld block or structured result turns the call into a
+        # clean tool error (the model sees the notice, never the raw value, and the client never gets a malformed result).
+        if any(getattr(b, "text", None) == _PRIVACY_WITHHELD for b in (getattr(result, "content", None) or [])) \
+                or getattr(result, "structured_content", None) == _PRIVACY_WITHHELD:
+            raise ToolError(_PRIVACY_WITHHELD)
         return result
 
 
@@ -659,6 +669,29 @@ def dashboard_init_campaign(
     )
 
 
+# Attack paths: earlier findings whose result this exploitation used. Stored as declared by the agent; the
+# attack-path view shows them as hypotheses, never as proof (api/declared_links.py, api/attack_paths.py).
+_ENABLED_BY = ("Optional: list of findings of this campaign whose result this exploitation used (token, credential "
+               "or access obtained there), by vuln_id (as returned by the push), exact title or exact endpoint. "
+               "Leave empty when it used none.")
+
+
+def _enabled_by_refs(value: Any) -> List[str]:
+    """At most 16 non-empty references of at most 120 characters, whatever shape the model sent."""
+    items = value if isinstance(value, (list, tuple)) else [value]
+    flat: List[Any] = []
+    for x in items:
+        flat.extend(x if isinstance(x, (list, tuple)) else [x])
+    out: List[str] = []
+    for x in flat:
+        if x is None or isinstance(x, (dict, bool)):
+            continue
+        ref = str(x).strip()[:120]
+        if ref and ref not in out:
+            out.append(ref)
+    return out[:16]
+
+
 @mcp.tool()
 def dashboard_push_finding(
     campaign_id: str,
@@ -683,6 +716,8 @@ def dashboard_push_finding(
     plugin_or_component: Optional[str] = None,
     raw_request: Optional[str] = None,
     raw_response: Optional[str] = None,
+    # Any: a malformed value (a bare string, numbers, nested lists) must never make the tool reject the whole finding
+    enabled_by: Annotated[Optional[Any], Field(description=_ENABLED_BY)] = None,
 ) -> Dict[str, Any]:
     """
     Push a single vulnerability finding to the Darkmoon Dashboard in real-time.
@@ -713,9 +748,14 @@ def dashboard_push_finding(
         plugin_or_component: Vulnerable component name
         raw_request: Raw HTTP request (evidence)
         raw_response: Raw HTTP response (evidence)
+        enabled_by: Earlier findings of this campaign whose result this exploitation used
+            (e.g. ["vuln_1a2b3c"] when a credential found there was used here). A declaration,
+            shown as a hypothesis in the attack paths. Re-pushing the same finding with
+            enabled_by adds the references instead of creating a duplicate.
 
     Returns:
-        Dictionary with vuln_id, total findings count.
+        Dictionary with vuln_id, total findings count (and enabled_by_warnings for
+        references that could not be resolved).
 
     Example:
         dashboard_push_finding(
@@ -767,6 +807,9 @@ def dashboard_push_finding(
             __import__("datetime").timezone.utc
         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
+    refs = _enabled_by_refs(enabled_by)
+    if refs:
+        finding["enabled_by"] = refs
 
     return push_finding(campaign_id=campaign_id, finding=finding)
 

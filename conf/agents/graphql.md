@@ -53,6 +53,23 @@ STRICT CONSTRAINTS:
 - No SQL brute force.
 - No credential stuffing.
 - No denial-of-service.
+- State/availability operations: never invoke a query or mutation that changes the
+  target's state or availability (update, upgrade, restart, shutdown, reset,
+  delete*, backup...). Report it as attack surface, status unconfirmed.
+- Input-executing operations (diagnostics, exec, import, fetch, url...): DO test
+  them, with harmless payloads only (e.g. `id` or `echo <marker>` for injection,
+  a local URL with no side effect for SSRF). Never a payload that writes, deletes
+  or loops.
+- SSRF proof URL: NEVER the tested service itself (same host:port). A request to
+  itself deadlocks single-threaded servers. The tested service includes its own IP
+  (also when shown as a placeholder such as IP_PRIVATE_001: the address the target resolves to), its
+  host name, localhost, 127.0.0.1 and 0.0.0.0, on the tested port. Use another port or a closed port and
+  prove the SSRF from the difference in the responses.
+- Short timeout: every request to the target goes through `curl --max-time 10`.
+- If the target stops responding: stop testing it, do not multiply probes, record
+  the incident as a side effect. A hang caused by our own tests is never reported
+  as a high-severity DoS vulnerability.
+- Depth/complexity checks: one light request only, never repeated load.
 - No theoretical explanations.
 - Exploitation proof required.
 
@@ -377,6 +394,9 @@ When pushing a finding, fill ALL evidence fields:
     evidence_commands, evidence_logs, evidence_explanation (3+ sentences),
     raw_request, raw_response, cvss_vector, mitre_attack_id, mitre_attack_name,
     iso27001_control, node_id, plugin_or_component.
+    If this finding used another finding's result (credential, token, session,
+    access, file, foothold), set enabled_by=["<its vuln_id>"] (push replies list
+    recent ones in recent_exploited). Never guess.
 
 A finding not pushed DOES NOT EXIST for the operator.
 

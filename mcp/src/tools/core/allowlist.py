@@ -148,6 +148,12 @@ EXECUTOR_ALLOWED_TOOLS = {
             "sasquatch",
             "firmwalker",
             "nc",
+            # 17/11/2026 coverage audit: tools the agent prompts call as the FIRST word were refused here while the
+            # same command wrapped in `bash -c` (allowed) passed — the lab campaign lost its SSH step to this.
+            # ssh is installed in the toolbox; timeout / printf are coreutils used by 15 prompt commands.
+            "ssh",
+            "timeout",
+            "printf",
             "john",
             "unshadow",
             "sqlite3",

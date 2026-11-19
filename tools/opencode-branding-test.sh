@@ -44,19 +44,24 @@ if [ "${1:-}" = "--image" ]; then
   IMG="${2:?--image needs an image name}"
   TMPBIN="$(mktemp)"
   cid="$(docker create "$IMG")"
-  docker cp "$cid:/opencode-bin" "$TMPBIN" 2>/dev/null \
+  # /usr/local/bin/opencode is the privilege-dropping shell wrapper: test the real binary.
+  docker cp "$cid:/usr/local/libexec/opencode-real" "$TMPBIN" 2>/dev/null \
+    || docker cp "$cid:/opencode-bin" "$TMPBIN" 2>/dev/null \
     || docker cp "$cid:/usr/local/bin/opencode" "$TMPBIN" 2>/dev/null
   docker rm -f "$cid" >/dev/null 2>&1 || true
   chmod +x "$TMPBIN"; BIN="$TMPBIN"
 elif [ -n "${1:-}" ]; then
   BIN="$1"
 else
-  # default: the opencode binary inside the running stack
-  if docker exec opencode test -x /usr/local/bin/opencode 2>/dev/null; then
-    TMPBIN="$(mktemp)"
-    docker cp opencode:/usr/local/bin/opencode "$TMPBIN" >/dev/null 2>&1
-    chmod +x "$TMPBIN"; BIN="$TMPBIN"
-  fi
+  # default: the opencode binary inside the running stack (the real binary when a wrapper sits on PATH)
+  for p in /usr/local/libexec/opencode-real /usr/local/bin/opencode; do
+    if docker exec opencode test -x "$p" 2>/dev/null; then
+      TMPBIN="$(mktemp)"
+      docker cp "opencode:$p" "$TMPBIN" >/dev/null 2>&1
+      chmod +x "$TMPBIN"; BIN="$TMPBIN"
+      break
+    fi
+  done
 fi
 [ -n "$BIN" ] && [ -x "$BIN" ] || { echo "no runnable opencode binary found (arg / --image / running stack)"; exit 1; }
 [ -f "$LOGO_TS" ] || { echo "logo source of truth not found: $LOGO_TS"; exit 1; }

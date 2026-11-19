@@ -513,6 +513,17 @@ EOF
 
 echo "✅ OpenCode config written to $OPENCODE_CONFIG_FILE"
 
+# TUI config (opencode >= 1.19): the Darkmoon Terminal Explorer, a read-only TUI plugin that browses the local
+# projects, campaigns, findings, reports and attack paths (/explore; no model call). Community reads the local
+# store through darkmoon_explore.py; evidence is masked before display, or withheld if it cannot be masked.
+cat > "$OPENCODE_CONFIG_DIR/tui.json" <<'TUIEOF'
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "plugin": [["file:///opt/darkmoon/plugins/darkmoon-explorer/index.tsx",
+              {"source": "files", "data": "/root/.local/share/opencode", "reports": "/root/.local/share/opencode/reports"}]]
+}
+TUIEOF
+
 #######################################
 # Write auth.json ONLY for cloud providers
 #######################################

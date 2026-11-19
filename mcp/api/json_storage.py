@@ -18,15 +18,21 @@ Directory layout:
         └── *.md
 """
 
+import fcntl
 import json
+import logging
 import os
+import re
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Resolve data directory — use opencode's standard data dir so it lands in the
 # volume-mounted path (e.g. ./darkmoon-settings or ./reports on the host).
+# DARKMOON_DATA_DIR lets tests and local tools point at a copy of the data.
 _OPENDATA_DIR = Path.home() / ".local" / "share" / "opencode"
-DATA_DIR = _OPENDATA_DIR
+DATA_DIR = Path(os.environ.get("DARKMOON_DATA_DIR", "").strip() or _OPENDATA_DIR)
 
 PROJECTS_FILE = DATA_DIR / "projects.json"
 TARGETS_FILE = DATA_DIR / "targets.json"
@@ -51,6 +57,78 @@ if _REPORTS_OVERRIDE:
 # Generic helpers
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Identifier safety (path traversal guard)
+# ---------------------------------------------------------------------------
+# Every per-campaign file is named after an id that reaches us from request data
+# (path/query/body params, MCP tool arguments, or ids stored inside records). An
+# id is only ever a file NAME: ASCII letters, digits, "_" and "-", starting with
+# a letter or digit, at most 128 chars. Real ids are camp_YYYYMMDD_<8 alnum>
+# (the run fragment is hex or an opencode root-session fragment); tests and the
+# demo use free-form ids such as camp_demo_chaindemo, which the grammar keeps.
+# No dot, slash, backslash, NUL, whitespace or non-ASCII character can pass, so
+# "..", absolute paths and encoded variants are rejected before any filesystem
+# call. _resolve_inside() additionally refuses a resolved path (symlinks
+# followed) that leaves its directory.
+_SAFE_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", re.ASCII)
+
+
+class InvalidIdError(ValueError):
+    """An identifier that cannot name a file inside the data directory."""
+
+
+def is_safe_id(value: Any) -> bool:
+    return isinstance(value, str) and _SAFE_ID_RE.fullmatch(value) is not None
+
+
+def safe_campaign_id(value: Any) -> str:
+    """Return ``value`` if it is a well-formed id, else raise InvalidIdError."""
+    if not is_safe_id(value):
+        raise InvalidIdError("invalid identifier")
+    return value
+
+
+def _resolve_inside(base: Path, name: Any, suffix: str = ".json") -> Path:
+    """``base / f"{name}{suffix}"`` after checking ``name`` against the id grammar
+    and that the resolved path (symlinks followed) stays inside ``base``.
+    Raises InvalidIdError otherwise; never touches a file outside ``base``."""
+    safe_campaign_id(name)
+    path = Path(base) / f"{name}{suffix}"
+    if not is_inside(base, path):
+        raise InvalidIdError("identifier resolves outside its directory")
+    return path
+
+
+def is_inside(base: Path, path: Path) -> bool:
+    """True if ``path`` (symlinks followed) resolves inside ``base``."""
+    try:
+        return Path(path).resolve().is_relative_to(Path(base).resolve())
+    except (OSError, RuntimeError, ValueError):
+        return False
+
+
+def store_files(base: Path, pattern: str = "*.json") -> List[Path]:
+    """Sorted ``base.glob(pattern)`` without the entries (planted symlinks) that
+    resolve outside ``base``: the "scan every campaign" loaders never follow a
+    link out of the store."""
+    base = Path(base)
+    if not base.exists():
+        return []
+    return [f for f in sorted(base.glob(pattern)) if is_inside(base, f)]
+
+
+def campaign_path(campaign_id: Any) -> Path:
+    return _resolve_inside(CAMPAIGNS_DIR, campaign_id)
+
+
+def infrastructure_path(campaign_id: Any) -> Path:
+    return _resolve_inside(INFRASTRUCTURE_DIR, campaign_id)
+
+
+def vulnerabilities_path(campaign_id: Any) -> Path:
+    return _resolve_inside(VULNERABILITIES_DIR, campaign_id)
+
+
 def _read_json(path: Path) -> Any:
     """Read and parse a JSON file. Returns [] if file not found."""
     if not path.exists():
@@ -60,10 +138,76 @@ def _read_json(path: Path) -> Any:
 
 
 def _write_json(path: Path, data: Any) -> None:
-    """Write data as pretty-printed JSON."""
+    """Write data as pretty-printed JSON, atomically (temp file + os.replace), so a
+    reader never sees a truncated file (B-12)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
+    try:
+        os.fchmod(fd, 0o666 & ~_UMASK)  # mkstemp creates 0600: keep the permissions a plain open() would give
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+_UMASK = os.umask(0)
+os.umask(_UMASK)
+
+
+@contextmanager
+def locked(name: str):
+    """Cross-process exclusive lock (fcntl.flock) for a read-modify-write on the
+    data dir, e.g. ``with locked(f"vulns-{campaign_id}")``. Not re-entrant: take
+    it once around the whole update (B-12)."""
+    lock_dir = _shared_lock_dir()
+    safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in name)[:120]
+    fd = _open_lock(lock_dir / f"{safe}.lock")
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
+
+
+# The lock files live in DATA_DIR/.locks and carry no data. Only the process that owns the store (the MCP server)
+# takes them, so they are private to its user; a lock file that cannot be opened for writing is locked through a
+# read-only descriptor (flock does not need write access).
+LOCK_DIR_MODE = 0o700
+LOCK_FILE_MODE = 0o600
+
+
+def _shared_lock_dir() -> Path:
+    lock_dir = DATA_DIR / ".locks"
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        st = lock_dir.stat()
+        if st.st_uid == os.geteuid() and (st.st_mode & 0o7777) != LOCK_DIR_MODE:
+            os.chmod(lock_dir, LOCK_DIR_MODE)
+    except OSError:
+        pass
+    return lock_dir
+
+
+def _open_lock(path: Path) -> int:
+    try:
+        fd = os.open(str(path), os.O_RDWR | os.O_CREAT, LOCK_FILE_MODE)
+    except PermissionError:
+        return os.open(str(path), os.O_RDONLY)
+    try:
+        st = os.fstat(fd)
+        if st.st_uid == os.geteuid() and (st.st_mode & 0o777) != LOCK_FILE_MODE:
+            os.fchmod(fd, LOCK_FILE_MODE)
+    except OSError:
+        pass
+    return fd
 
 
 # ---------------------------------------------------------------------------
@@ -132,8 +276,13 @@ def load_campaigns() -> List[Dict[str, Any]]:
     """Load all campaigns from campaigns/ directory."""
     campaigns = []
     if CAMPAIGNS_DIR.exists():
-        for f in sorted(CAMPAIGNS_DIR.glob("*.json")):
-            data = _read_json(f)
+        for f in store_files(CAMPAIGNS_DIR):
+            try:
+                data = _read_json(f)
+            except (OSError, ValueError):
+                # One unreadable file must not take the whole list down (B-12).
+                logging.getLogger("darkmoon.storage").warning("unreadable campaign file %s", f.name)
+                continue
             if isinstance(data, dict):
                 campaigns.append(data)
             elif isinstance(data, list):
@@ -142,9 +291,12 @@ def load_campaigns() -> List[Dict[str, Any]]:
 
 
 def load_campaign(campaign_id: str) -> Optional[Dict[str, Any]]:
-    """Load a single campaign by ID."""
-    # Try direct file first
-    direct = CAMPAIGNS_DIR / f"{campaign_id}.json"
+    """Load a single campaign by ID. A malformed id is simply "not found" (no
+    filesystem access, so no existence oracle)."""
+    try:
+        direct = campaign_path(campaign_id)
+    except InvalidIdError:
+        return None
     if direct.exists():
         data = _read_json(direct)
         if isinstance(data, dict):
@@ -158,8 +310,7 @@ def load_campaign(campaign_id: str) -> Optional[Dict[str, Any]]:
 
 def save_campaign(campaign: Dict[str, Any]) -> None:
     """Save a campaign to campaigns/<campaign_id>.json."""
-    campaign_id = campaign.get("id", "unknown")
-    path = CAMPAIGNS_DIR / f"{campaign_id}.json"
+    path = campaign_path(campaign.get("id", "unknown"))
     _write_json(path, campaign)
 
 
@@ -168,8 +319,11 @@ def save_campaign(campaign: Dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 
 def load_infrastructure(campaign_id: str) -> List[Dict[str, Any]]:
-    """Load infrastructure nodes for a campaign."""
-    path = INFRASTRUCTURE_DIR / f"{campaign_id}.json"
+    """Load infrastructure nodes for a campaign ([] for a malformed id)."""
+    try:
+        path = infrastructure_path(campaign_id)
+    except InvalidIdError:
+        return []
     data = _read_json(path)
     if isinstance(data, list):
         return data
@@ -178,7 +332,7 @@ def load_infrastructure(campaign_id: str) -> List[Dict[str, Any]]:
 
 def save_infrastructure(campaign_id: str, nodes: List[Dict[str, Any]]) -> None:
     """Save infrastructure nodes for a campaign."""
-    path = INFRASTRUCTURE_DIR / f"{campaign_id}.json"
+    path = infrastructure_path(campaign_id)
     _write_json(path, nodes)
 
 
@@ -187,8 +341,11 @@ def save_infrastructure(campaign_id: str, nodes: List[Dict[str, Any]]) -> None:
 # ---------------------------------------------------------------------------
 
 def load_vulnerabilities(campaign_id: str) -> List[Dict[str, Any]]:
-    """Load vulnerabilities for a campaign."""
-    path = VULNERABILITIES_DIR / f"{campaign_id}.json"
+    """Load vulnerabilities for a campaign ([] for a malformed id)."""
+    try:
+        path = vulnerabilities_path(campaign_id)
+    except InvalidIdError:
+        return []
     data = _read_json(path)
     if isinstance(data, list):
         return data
@@ -199,7 +356,7 @@ def load_all_vulnerabilities() -> List[Dict[str, Any]]:
     """Load all vulnerabilities from all campaign files."""
     all_vulns = []
     if VULNERABILITIES_DIR.exists():
-        for f in sorted(VULNERABILITIES_DIR.glob("*.json")):
+        for f in store_files(VULNERABILITIES_DIR):
             data = _read_json(f)
             if isinstance(data, list):
                 all_vulns.extend(data)
@@ -216,7 +373,7 @@ def load_vulnerability(vuln_id: str) -> Optional[Dict[str, Any]]:
 
 def save_vulnerabilities(campaign_id: str, vulns: List[Dict[str, Any]]) -> None:
     """Save vulnerabilities for a campaign."""
-    path = VULNERABILITIES_DIR / f"{campaign_id}.json"
+    path = vulnerabilities_path(campaign_id)
     _write_json(path, vulns)
 
 
@@ -249,39 +406,41 @@ def count_open_vulnerabilities_for_target(target_id: str) -> int:
 # Reports (Markdown)
 # ---------------------------------------------------------------------------
 
+def _report_file(base: Path, fname: str) -> Optional[Path]:
+    """``base/fname`` if it is a regular report file that resolves inside ``base``."""
+    candidate = Path(base) / fname
+    try:
+        return candidate if is_inside(base, candidate) and candidate.is_file() else None
+    except (OSError, ValueError):
+        return None
+
+
 def load_report_content(report_path: str) -> Optional[str]:
     """
     Load a markdown report file.
 
-    report_path can be:
-      - An absolute path
-      - A relative path like /reports/filename.md (relative to data dir)
-      - Just a filename
+    report_path is what the store writes in campaign.report_path, i.e.
+    ``/reports/<filename>.md`` (a bare filename is accepted too). Only the
+    file NAME is used, and it is looked up in DATA_DIR/reports and REPORTS_DIR
+    only: an absolute path or ``..`` never reaches another file (traversal
+    guard; the store never wrote anything else).
     """
-    # Try as relative to data dir (strip leading /)
-    clean = report_path.lstrip("/")
-    candidate = DATA_DIR / clean
-    if candidate.exists():
-        return candidate.read_text(encoding="utf-8")
-
-    # Try in reports dir directly
-    fname = Path(report_path).name
-    candidate = REPORTS_DIR / fname
-    if candidate.exists():
-        return candidate.read_text(encoding="utf-8")
-
-    # Try as absolute
-    abs_path = Path(report_path)
-    if abs_path.exists():
-        return abs_path.read_text(encoding="utf-8")
-
+    if not isinstance(report_path, str) or "\x00" in report_path:
+        return None
+    fname = Path(report_path.replace("\\", "/")).name
+    if not fname or fname.startswith(".") or not fname.endswith(".md"):
+        return None
+    for base in (DATA_DIR / "reports", REPORTS_DIR):
+        found = _report_file(base, fname)
+        if found is not None:
+            return found.read_text(encoding="utf-8")
     return None
 
 
 def list_reports() -> List[str]:
     """List all report filenames."""
     if REPORTS_DIR.exists():
-        return [f.name for f in sorted(REPORTS_DIR.glob("*.md"))]
+        return [f.name for f in store_files(REPORTS_DIR, "*.md")]
     return []
 
 # ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@
 <p>
 <a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/github/stars/ASCIT31/Dark-Moon?style=for-the-badge&logo=github&label=Star&color=2667FF&labelColor=0A2472" alt="GitHub stars"></a>
 <a href="https://github.com/ASCIT31/Dark-Moon/releases"><img src="https://img.shields.io/github/v/release/ASCIT31/Dark-Moon?style=for-the-badge&label=Release&color=2667FF&labelColor=0A2472" alt="Latest release"></a>
-<a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-2667FF?style=for-the-badge&labelColor=0A2472" alt="License GPLv3"></a>
+<a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/License-AGPLv3-2667FF?style=for-the-badge&labelColor=0A2472" alt="License AGPLv3"></a>
 <a href="#quick-start"><img src="https://img.shields.io/badge/Runs%20on-Local%20LLM-87BFFF?style=for-the-badge&labelColor=0A2472" alt="Made with local LLM"></a>
 <a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/badge/Autonomous%20AI-Pentesting-DCEAF4?style=for-the-badge&labelColor=0A2472" alt="Autonomous AI pentesting"></a>
 </p>
@@ -22,7 +22,7 @@
 
 **DarkMoon is autonomous AI penetration testing for your own infrastructure.** Point it at an authorized target and it runs the whole assessment on its own, then documents every finding with the exact command and raw output.
 
-- 🟢 **Truly open source.** GPLv3 and self-hosted, every agent's methodology is plain Markdown you can read, diff and fork.
+- 🟢 **Truly open source.** AGPLv3 and self-hosted, every agent's methodology is plain Markdown you can read, diff and fork.
 - 🎯 **Finds AND proves.** Each vulnerability ships with the exact command and raw output (exploitation is agent-asserted; the Pro remediation retest is the machine-verified step), so there is almost nothing to triage.
 - 🔒 **Runs on a local LLM + Privacy Gateway.** The gateway tokenizes your real IPs, hosts and credentials locally, so the model reasons on placeholders while real values stay on your perimeter.
 - 🧩 **Everywhere you build.** Run it from GitHub, GitLab, Jenkins, VS Code, JetBrains, n8n, Grafana or Splunk — the open-source edition works with the CLI-based ones. [See the integrations ↓](#-darkmoon-everywhere)
@@ -252,7 +252,7 @@ Reproduce it and compare tools yourself: **[ASCIT31/Darkmoon-Benchmarks](https:/
 | Privacy Gateway (local tokenization) | ✅ | ❌ | ❌ | ❌ |
 | Active Directory + Kubernetes | ✅ | ❌ | ❌ | partial |
 | Proof-of-exploitation | ✅ | ✅ | ✅ | ✅ |
-| Open source | ✅ GPL-3.0 | ✅ | ✅ | ✅ |
+| Open source | ✅ AGPL-3.0 | ✅ | ✅ | ✅ |
 
 *Compiled from public repos/docs (2026-08); corrections welcome via PR.*
 
@@ -438,7 +438,7 @@ DarkMoon is open source and welcomes contributions. Whether you want to add new 
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE) for details.
+Darkmoon Community is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0-only). See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md) for what this means for users, service operators and contributors. Releases published before the switch remain available under the GNU GPL v3.0.
 
 ---
 

@@ -290,6 +290,18 @@ When pushing a finding, fill ALL evidence fields:
     evidence_commands, evidence_logs, evidence_explanation (3+ sentences),
     raw_request, raw_response, cvss_vector, mitre_attack_id, mitre_attack_name,
     iso27001_control, node_id, plugin_or_component.
+    If this finding used another finding's result (credential, token, session,
+    access, file, foothold), set enabled_by=["<its vuln_id>"] (push replies list
+    recent ones in recent_exploited). Never guess.
+
+TARGET SAFETY (every request to the target):
+    Never point an SSRF/fetch/import/callback at the tested service itself: its host
+    name, its own IP (also as a placeholder such as IP_PRIVATE_001), localhost, 127.0.0.1
+    or 0.0.0.0 on the tested port. A request to itself hangs single-threaded servers.
+    Never invoke an operation that changes the target's state or availability (reset,
+    start over, restart, shutdown, update, delete, backup...): report it as attack surface.
+    Use curl --max-time 10. If the target stops responding, stop and record it as a side
+    effect: a hang caused by our own test is never reported as a DoS finding.
 
 A finding not pushed DOES NOT EXIST for the operator.
 

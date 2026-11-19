@@ -1,0 +1,97 @@
+{
+  "id": "camp_demo_chaindemo",
+  "project_id": "proj_4f1835",
+  "target_id": "tgt_60f37a",
+  "session_id": "chaindemo",
+  "is_subagent": false,
+  "date": "2026-10-29T09:00:00+00:00",
+  "duration_seconds": 600,
+  "status": "completed",
+  "methodology": "ISO 27001 / NIST SP 800-115 / MITRE ATT&CK",
+  "agents_dispatched": [
+    {
+      "agent": "nodejs",
+      "findings": 7,
+      "level": 0,
+      "status": "completed"
+    },
+    {
+      "agent": "headless-browser",
+      "findings": 1,
+      "level": 0,
+      "status": "completed"
+    }
+  ],
+  "cascade_depth": 0,
+  "overall_risk": "critical",
+  "stats": {
+    "total_findings": 8,
+    "critical": 2,
+    "high": 4,
+    "medium": 1,
+    "low": 1,
+    "info": 0,
+    "exploited": 7,
+    "confirmed": 1,
+    "unconfirmed": 0
+  },
+  "report_path": "",
+  "executive_summary": "Synthetic demo campaign.",
+  "attack_chains": {
+    "schema": "darkmoon-attack-chains/v1",
+    "chains": [
+      {
+        "id": "chain-admin-db",
+        "title": "Open registration -> token -> admin API -> users database",
+        "entry_node_id": "forge-web",
+        "objective_node_id": "forge-db",
+        "criticality": "critical",
+        "observed": true,
+        "steps": [
+          {
+            "node_id": "forge-web",
+            "satisfied_by": [
+              [
+                "vuln_reg01"
+              ],
+              [
+                "vuln_reg02"
+              ]
+            ],
+            "rationale": "self-registered account gives the API token"
+          },
+          {
+            "node_id": "forge-api",
+            "satisfied_by": [
+              [
+                "vuln_adm01"
+              ]
+            ],
+            "rationale": "admin endpoint accepts any user token"
+          },
+          {
+            "node_id": "forge-db",
+            "satisfied_by": [
+              [
+                "vuln_adm01"
+              ]
+            ],
+            "rationale": "user rows returned from the database"
+          }
+        ],
+        "evidence_vuln_ids": [
+          "vuln_adm01",
+          "vuln_reg01"
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "chain_id": "chain-guess",
+        "message": "observed is not true: only chains actually executed are accepted"
+      }
+    ],
+    "submitted_at": "2026-10-29T09:00:00+00:00"
+  },
+  "demo": true
+}

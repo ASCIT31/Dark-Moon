@@ -1,0 +1,16 @@
+[
+  {
+    "id": "tgt_60f37a",
+    "project_id": "proj_4f1835",
+    "host": "forge.demo.test",
+    "ip": "10.99.0.10",
+    "ports": [],
+    "technologies": [],
+    "os": "",
+    "status": "compromised",
+    "risk_level": "critical",
+    "first_seen": "2026-10-29T09:00:00+00:00",
+    "last_seen": "2026-10-29T09:00:00+00:00",
+    "demo": true
+  }
+]

@@ -95,4 +95,9 @@ DM_GPU_NAME=${DM_GPU_NAME}
 DM_HASHCAT_OPTS=${DM_HASHCAT_OPTS}
 EOF
 
+# ProjectDiscovery tools never call api.pdtm.sh (idempotent; also set at build time)
+if [ -x /usr/local/sbin/pd-disable-update-check ]; then
+    /usr/local/sbin/pd-disable-update-check >/dev/null 2>&1 || true
+fi
+
 exec "$@"

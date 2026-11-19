@@ -2712,6 +2712,6 @@ If you to contribute to the project, you access to the coding guideline at [CONT
 
 # IX. License
 
-Code licensed under [GNU GPL v3](LICENSE)
+Code licensed under the [GNU AGPL v3](LICENSE) (see [LICENSING.md](LICENSING.md))
 
 [Back to Summary](#summary)
