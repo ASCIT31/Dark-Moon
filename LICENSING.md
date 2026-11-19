@@ -1,5 +1,7 @@
 # Licensing
 
+> **Draft under legal review.** This page and the [CLA](CLA.md) are drafts being reviewed by counsel; the wording may change before the first AGPL-3.0 release. The [LICENSE](LICENSE) text itself is the official GNU AGPL v3.0.
+
 ## Darkmoon Community: AGPL-3.0
 
 Darkmoon Community (this repository: CLI, TUI and Terminal Explorer, agents, toolbox, MCP server and orchestrator,
@@ -51,9 +53,9 @@ open an issue or sign the [CLA](CLA.md) with the « earlier contributions » sen
 
 ## Contributing from now on
 
-New contributions are accepted under the AGPL-3.0 and require the
+New contributions are accepted under the AGPL-3.0. Once its reviewed version is published, the
 [Contributor License Agreement](CLA.md) (individuals) and, when you contribute for an organisation, the
-[Corporate CLA](CLA-CORPORATE.md). The CLA lets ASC also offer Darkmoon under commercial licenses; in exchange ASC
+[Corporate CLA](CLA-CORPORATE.md) will be required; both are drafts today and cannot be signed yet. The CLA lets ASC also offer Darkmoon under commercial licenses; in exchange ASC
 commits that every contribution it includes in the open-source edition stays available under an open-source license.
 
 ## Commercial licensing

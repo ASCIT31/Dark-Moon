@@ -1,4 +1,6 @@
-# Darkmoon Corporate Contributor License Agreement (v1.0)
+# Darkmoon Corporate Contributor License Agreement (v1.0-draft)
+
+> **DRAFT — v1.0-draft, under legal review. Not in force: do not sign it yet.** The final text may change. Signatures will open, through the CLA bot, once the reviewed version is published; until then no contribution is licensed under this Agreement.
 
 This Agreement is between the organisation identified below (« **Corporation** ») and **ASC**, a French société à
 responsabilité limitée trading as **ASC-IT**, registered at the RCS of Toulouse under number 840 356 570, registered
