@@ -78,8 +78,35 @@ _PATH_OF_PROVENANCE = {
 
 
 def path_kind(provenance: Any) -> str:
-    """Path kind of an engine provenance; anything unknown is a hypothesis."""
+    """Path kind of an engine provenance alone; anything unknown is a hypothesis. A ``derived`` path needs its
+    corroboration record to be evidence-backed: use ``path_kind_of`` on the whole path."""
     return _PATH_OF_PROVENANCE.get(str(provenance or "").strip().lower(), "possible")
+
+
+def path_kind_of(path: Any) -> str:
+    """Path kind of one attack-path record of the engine.
+
+    * a hypothesis (``hypothesis`` true) is always ``possible``;
+    * ``observed``: every link was observed by the server -> ``evidence_backed``;
+    * ``derived`` (built from the agents' claims): ``evidence_backed`` only when the engine CHECKED every claim against
+      the evidence it recorded (``corroboration``: status ``corroborated``, nothing ``unverified``, ``checked`` true:
+      matching server-computed credential fingerprints, an observed link on the same pair, or the proof excerpt found
+      in the stored response). A derived path without that record, or corroborated without a check (legacy flag,
+      labelled demo), stays ``possible``;
+    * ``declared``, ``agent-declared``, ``inferred`` or anything unknown -> ``possible``: a declaration is never
+      presented as a proven exploitation.
+    """
+    if not isinstance(path, dict) or path.get("hypothesis"):
+        return "possible"
+    prov = str(path.get("provenance") or "").strip().lower()
+    if prov == "observed":
+        return "evidence_backed"
+    if prov == "derived":
+        c = path.get("corroboration")
+        if (isinstance(c, dict) and c.get("status") == "corroborated" and not c.get("unverified")
+                and c.get("checked") is True):
+            return "evidence_backed"
+    return "possible"
 
 
 def evidence_label(status: Any) -> str:

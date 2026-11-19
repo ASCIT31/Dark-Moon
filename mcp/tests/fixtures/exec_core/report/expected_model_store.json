@@ -1049,7 +1049,7 @@
          "A.8.5",
          "No weakness observed in the tested scope",
          "0",
-         "Login and session handling: «redacted:credentials» bypass, brute-force resistance, session token handling."
+         "Login and session handling: authentication bypass, brute-force resistance, session token handling."
         ],
         [
          "A.8.6",

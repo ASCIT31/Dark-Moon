@@ -170,7 +170,9 @@ def masked(model: Dict[str, Any], red: Any = "auto") -> Dict[str, Any]:
     if red is None:
         return _withhold_evidence(m)
     try:
-        return red.redact_obj(m)
+        # Darkmoon's own static texts (catalogue, legend, fixed notes) are kept as written (exec_core.static_text)
+        from api.exec_core import static_text
+        return static_text.masked_obj(m, red.redact_obj)
     except Exception:  # noqa: BLE001 — a failing engine is no engine
         _log.warning("report model: redaction failed, evidence withheld", exc_info=True)
         return _withhold_evidence(m)

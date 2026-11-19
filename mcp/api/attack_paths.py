@@ -398,7 +398,10 @@ def _analyse(campaign: Dict[str, Any], nodes: List[Dict[str, Any]], edges: List[
         if r["provenance"] != "derived":
             continue
         unverified = [] if legacy_claims else _uncorroborated(r["claims"], vmap, obs_links)
-        r["corroboration"] = {"status": "claimed" if unverified else "corroborated", "unverified": unverified}
+        # « checked »: the claims were really matched against the recorded evidence (False under the legacy flag or for
+        # the labelled demo, where nothing is checked): exec_core counts a derived path evidence-backed only when checked
+        r["corroboration"] = {"status": "claimed" if unverified else "corroborated", "unverified": unverified,
+                              "checked": not legacy_claims}
         if unverified:
             r["hypothesis"] = True
 

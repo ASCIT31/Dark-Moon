@@ -641,10 +641,9 @@ def _treatment_plan(plan: Optional[Dict[str, Any]], titles: Dict[str, str], path
 
 
 def path_kind(p: Dict[str, Any]) -> str:
-    """Legend kind of a path: a hypothesis (flag) or anything not observed is a Possible Attack Path."""
-    if p.get("hypothesis"):
-        return "possible"
-    return _legend.path_kind(p.get("provenance"))
+    """Legend kind of a path (``legend.path_kind_of``): a hypothesis (flag) or anything not backed by evidence the
+    server recorded is a Possible Attack Path."""
+    return _legend.path_kind_of(p)
 
 
 _SAFE_LABEL = re.compile(r"[^A-Za-z0-9 .,:/_+@&'=()\-À-ſ«»·→]")
