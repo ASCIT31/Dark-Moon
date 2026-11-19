@@ -12,7 +12,9 @@ Architecture:
 import os
 import threading
 import uuid
-from typing import Optional, Dict, Any
+from typing import Annotated, Optional, Dict, Any, List
+
+from pydantic import Field
 from fastmcp import FastMCP
 
 from src.docker_client import DarkmoonDockerClient
@@ -659,6 +661,12 @@ def dashboard_init_campaign(
     )
 
 
+# Attack paths: earlier findings whose result this exploitation used. Stored as declared by the agent; the
+# attack-path view shows them as hypotheses, never as proof (api/declared_links.py, api/attack_paths.py).
+_ENABLED_BY = ("Optional: findings of this campaign whose result this exploitation used (token, credential or access "
+               "obtained there), by vuln_id, dedup_key, short_title or exact endpoint. Leave empty when it used none.")
+
+
 @mcp.tool()
 def dashboard_push_finding(
     campaign_id: str,
@@ -683,6 +691,7 @@ def dashboard_push_finding(
     plugin_or_component: Optional[str] = None,
     raw_request: Optional[str] = None,
     raw_response: Optional[str] = None,
+    enabled_by: Annotated[Optional[List[str]], Field(description=_ENABLED_BY)] = None,
 ) -> Dict[str, Any]:
     """
     Push a single vulnerability finding to the Darkmoon Dashboard in real-time.
@@ -713,9 +722,14 @@ def dashboard_push_finding(
         plugin_or_component: Vulnerable component name
         raw_request: Raw HTTP request (evidence)
         raw_response: Raw HTTP response (evidence)
+        enabled_by: Earlier findings of this campaign whose result this exploitation used
+            (e.g. ["vuln_1a2b3c"] when a credential found there was used here). A declaration,
+            shown as a hypothesis in the attack paths. Re-pushing the same finding with
+            enabled_by adds the references instead of creating a duplicate.
 
     Returns:
-        Dictionary with vuln_id, total findings count.
+        Dictionary with vuln_id, total findings count (and enabled_by_warnings for
+        references that could not be resolved).
 
     Example:
         dashboard_push_finding(
@@ -767,6 +781,9 @@ def dashboard_push_finding(
             __import__("datetime").timezone.utc
         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
+    refs = [str(x).strip()[:120] for x in (enabled_by or []) if str(x).strip()][:16]
+    if refs:
+        finding["enabled_by"] = refs
 
     return push_finding(campaign_id=campaign_id, finding=finding)
 

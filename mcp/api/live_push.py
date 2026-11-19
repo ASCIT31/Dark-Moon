@@ -13,6 +13,7 @@ Flow during a live pentest:
 Each call writes JSON to disk immediately so the API serves fresh data.
 """
 
+import logging
 import re
 import sqlite3
 import uuid
@@ -160,6 +161,10 @@ from api.json_storage import (
     find_project_by_target_id,
     _read_json,
     _write_json,
+    _resolve_inside,
+    is_safe_id,
+    load_report_content,
+    locked,
 )
 
 
@@ -413,7 +418,7 @@ def _normalize_campaign_status(status: str) -> str:
 # 1. Init campaign — creates project/target/campaign skeleton
 # -----------------------------------------------------------------------
 
-def init_live_campaign(
+def _init_live_campaign_unlocked(
     session_id: str,
     target_host: str,
     target_ip: str,
@@ -538,7 +543,7 @@ def init_live_campaign(
             ports=ports,
             technologies=technologies,
         )
-        infra_path = INFRASTRUCTURE_DIR / f"{parent_campaign_id}.json"
+        infra_path = _resolve_inside(INFRASTRUCTURE_DIR, parent_campaign_id)
         existing_nodes = _read_json(infra_path)
         if not isinstance(existing_nodes, list):
             existing_nodes = []
@@ -588,7 +593,7 @@ def init_live_campaign(
     save_campaign(campaign)
 
     # Only init empty vulns if file doesn't exist yet
-    vuln_path = VULNERABILITIES_DIR / f"{campaign_id}.json"
+    vuln_path = _resolve_inside(VULNERABILITIES_DIR, campaign_id)
     if not vuln_path.exists():
         _write_json(vuln_path, [])
 
@@ -603,7 +608,7 @@ def init_live_campaign(
         technologies=technologies,
     )
     # Merge with existing infra nodes instead of overwriting
-    infra_path = INFRASTRUCTURE_DIR / f"{campaign_id}.json"
+    infra_path = _resolve_inside(INFRASTRUCTURE_DIR, campaign_id)
     existing_nodes = _read_json(infra_path)
     if not isinstance(existing_nodes, list):
         existing_nodes = []
@@ -625,7 +630,68 @@ def init_live_campaign(
 # 2. Push a single finding (vulnerability) — incremental
 # -----------------------------------------------------------------------
 
-def push_finding(
+def _same_finding(finding: Dict[str, Any], vulns: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """The stored finding a re-push designates: same dedup_key, else same title + endpoint + category (exact)."""
+    key = finding.get("dedup_key")
+    if key:
+        hit = next((v for v in vulns if v.get("dedup_key") == key and not v.get("duplicate_of")), None)
+        if hit is not None:
+            return hit
+    t = (str(finding.get("title") or "").strip(), str(finding.get("endpoint") or "").strip(),
+         str(finding.get("category") or "").strip())
+    if not all(t):
+        return None
+    return next((v for v in vulns if (str(v.get("title") or "").strip(), str(v.get("endpoint") or "").strip(),
+                                       str(v.get("category") or "").strip()) == t), None)
+
+
+# Lever 1 (enabled_by fill rate): the push reply reminds the agent of the last EXPLOITED findings of the campaign, by
+# vuln_id (the form the enabled_by resolver always accepts; a cut title would not resolve). Built from the findings
+# already loaded for the push: no extra read. One short line, at most RECENT_EXPLOITED_MAX chars, at most 3 items.
+# Architecture D (17/11/2026, CONTRACT-D): same item count per reply (never a hint where there was none); the finding
+# JUST pushed (when exploited) comes first — the oracle showed it is the most frequent true parent of the NEXT push and
+# the old order excluded it — then the most recent exploited findings of the campaign. Measured on c5 / c6: +17 / -9
+# characters over a whole campaign. The hint can only help the next push (it is in this push's reply).
+RECENT_EXPLOITED_PREFIX = "recent exploited (use in enabled_by if relevant): "
+RECENT_EXPLOITED_MAX = 200
+
+
+def _hint_item(v: Dict[str, Any], campaign_id: str) -> Optional[str]:
+    vid = str(v.get("id") or "")
+    if (not vid or len(vid) > 24 or v.get("duplicate_of")
+            or str(v.get("status") or "").strip().lower() != "exploited"
+            or (v.get("campaign_id") and v.get("campaign_id") != campaign_id)):
+        return None
+    label = " ".join(str(v.get("short_title") or v.get("title") or "").replace(";", ",").split())
+    if len(label) > 32:
+        label = label[:31].rstrip() + "…"
+    return f"{vid} · {label}" if label else vid
+
+
+def recent_exploited_hint(vulns: List[Dict[str, Any]], self_finding: Dict[str, Any], campaign_id: str,
+                          limit: int = 3) -> Optional[str]:
+    self_id = str(self_finding.get("id") or "")
+    skip = {self_id, str(self_finding.get("duplicate_of") or "")} - {""}
+    items: List[str] = []
+    for v in reversed(vulns):
+        if len(items) >= limit:
+            break
+        if str(v.get("id") or "") in skip:
+            continue
+        it = _hint_item(v, campaign_id)
+        if it:
+            items.append(it)
+    if not items:
+        return None
+    # constant length: the same NUMBER of items as before (never a hint where there was none); the finding just pushed,
+    # when exploited, takes the first place and the oldest item leaves
+    own = _hint_item(self_finding, campaign_id)
+    if own:
+        items = [own] + items[:len(items) - 1]
+    return (RECENT_EXPLOITED_PREFIX + "; ".join(items))[:RECENT_EXPLOITED_MAX]
+
+
+def _push_finding_unlocked(
     campaign_id: str,
     finding: Dict[str, Any],
 ) -> Dict[str, Any]:
@@ -633,7 +699,9 @@ def push_finding(
     Push a single vulnerability finding to the dashboard.
     Appends to the campaign's vulnerabilities file and updates stats.
     """
-    vuln_path = VULNERABILITIES_DIR / f"{campaign_id}.json"
+    if not is_safe_id(campaign_id):  # traversal guard: same answer as an unknown id
+        return {"error": f"Campaign {campaign_id!r} not found"}
+    vuln_path = _resolve_inside(VULNERABILITIES_DIR, campaign_id)
     vulns = _read_json(vuln_path)
     if not isinstance(vulns, list):
         vulns = []
@@ -650,6 +718,44 @@ def push_finding(
     finding["target_id"] = campaign.get("target_id")
     finding["severity"] = str(finding.get("severity", "info")).strip().lower()
     finding["status"] = str(finding.get("status", "unconfirmed")).strip().lower()
+
+    # round 4 (owner): `enabled_by` = earlier findings whose result this exploitation used. Resolved HERE against the
+    # findings already stored (so a forward reference cannot exist): vuln_id, then a unique short_title / dedup_key /
+    # title. Unknown or ambiguous refs and self-references are dropped with a warning; validation (ATT&CK order, nodes)
+    # happens at analysis time (api/declared_links.py).
+    enabled_warnings: List[str] = []
+    if finding.get("enabled_by"):
+        from api.declared_links import clean_refs, push_warnings
+        finding["enabled_by"] = clean_refs(finding.get("enabled_by"))
+        enabled_warnings = push_warnings(finding["enabled_by"], vulns, finding["id"])
+        # round 5: re-pushing the SAME finding to add what enabled it updates it — no duplicate is created
+        same = _same_finding(finding, vulns)
+        if same is not None and finding["enabled_by"]:
+            from api.declared_links import resolve_one
+            mine = [r for r in finding["enabled_by"] if resolve_one(r, vulns, str(same["id"]))[1] != "self"]
+            merged = clean_refs(list(same.get("enabled_by") or []) + mine)
+            added = [r for r in merged if r not in (same.get("enabled_by") or [])]
+            same["enabled_by"] = merged
+            # architecture D: a late addition is dated by the number of findings stored when it was declared (a
+            # reference to a finding pushed after that is « forward in time »); the FIRST push keeps binding the run
+            # position (run_id / push_seq are never moved by a re-push)
+            at = dict(same.get("enabled_by_at") or {})
+            for r in added:
+                at.setdefault(r, len(vulns))
+            same["enabled_by_at"] = at
+            for k in ("run_id", "push_seq"):
+                if finding.get(k) is not None and same.get(k) is None:
+                    same[k] = finding[k]
+            _write_json(vuln_path, vulns)
+            out = {"vuln_id": same["id"], "campaign_id": campaign_id, "total_findings": len(vulns),
+                   "status": "finding_updated", "enabled_by_added": added}
+            if enabled_warnings:
+                out["enabled_by_warnings"] = enabled_warnings
+            return out
+        if not finding["enabled_by"]:
+            finding.pop("enabled_by")
+        else:   # architecture D: declaration time of each reference = findings already stored (forward-in-time check)
+            finding["enabled_by_at"] = {r: len(vulns) for r in finding["enabled_by"]}
 
     vulns.append(finding)
     _write_json(vuln_path, vulns)
@@ -721,19 +827,28 @@ def push_finding(
             target["last_seen"] = _now_iso()
             save_target(target)
 
-    return {
+    result = {
         "vuln_id": finding["id"],
         "campaign_id": campaign_id,
         "total_findings": len(vulns),
         "status": "finding_pushed",
     }
+    if enabled_warnings:
+        result["enabled_by_warnings"] = enabled_warnings
+    try:  # advice only: never fails a push
+        hint = recent_exploited_hint(vulns[:-1], finding, campaign_id)
+    except Exception:
+        hint = None
+    if hint:
+        result["recent_exploited"] = hint
+    return result
 
 
 # -----------------------------------------------------------------------
 # 3. Push an infrastructure node — incremental
 # -----------------------------------------------------------------------
 
-def push_infra_node(
+def _push_infra_node_unlocked(
     campaign_id: str,
     node: Dict[str, Any],
 ) -> Dict[str, Any]:
@@ -742,7 +857,9 @@ def push_infra_node(
     Appends to the campaign's infrastructure file.
     Also links the node to campaign + project + target.
     """
-    infra_path = INFRASTRUCTURE_DIR / f"{campaign_id}.json"
+    if not is_safe_id(campaign_id):  # traversal guard: same answer as an unknown id
+        return {"error": f"Campaign {campaign_id!r} not found"}
+    infra_path = _resolve_inside(INFRASTRUCTURE_DIR, campaign_id)
     nodes = _read_json(infra_path)
     if not isinstance(nodes, list):
         nodes = []
@@ -779,6 +896,51 @@ def push_infra_node(
 # 4. Report auto-generator (called when agent passes a path/reference)
 # -----------------------------------------------------------------------
 
+def _append_attack_paths_section(A: Callable[[str], None], campaign_id: str, vulns: List[Dict[str, Any]]) -> None:
+    """Section 5: links the agents declared between findings (enabled_by) and the attack paths built on them.
+
+    Community has no run ledger, so the server never observes a link: every declared link is printed as a
+    declaration and every path resting on one as a hypothesis. Nothing here is presented as proof. Advisory only:
+    an error leaves the report without the section rather than failing the finalisation.
+    """
+    if not any(v.get("enabled_by") for v in vulns):
+        return
+    try:
+        from api.declared_links import LEVEL_LABELS, validate
+        from api.attack_paths_local import attack_paths_doc
+        links = validate(vulns)
+        doc = attack_paths_doc(campaign_id) or {}
+    except Exception:
+        logging.getLogger("darkmoon.report").warning("attack-path section skipped", exc_info=True)
+        return
+    titles = {str(v.get("id")): str(v.get("title") or "") for v in vulns}
+
+    def cell(text: str, n: int = 60) -> str:
+        text = " ".join(str(text).replace("|", "/").split())
+        return text[:n - 1] + "…" if len(text) > n else text
+
+    def name(fid: str) -> str:
+        return f"{cell(titles[fid])} `{cell(fid, 24)}`" if titles.get(fid) else f"`{cell(fid, 24)}`"
+
+    A("---\n\n## 5. ATTACK PATHS AND DECLARED LINKS\n\n")
+    A("> These links were **declared by the testing agents** (a finding whose result was used by a later one). "
+      "The server did not observe them: each one is a hypothesis to verify, not a proof of an attack chain.\n\n")
+    summary = doc.get("summary") or {}
+    if summary:
+        A(f"- Attack paths resting on declared links: **{summary.get('declared_paths', 0)}**"
+          f" (of which critical: {summary.get('declared_critical_paths', 0)})\n")
+        A(f"- Paths proven by the server: **{summary.get('proven_paths', 0)}**\n\n")
+    A("| Enabling finding | Used by | Status |\n|---|---|---|\n")
+    for link in links:
+        producer, consumer = str(link.get("producer") or ""), str(link.get("consumer") or "")
+        state = str(link.get("state") or "")
+        label = LEVEL_LABELS.get(state, state)
+        if link.get("reason"):
+            label += f" ({link['reason']})"
+        A(f"| {name(producer)} | {name(consumer)} | {cell(label, 90)} |\n")
+    A("\n")
+
+
 def _generate_report_from_db(
     campaign_id: str,
     campaign: Dict[str, Any],
@@ -791,7 +953,7 @@ def _generate_report_from_db(
     """
     from api.json_storage import VULNERABILITIES_DIR
 
-    vuln_path = VULNERABILITIES_DIR / f"{campaign_id}.json"
+    vuln_path = _resolve_inside(VULNERABILITIES_DIR, campaign_id)
     vulns: List[Dict[str, Any]] = _read_json(vuln_path) or []
 
     target_id = campaign.get("target_id", "unknown")
@@ -982,6 +1144,8 @@ def _generate_report_from_db(
             A(f"| {t} | High |\n")
         A("\n")
 
+    _append_attack_paths_section(A, campaign_id, vulns)
+
     A("---\n\n")
     A(f"*Report auto-generated by Darkmoon AI Security Platform*  \n")
     A(f"*Classification: CONFIDENTIAL — Restricted to authorized personnel*  \n")
@@ -995,7 +1159,7 @@ def _generate_report_from_db(
 # 4. Finalize campaign
 # -----------------------------------------------------------------------
 
-def finalize_campaign(
+def _finalize_campaign_unlocked(
     campaign_id: str,
     duration_seconds: int = 0,
     executive_summary: str = "",
@@ -1111,11 +1275,48 @@ def finalize_campaign(
     }
 
 
-def abort_campaign(campaign_id: str, duration_seconds: int = 0, executive_summary: str = "") -> Dict[str, Any]:
+def _abort_campaign_unlocked(campaign_id: str, duration_seconds: int = 0, executive_summary: str = "") -> Dict[str, Any]:
     """Mark a campaign as aborted."""
-    return finalize_campaign(
+    return _finalize_campaign_unlocked(
         campaign_id=campaign_id,
         duration_seconds=duration_seconds,
         executive_summary=executive_summary,
         final_status="aborted",
     )
+
+
+# -----------------------------------------------------------------------
+# Locked entry points: every read-modify-write of the store goes through one
+# cross-process lock and _write_json is atomic, so concurrent pushes from
+# parallel agents never lose a finding nor truncate a file.
+# -----------------------------------------------------------------------
+
+def init_live_campaign(*args, **kwargs) -> Dict[str, str]:
+    with locked("store"):
+        return _init_live_campaign_unlocked(*args, **kwargs)
+
+
+def push_finding(campaign_id: str, finding: Dict[str, Any]) -> Dict[str, Any]:
+    with locked("store"):
+        return _push_finding_unlocked(campaign_id, finding)
+
+
+def push_infra_node(campaign_id: str, node: Dict[str, Any]) -> Dict[str, Any]:
+    with locked("store"):
+        return _push_infra_node_unlocked(campaign_id, node)
+
+
+def finalize_campaign(*args, **kwargs) -> Dict[str, Any]:
+    with locked("store"):
+        return _finalize_campaign_unlocked(*args, **kwargs)
+
+
+def abort_campaign(campaign_id: str, duration_seconds: int = 0, executive_summary: str = "") -> Dict[str, Any]:
+    with locked("store"):
+        return _abort_campaign_unlocked(campaign_id, duration_seconds, executive_summary)
+
+
+for _locked_fn, _impl in ((init_live_campaign, _init_live_campaign_unlocked), (push_finding, _push_finding_unlocked),
+                          (push_infra_node, _push_infra_node_unlocked), (finalize_campaign, _finalize_campaign_unlocked),
+                          (abort_campaign, _abort_campaign_unlocked)):
+    _locked_fn.__doc__ = _impl.__doc__

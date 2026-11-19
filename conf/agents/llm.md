@@ -329,6 +329,9 @@ When pushing a finding, fill ALL evidence fields:
     evidence_commands, evidence_logs, evidence_explanation (3+ sentences),
     raw_request, raw_response, cvss_vector, mitre_attack_id, mitre_attack_name,
     iso27001_control, node_id, plugin_or_component.
+    If this finding used another finding's result (credential, token, session,
+    access, file, foothold), set enabled_by=["<its vuln_id>"] (push replies list
+    recent ones in recent_exploited). Never guess.
 Map each finding to its OWASP-LLM id in evidence_explanation (LLM01..LLM10) and, where it
 applies, to MITRE ATLAS.
 
