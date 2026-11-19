@@ -429,10 +429,12 @@ def _init_live_campaign_unlocked(
     ports: Optional[List[Dict[str, Any]]] = None,
     technologies: Optional[List[Dict[str, Any]]] = None,
     os_info: str = "",
+    campaign_kind: Optional[str] = None,
 ) -> Dict[str, str]:
     """
     Initialize a live campaign. Creates project + target + campaign skeleton.
     Rule: 1 project = 1 target.
+    ``campaign_kind`` (optional): full | retest | short, recorded in the coverage signals.
     """
     if not is_safe_id(f"camp_x_{session_id}"):  # refused before anything is written (no orphan project/target)
         return {"error": f"invalid session_id {str(session_id)[:40]!r}"}
@@ -592,6 +594,13 @@ def _init_live_campaign_unlocked(
         "report_path": "",
         "executive_summary": "",
     }
+    # coverage signals (exec_core score gate): a repeated init keeps the server start of the campaign
+    from api import coverage_signals
+    _prior = load_campaign(campaign_id)
+    if _prior and isinstance(_prior.get("coverage_signals"), dict):
+        campaign["coverage_signals"] = _prior["coverage_signals"]
+        campaign["date"] = _prior.get("date") or campaign["date"]
+    coverage_signals.on_init(campaign, campaign_kind)
     save_campaign(campaign)
 
     # Only init empty vulns if file doesn't exist yet
@@ -782,6 +791,8 @@ def _push_finding_unlocked(
     stats.update(_core_stats.compute_stats(vulns))
 
     campaign["stats"] = stats
+    from api import coverage_signals
+    coverage_signals.note_agent(campaign, finding.get("discovered_by_agent"), "push_finding")
 
     # Derive the dispatch log from the findings store, exactly like the stats
     # above. An agent that pushed a finding demonstrably ran, so the log can be
@@ -1274,6 +1285,24 @@ def _generate_report_from_db(
 # 4. Finalize campaign
 # -----------------------------------------------------------------------
 
+def _measured_duration(campaign: Dict[str, Any], declared: Any) -> int:
+    """Wall-clock seconds since the campaign was initialised (server clock); the duration the agent declares is
+    only a fallback (the DVGA run of 62 min was finalised with the docstring's example value, 900 s)."""
+    try:
+        start = datetime.fromisoformat(str(campaign.get("date") or "").replace("Z", "+00:00"))
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        measured = int((datetime.now(timezone.utc) - start).total_seconds())
+        if measured > 0:
+            return measured
+    except (ValueError, TypeError):
+        pass
+    try:
+        return max(0, int(declared or 0))
+    except (ValueError, TypeError):
+        return 0
+
+
 def _finalize_campaign_unlocked(
     campaign_id: str,
     duration_seconds: int = 0,
@@ -1320,7 +1349,9 @@ def _finalize_campaign_unlocked(
 
     normalized_status = _normalize_campaign_status(final_status)
     campaign["status"] = normalized_status
-    campaign["duration_seconds"] = duration_seconds
+    campaign["duration_seconds"] = _measured_duration(campaign, duration_seconds)
+    from api import coverage_signals
+    coverage_signals.on_close(campaign)
     campaign["executive_summary"] = executive_summary
 
     if agents_dispatched:

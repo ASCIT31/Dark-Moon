@@ -366,6 +366,17 @@ def diagnose() -> Dict[str, Any]:
 # GENERIC EXECUTOR (2 tools)
 # ============================================================================
 
+def _count_toolbox_call(kind: str) -> None:
+    """Coverage signal: one toolbox call served for the calling run (api/coverage_signals), keyed like the campaign
+    (the latest root OpenCode session, else the server session). Never fails the call."""
+    try:
+        from api import coverage_signals
+        from api.live_push import _run_campaign_frag
+        coverage_signals.count_call(_run_campaign_frag(SESSION_ID), kind)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 @mcp.tool()
 def execute_command(
     command: str,
@@ -438,6 +449,7 @@ def execute_command(
         )
     real_command = gw.command or command
 
+    _count_toolbox_call("command")
     result = executor.execute(
         command=real_command,
         timeout=timeout,
@@ -612,6 +624,7 @@ def run_workflow(
     privacy_gateway = _command_gateway
     privacy_vault = _get_vault(session_id)
 
+    _count_toolbox_call("workflow")
     return workflow_registry.run_workflow(
         workflow,
         method,
@@ -633,6 +646,7 @@ def dashboard_init_campaign(
     target_ip: str,
     project_name: str = "Darkmoon Assessment",
     methodology: str = "ISO 27001 / NIST SP 800-115 / MITRE ATT&CK",
+    campaign_kind: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Initialize a live campaign for the Darkmoon Dashboard.
@@ -647,6 +661,7 @@ def dashboard_init_campaign(
         target_ip: Target IP address
         project_name: Name for the assessment project
         methodology: Methodology string
+        campaign_kind: Optional. "full" (default), "retest" or "short" (a quick or partial run)
 
     Returns:
         Dictionary with project_id, target_id, campaign_id.
@@ -666,6 +681,7 @@ def dashboard_init_campaign(
         target_ip=target_ip,
         project_name=project_name,
         methodology=methodology,
+        campaign_kind=campaign_kind,
     )
 
 
