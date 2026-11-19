@@ -1060,10 +1060,27 @@ def _generate_report_from_db(
             m = re.search(r"\d+(?:\.\d+)?", str(raw or ""))
             return float(m.group()) if m else 0.0
 
+    from api import cvss31 as _cvss31
+
+    def _cvss_shown(v: Dict) -> Any:
+        """(table cell, detail cell, number used for ordering): the score recomputed from a valid vector is the
+        one shown; the agent's number is shown as « reported » when it differs."""
+        a = _cvss31.assess(v)
+        if a["score"] is not None:
+            cell = f"{a['score']:.1f}"
+            if a["status"] == "mismatch":
+                return (f"{cell} (reported {a['reported']:.1f})",
+                        f"{cell} (computed from the vector; reported by the agent: {a['reported']:.1f})", a["score"])
+            return cell, f"{cell} (computed from the vector)", a["score"]
+        if v.get("cvss_score"):
+            n = _cvss_num(v)
+            return f"{n:.1f}", f"{n:.1f} (reported by the agent; no valid vector)", n
+        return "N/A", "N/A", 0.0
+
     vulns = sorted(
         vulns,
         key=lambda v: (SEV_ORDER.get(str(v.get("severity", "info")).lower(), 9),
-                       -_cvss_num(v)),
+                       -_cvss_shown(v)[2]),
     )
 
     SEV_LABEL  = {"critical": "CRITICAL", "high": "HIGH", "medium": "MEDIUM",
@@ -1077,15 +1094,11 @@ def _generate_report_from_db(
     def stat(v: Dict) -> str:
         return STAT_LABEL.get(str(v.get("status", "")).lower(), _md_inline(v.get("status", ""), cell=True))
 
-    stats = campaign.get("stats", {})
-    if held:
-        # the report counts only what it shows: held findings are left out
-        stats = dict(stats)
-        for key in ("critical", "high", "medium", "low", "info"):
-            stats[key] = sum(1 for v in vulns if str(v.get("severity", "")).lower() == key)
-        stats["total_findings"] = len(vulns)
-        stats["exploited"] = sum(1 for v in vulns if v.get("status") == "exploited")
-        stats["confirmed"] = sum(1 for v in vulns if v.get("status") == "confirmed")
+    # the one stats function (exec_core.stats): held (quarantined) and false-positive findings are counted
+    # nowhere, so the report, the campaign record and the API give the same numbers
+    from api.exec_core import stats as _core_stats
+    stats = _core_stats.compute_stats(vulns)
+    counted = _core_stats.split(vulns)[0]
     exploited = stats.get("exploited", 0)
     confirmed = stats.get("confirmed", 0)
     now = _now_iso()
@@ -1124,10 +1137,11 @@ def _generate_report_from_db(
 
     if n_crit > 0:
         posture = f"🔴 CRITICAL — Immediate Action Required"
+        _xsev = stats.get("exploited_by_severity") or {}
+        _x_ch = int(_xsev.get("critical", 0)) + int(_xsev.get("high", 0))
         posture_text = (
-            f"The system tested (**{host}**) presents an **extremely poor security posture**. "
-            f"Our team confirmed {n_crit} critical and {n_high} high severity vulnerabilities, "
-            "enabling complete compromise through multiple independent attack paths."
+            f"The automated assessment of **{host}** reported {n_crit} critical and {n_high} high severity "
+            f"findings; {_x_ch} of them were exploited during the test (proof on file)."
         )
     elif n_high > 0:
         posture = f"🟠 HIGH — Urgent Remediation Required"
@@ -1135,10 +1149,16 @@ def _generate_report_from_db(
             f"The system tested (**{host}**) has significant security weaknesses. "
             f"{n_high} high severity vulnerabilities were identified requiring urgent attention."
         )
-    else:
+    elif int(stats.get("medium", 0) or 0) or int(stats.get("low", 0) or 0):
         posture = "🟡 MEDIUM — Security Improvements Needed"
         posture_text = (
             f"The system tested (**{host}**) has moderate security issues that should be addressed."
+        )
+    else:
+        posture = "⚪ NO SIGNIFICANT FINDING — in the tested scope"
+        posture_text = (
+            f"No weakness above informational was reported in the tested scope of **{host}**; this is not a "
+            "proof that none exists."
         )
 
     A(f"### Overall Security Posture: {posture}\n\n")
@@ -1154,12 +1174,21 @@ def _generate_report_from_db(
             A(f"**{i}. {_md_inline(v.get('title',''))}**  \n{_md_prose(plain)}\n\n")
 
     A("### Required Actions\n\n")
-    A("| Timeframe | Action |\n|-----------|--------|\n")
-    if n_crit > 0:
-        A("| **Today** | Block external access / take offline if possible |\n")
-    A("| **This week** | Patch all critical and high severity findings |\n")
-    A("| **2 weeks** | Address medium severity findings and security headers |\n")
-    A("| **1 month** | Full code review and independent re-test |\n\n---\n\n")
+    A("Order derived from the reported severity and the proof of the findings below; the deadlines are set by "
+      "the system owner.\n\n")
+    A("| Order | Action |\n|-------|--------|\n")
+    _order = 0
+    for _sk in ("critical", "high", "medium", "low"):
+        _n = int(stats.get(_sk, 0) or 0)
+        if not _n:
+            continue
+        _order += 1
+        _nx = int((stats.get("exploited_by_severity") or {}).get(_sk, 0) or 0)
+        A(f"| **{_order}** | Treat the {_n} {_sk} severity finding(s) ({_nx} exploited during the test) |\n")
+    if _order:
+        A(f"| **{_order + 1}** | Run a new full campaign to check the fixes |\n\n---\n\n")
+    else:
+        A("| **1** | No finding to treat in the tested scope |\n\n---\n\n")
 
     # ── EXECUTIVE SUMMARY ───────────────────────────────────────────
     A("## 1. EXECUTIVE SUMMARY\n\n")
@@ -1170,8 +1199,8 @@ def _generate_report_from_db(
     A("| Severity | Count | Exploited | Confirmed |\n|----------|-------|-----------|----------|\n")
     for s, label in [("critical","CRITICAL"),("high","HIGH"),("medium","MEDIUM"),("low","LOW"),("info","INFO")]:
         n   = stats.get(s, 0)
-        exp = sum(1 for v in vulns if str(v.get("severity","")).lower()==s and v.get("status")=="exploited")
-        con = sum(1 for v in vulns if str(v.get("severity","")).lower()==s and v.get("status")=="confirmed")
+        exp = sum(1 for v in counted if str(v.get("severity","")).lower()==s and v.get("status")=="exploited")
+        con = sum(1 for v in counted if str(v.get("severity","")).lower()==s and v.get("status")=="confirmed")
         A(f"| {label} | {n} | {exp} | {con} |\n")
     A(f"| **TOTAL** | **{n_total}** | **{exploited}** | **{confirmed}** |\n\n---\n\n")
 
@@ -1180,7 +1209,7 @@ def _generate_report_from_db(
     A("| # | ID | Title | Severity | CVSS | Status | Endpoint |\n")
     A("|---|-----|-------|----------|------|--------|----------|\n")
     for i, v in enumerate(vulns):
-        cvss  = f"{_cvss_num(v):.1f}" if v.get("cvss_score") else "N/A"
+        cvss  = _cvss_shown(v)[0]
         ep    = (v.get("endpoint") or "").replace("https://","").replace("http://","")
         ep    = ep[:50]+"..." if len(ep)>50 else ep
         title = v.get("title","")[:50]+"..." if len(v.get("title",""))>50 else v.get("title","")
@@ -1190,7 +1219,7 @@ def _generate_report_from_db(
     # ── VULNERABILITY DETAILS ────────────────────────────────────────
     A("## 3. VULNERABILITY DETAILS\n\n")
     for i, v in enumerate(vulns):
-        cvss_score = f"{_cvss_num(v):.1f}" if v.get("cvss_score") else "N/A"
+        cvss_score = _cvss_shown(v)[1]
         cvss_vec   = v.get("cvss_vector") or "N/A"
         ev         = v.get("evidence") if isinstance(v.get("evidence"), dict) else {}
         commands   = ev.get("commands") or []
@@ -1245,18 +1274,19 @@ def _generate_report_from_db(
 
     # ── REMEDIATION ROADMAP ──────────────────────────────────────────
     A("---\n\n## 4. REMEDIATION ROADMAP\n\n")
+    A("Grouped by reported severity; the deadlines are set by the system owner.\n\n")
     for priority, sev_key, timeframe, max_items in [
-        ("P0", "critical", "Immediate (< 24h)",       6),
-        ("P1", "high",     "Short term (< 1 week)",   6),
-        ("P2", "medium",   "Medium term (< 2 weeks)", 5),
-        ("P3", "low",      "Long term (< 1 month)",   3),
+        ("P0", "critical", "Critical findings", 6),
+        ("P1", "high",     "High findings",     6),
+        ("P2", "medium",   "Medium findings",   5),
+        ("P3", "low",      "Low findings",      3),
     ]:
         items = [v for v in vulns if str(v.get("severity","")).lower()==sev_key][:max_items]
         if not items: continue
-        A(f"### {priority} — {timeframe}\n\n| Finding | Effort |\n|---------|--------|\n")
+        A(f"### {priority} — {timeframe}\n\n| Finding | Proof |\n|---------|-------|\n")
         for v in items:
             t = v.get("title","")[:60]+"..." if len(v.get("title",""))>60 else v.get("title","")
-            A(f"| {_md_inline(t, cell=True)} | High |\n")
+            A(f"| {_md_inline(t, cell=True)} | {stat(v)} |\n")
         A("\n")
 
     # ── REPORT ANNEX (computed from the campaign's own data) ─────────
