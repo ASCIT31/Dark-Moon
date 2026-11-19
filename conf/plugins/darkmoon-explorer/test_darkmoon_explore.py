@@ -55,6 +55,22 @@ class AdapterTests(unittest.TestCase):
         code, out, _ = run(self.root, "vulnerabilities", "--project", "p1")
         self.assertEqual(json.loads(out)["stats"]["by_severity"], {"critical": 1, "high": 1})
 
+    def test_counts_use_the_one_stats_function(self):
+        """exec_core.stats (vendored copy, no MCP installed): held and false-positive findings counted nowhere."""
+        extra = json.loads((self.root / "vulnerabilities" / "c1.json").read_text()) + [
+            {"id": "v3", "title": "Held", "severity": "critical", "status": "exploited", "quarantined": True},
+            {"id": "v4", "title": "FP", "severity": "high", "status": "false_positive"},
+            {"id": "v5", "title": "Low", "severity": "Low", "status": "confirmed"},
+        ]
+        (self.root / "vulnerabilities" / "c1.json").write_text(json.dumps(extra))
+        code, out, _ = run(self.root, "campaign", "c1")
+        st = json.loads(out)["data"]["stats"]
+        self.assertEqual((code, st["total_findings"], st["critical"], st["high"], st["low"]), (0, 3, 1, 1, 1))
+        self.assertEqual(st["excluded"], {"quarantined": 1, "false_positive": 1})
+        code, out, _ = run(self.root, "projects")
+        p = json.loads(out)["data"][0]
+        self.assertEqual((p["vulnerabilities_count"], p["latest_risk"]), (3, "critical"))
+
     def test_fail_closed_without_redaction_engine(self):
         real = dx.load_redaction
         dx.load_redaction = lambda *_: None  # the engine cannot be loaded

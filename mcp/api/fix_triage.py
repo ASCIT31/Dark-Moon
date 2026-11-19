@@ -46,7 +46,8 @@ from api.url_parts import safe_port, safe_urlparse
 from api import cvss31
 from api.attack_paths_engine import first_blocked_step
 from api.attack_paths_observed import normalise_title
-from api.campaign_view import fingerprint
+from api.exec_core import identity as _identity
+from api.exec_core.identity import fingerprint
 
 CLOSED_STATUSES = frozenset({"remediated", "resolved", "closed", "fixed"})   # json_storage/campaign_view/retest_store
 _FALSE_POSITIVE = re.compile(r"^false[\s_-]?positive$")
@@ -218,17 +219,18 @@ def triage(a: Dict[str, Any], label_of: Callable[[str, List[str]], str], path_in
     open_total = 0
     by_fp: Dict[str, List[Tuple[Dict[str, Any], Dict[str, Any]]]] = {}
     for v in a["vmap"].values():
-        st = _status(v)
         vid = str(v["id"])
         # integration P4 x P1: held by the strict privacy policy (quarantined, not reviewed by an operator) ->
         # never ordered nor counted as open, like attack paths and the report (_analyse marks the status too)
-        if st == "quarantined" or (v.get("quarantined") and not v.get("quarantine_reviewed_by")):
+        # exclusion rules shared with the stats and the score (exec_core.identity)
+        reason = _identity.exclusion_reason(v)
+        if reason == "quarantined":
             excluded["quarantined"] += 1
             continue
-        if st in CLOSED_STATUSES:
+        if _identity.is_closed(v):
             excluded["closed"] += 1
             continue
-        if _FALSE_POSITIVE.match(st):
+        if reason == "false_positive":
             excluded["false_positive"] += 1
             continue
         if verdicts.get(vid) == "fixed":

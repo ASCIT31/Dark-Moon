@@ -176,17 +176,34 @@ def safe_text(s: str, red) -> str | None:
 
 # ---------------------------------------------------------------- commands
 
+def core_stats():
+    """The one stats function of the product (exec_core.stats): the MCP server's copy when installed, else the
+    copy vendored next to this file (byte-identical, checked by the MCP parity test)."""
+    try:
+        from api.exec_core import stats as mod  # type: ignore
+        return mod
+    except Exception:  # noqa: BLE001
+        vendor = str(Path(__file__).resolve().parent / "_vendor")
+        if vendor not in sys.path:
+            sys.path.insert(0, vendor)
+        from exec_core import stats as mod  # type: ignore
+        return mod
+
+
 def severity_counts(vs: list) -> dict:
-    c = Counter(str(v.get("severity", "info")).lower() for v in vs)
-    stats = {s: c.get(s, 0) for s in SEVERITIES}
-    stats["total_findings"] = len(vs)
-    stats["exploited"] = sum(1 for v in vs if str(v.get("status", "")).lower() == "exploited")
-    return stats
+    """Campaign stats as the Pro API serves them: quarantined (held) and false-positive findings are counted
+    nowhere and reported under ``excluded``."""
+    return core_stats().compute_stats(vs)
+
+
+def counted(vs: list) -> list:
+    return core_stats().split(vs)[0]
 
 
 def worst(vs: list) -> str | None:
+    kept = counted(vs)
     for s in SEVERITIES:
-        if any(str(v.get("severity", "")).lower() == s for v in vs):
+        if any(str(v.get("severity", "")).strip().lower() == s for v in kept):
             return s
     return None
 
@@ -203,7 +220,7 @@ def cmd_projects(st: Store, red) -> dict:
         ids = {c.get("id") for c in pc}
         pv = [v for v in vulns if v.get("campaign_id") in ids or v.get("project_id") == p.get("id")]
         out.append({**p, "target": targets.get(p.get("target_id")) or p.get("target"), "campaigns_count": len(pc),
-                    "vulnerabilities_count": len(pv), "latest_risk": worst(pv)})
+                    "vulnerabilities_count": len(counted(pv)), "latest_risk": worst(pv)})
     return {"data": out, "total": len(out)}
 
 
@@ -237,8 +254,9 @@ FREE_TEXT_KEYS = ("executive_summary", "prompt", "description", "remediation", "
 
 def cmd_campaign(st: Store, red, cid: str) -> dict:
     c = safe_obj(st.campaign(cid), red)
-    vs = [safe_finding(v, red, True) for v in st.vulns(cid) if isinstance(v, dict)]
-    return {"data": {**c, "stats": severity_counts(vs), "vulnerabilities": vs}}
+    raw = [v for v in st.vulns(cid) if isinstance(v, dict)]
+    vs = [safe_finding(v, red, True) for v in raw]
+    return {"data": {**c, "stats": severity_counts(raw), "vulnerabilities": vs}}
 
 
 def cmd_finding(st: Store, red, vid: str) -> dict:

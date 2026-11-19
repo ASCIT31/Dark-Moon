@@ -776,20 +776,10 @@ def _push_finding_unlocked(
     vulns.append(finding)
     _write_json(vuln_path, vulns)
 
+    # the one stats function (exec_core.stats): quarantined / false-positive findings are counted nowhere
+    from api.exec_core import stats as _core_stats
     stats = campaign.get("stats", {})
-    stats["total_findings"] = len(vulns)
-
-    for sev in ("critical", "high", "medium", "low", "info"):
-        stats[sev] = sum(
-            1 for v in vulns
-            if str(v.get("severity", "info")).strip().lower() == sev
-        )
-
-    for st in ("exploited", "confirmed", "unconfirmed"):
-        stats[st] = sum(
-            1 for v in vulns
-            if str(v.get("status", "unconfirmed")).strip().lower() == st
-        )
+    stats.update(_core_stats.compute_stats(vulns))
 
     campaign["stats"] = stats
 
@@ -821,16 +811,7 @@ def _push_finding_unlocked(
             for name, count in sorted(seen.items(), key=lambda kv: (-kv[1], kv[0]))
         ]
 
-    if stats.get("critical", 0) > 0:
-        campaign["overall_risk"] = "critical"
-    elif stats.get("high", 0) > 0:
-        campaign["overall_risk"] = "high"
-    elif stats.get("medium", 0) > 0:
-        campaign["overall_risk"] = "medium"
-    elif stats.get("low", 0) > 0:
-        campaign["overall_risk"] = "low"
-    else:
-        campaign["overall_risk"] = "none"
+    campaign["overall_risk"] = _core_stats.overall_risk(stats)
 
     save_campaign(campaign)
 
