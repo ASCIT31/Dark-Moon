@@ -12,10 +12,13 @@ Safety
   loaded, evidence is withheld (fail closed): ``{"withheld": true}`` replaces it and nothing raw is printed.
 - Attack paths: the MCP server's read model (``api.attack_paths_local``) is used when it is installed; otherwise only
   the agents' ``enabled_by`` declarations are listed, as ``agent-declared`` hypotheses. Nothing is inferred here.
+- Prioritized Treatment Plan (``plan``): the MCP server's ``api.treatment_local`` (exec_core plan + the owner's own
+  declarations file ``<data>/treatments/<campaign_id>.json``, validated on read). Without the server or the redaction
+  engine nothing is printed (exit 2). Read-only: statuses are never written from here.
 
 Usage: darkmoon_explore.py [--data DIR] [--reports DIR] [--mcp DIR] <command> [args]
   projects | campaigns | campaign ID | finding ID | vulnerabilities [--project ID] [--campaign ID]
-  | report CAMPAIGN_ID | paths CAMPAIGN_ID
+  | report CAMPAIGN_ID | paths CAMPAIGN_ID | plan CAMPAIGN_ID
 Exit codes: 0 ok, 2 not found / refused, 1 error.
 """
 from __future__ import annotations
@@ -319,6 +322,22 @@ def cmd_paths(st: Store, red, cid: str) -> dict:
             "summary": {"paths_total": len(paths), "proven_paths": 0, "declared_paths": len(paths), "inferred_paths": 0}}, red)
 
 
+def cmd_plan(st: Store, red, cid: str) -> dict:
+    """Prioritized Treatment Plan (exec_core, through the MCP server's read model). Fail closed: without the redaction
+    engine or without the MCP server's plan module, no plan is printed."""
+    st.campaign(cid)
+    if red is None:
+        raise NotFound("plan withheld: the redaction engine is not available")
+    try:
+        from api.treatment_local import plan_doc  # type: ignore
+    except Exception:  # noqa: BLE001
+        raise NotFound("plan unavailable: the Darkmoon MCP server is not installed")
+    doc = plan_doc(cid, finding_filter=lambda v: safe_obj(v, red))
+    if doc is None:
+        raise NotFound(cid)
+    return safe_obj(doc, red)
+
+
 # C0 controls (but tab/newline), DEL, C1 controls (8-bit CSI/OSC/DCS...) and bidi overrides: a stored title or
 # report can never drive the terminal the explorer renders in.
 _CONTROLS = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]")
@@ -366,6 +385,8 @@ def main(argv: list[str]) -> int:
             out = cmd_report(st, red, a.arg or "")
         elif a.cmd == "paths":
             out = cmd_paths(st, red, a.arg or "")
+        elif a.cmd == "plan":
+            out = cmd_plan(st, red, a.arg or "")
         else:
             print(f"unknown command: {a.cmd}", file=sys.stderr)
             return 1

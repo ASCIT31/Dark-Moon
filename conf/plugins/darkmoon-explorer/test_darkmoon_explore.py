@@ -197,3 +197,83 @@ class RobustnessTests(unittest.TestCase):
         code, out, _ = run(self.root, "vulnerabilities")
         self.assertEqual(code, 0)
         self.assertFalse(any(ch in out for ch in ("\x1b", "\x07", "\x9d", "\x9c", "‮")))
+
+
+_HAS_MCP = (Path(__file__).resolve().parents[3] / "mcp" / "api" / "treatment_local.py").is_file()
+
+
+class PlanTests(unittest.TestCase):
+    """``plan CAMPAIGN_ID``: the Prioritized Treatment Plan, the owner's declarations file validated on read,
+    read-only, redacted, fail closed. Data lives in throw-away directories only."""
+
+    setUp = AdapterTests.setUp
+    tearDown = AdapterTests.tearDown
+    MCP = LocalEngineTests.MCP
+
+    def plan(self, cid: str = "c1"):
+        import subprocess
+        env = {k: v for k, v in os.environ.items() if k != "DARKMOON_DATA_DIR"}
+        return subprocess.run([sys.executable, str(Path(dx.__file__)), "--data", str(self.root), "--mcp", str(self.MCP),
+                               "plan", cid], capture_output=True, text=True, env=env, timeout=60)
+
+    def declare(self, entries, **top):
+        d = self.root / "treatments"
+        d.mkdir(exist_ok=True)
+        (d / "c1.json").write_text(json.dumps({"schema_version": "darkmoon-treatment-declarations/1",
+                                               "campaign_id": "c1", "declarations": entries, **top}))
+
+    def test_fail_closed_without_server_or_redaction(self):
+        self.assertEqual(run(self.root, "plan", "c1")[0], 2)             # --mcp /nonexistent: no plan module
+        real = dx.load_redaction
+        dx.load_redaction = lambda *_: None
+        self.addCleanup(setattr, dx, "load_redaction", real)
+        code, out, err = run(self.root, "plan", "c1")
+        self.assertEqual((code, out), (2, ""))
+        self.assertIn("withheld", err)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_plan_without_declarations_file(self):
+        r = self.plan()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        p = json.loads(r.stdout)
+        self.assertEqual((p["label"], p["verification"], p["can_edit"]), ("Prioritized Treatment Plan", "not_available", False))
+        self.assertEqual(p["declarations"]["status"], "absent")
+        self.assertTrue(p["actions"])
+        self.assertTrue(all(a["status"] == "proposed" for a in p["actions"]))
+        self.assertNotIn(SECRET, r.stdout)
+        self.assertFalse((self.root / "treatments").exists())          # read-only: nothing written
+        self.assertEqual(self.plan("../etc").returncode, 2)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_declared_applied_is_not_verified_and_invalid_entries_are_reported(self):
+        aid = json.loads(self.plan().stdout)["actions"][0]["action_id"]
+        self.declare([
+            {"action_id": aid, "at": "2026-11-20", "by_role": "web team lead", "status": "applied",
+             "note": f"rotated {SECRET}"},
+            {"action_id": aid, "at": "2026-11-21", "by_role": "x", "status": "verified_resolved"},
+            {"action_id": "act_0000000000000000", "at": "2026-11-21", "by_role": "x", "status": "approved"},
+            {"action_id": aid, "at": "2026-11-22", "by_role": "x", "status": "applied", "evil": 1},
+        ])
+        r = self.plan()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        p = json.loads(r.stdout)
+        a = next(x for x in p["actions"] if x["action_id"] == aid)
+        self.assertEqual(a["status"], "applied")
+        self.assertEqual(a["status_text"], "Declared applied by web team lead, 2026-11-20 — not verified")
+        self.assertFalse(a["status_verified"])
+        self.assertEqual(len(p["issues"]), 3)
+        self.assertNotIn(SECRET, r.stdout)
+        # the declaration changes no count
+        code, out, _ = run(self.root, "campaign", "c1")
+        self.assertEqual(json.loads(out)["data"]["stats"]["total_findings"], 2)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_unreadable_or_foreign_declarations_file(self):
+        d = self.root / "treatments"
+        d.mkdir()
+        (d / "c1.json").write_text("{not json")
+        p = json.loads(self.plan().stdout)
+        self.assertEqual(p["declarations"]["status"], "unreadable")
+        self.assertTrue(all(a["status"] == "proposed" for a in p["actions"]))
+        self.declare([], campaign_id="other")
+        self.assertEqual(json.loads(self.plan().stdout)["declarations"]["status"], "unreadable")
