@@ -61,7 +61,9 @@ STRICT CONSTRAINTS:
   a local URL with no side effect for SSRF). Never a payload that writes, deletes
   or loops.
 - SSRF proof URL: NEVER the tested service itself (same host:port). A request to
-  itself deadlocks single-threaded servers. Use another port or a closed port and
+  itself deadlocks single-threaded servers. The tested service includes its own IP
+  (also when shown as a placeholder such as IP_PRIVATE_001: the address the target resolves to), its
+  host name, localhost, 127.0.0.1 and 0.0.0.0, on the tested port. Use another port or a closed port and
   prove the SSRF from the difference in the responses.
 - Short timeout: every request to the target goes through `curl --max-time 10`.
 - If the target stops responding: stop testing it, do not multiply probes, record
