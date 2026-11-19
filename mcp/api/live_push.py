@@ -909,58 +909,127 @@ def _push_infra_node_unlocked(
 
 
 # -----------------------------------------------------------------------
-# 4. Report auto-generator (called when agent passes a path/reference)
+# Report markdown safety
 # -----------------------------------------------------------------------
+# Every finding field is written by an LLM after reading the target, and the
+# evidence (raw HTTP requests/responses, commands, logs) is captured from the
+# target itself. None of it may turn into live markup when the report is
+# rendered (markdown viewers): raw HTML is shown as text, images are never
+# fetched, and raw evidence can never close the code block it sits in.
 
-def _append_attack_paths_section(A: Callable[[str], None], campaign_id: str, vulns: List[Dict[str, Any]]) -> None:
-    """Section 5: links the agents declared between findings (enabled_by) and the attack paths built on them.
-    ``vulns`` in STORE order (push order), never sorted: a reference to a finding pushed later is rejected.
+_HTML_ESC = str.maketrans({"&": "&amp;", "<": "&lt;", ">": "&gt;"})
+_MD_FENCE_OPEN = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
+_MD_CODE_SPAN = re.compile(r"(?<![\\`])(`+)(?!`)(.+?)(?<!`)\1(?!`)")
 
-    Community has no run ledger, so the server never observes a link: every declared link is printed as a
-    declaration and every path resting on one as a hypothesis. Nothing here is presented as proof. Advisory only:
-    an error leaves the report without the section rather than failing the finalisation.
-    """
-    if not any(v.get("enabled_by") for v in vulns):
-        return
-    try:
-        from api.declared_links import LEVEL_LABELS, validate
-        links = validate(vulns)
-    except Exception:
-        logging.getLogger("darkmoon.report").warning("declared-link section skipped", exc_info=True)
-        return
-    try:  # the path counts are advisory: the declared links are listed even if the path engine fails
-        from api.attack_paths_local import attack_paths_doc
-        doc = attack_paths_doc(campaign_id) or {}
-    except Exception:
-        logging.getLogger("darkmoon.report").warning("attack-path counts skipped", exc_info=True)
-        doc = {}
-    titles = {str(v.get("id")): str(v.get("title") or "") for v in vulns}
 
-    def cell(text: str, n: int = 60) -> str:
-        text = " ".join(str(text).replace("|", "/").split())
-        return text[:n - 1] + "…" if len(text) > n else text
+def _md_text_segment(text: str, cell: bool = False) -> str:
+    """Plain markdown text: HTML escaped, images defused (no fetch on render)."""
+    out = text.translate(_HTML_ESC).replace("![", "!\\[")
+    if cell:
+        out = out.replace("|", "&#124;")
+    return out
 
-    def name(fid: str) -> str:
-        return f"{cell(titles[fid])} `{cell(fid, 24)}`" if titles.get(fid) else f"`{cell(fid, 24)}`"
 
-    A("---\n\n## 5. ATTACK PATHS AND DECLARED LINKS\n\n")
-    A("> These links were **declared by the testing agents** (a finding whose result was used by a later one). "
-      "The server did not observe them: each one is a hypothesis to verify, not a proof of an attack chain.\n\n")
-    summary = doc.get("summary") or {}
-    if summary:
-        A(f"- Attack paths resting on declared links: **{summary.get('declared_paths', 0)}**"
-          f" (of which critical: {summary.get('declared_critical_paths', 0)})\n")
-        A("- Darkmoon Community does not verify links itself: no path is counted as proven.\n\n")
-    A("| Enabling finding | Used by | Status |\n|---|---|---|\n")
-    for link in links:
-        producer, consumer = str(link.get("producer") or ""), str(link.get("consumer") or "")
-        state = str(link.get("state") or "")
-        label = LEVEL_LABELS.get(state, state)
-        if link.get("reason"):
-            label += f" ({link['reason']})"
-        A(f"| {name(producer)} | {name(consumer)} | {cell(label, 90)} |\n")
-    A("\n")
+def _md_spans(line: str) -> Optional[List[re.Match]]:
+    """Inline code spans of one line, or None when the line has a backtick that is
+    not part of a complete single-line span (it could pair with another line, or be
+    escaped): the caller then escapes everything rather than guess."""
+    if "|" in line:  # a table row splits code spans on pipes
+        return None if "`" in line else []
+    spans = list(_MD_CODE_SPAN.finditer(line))
+    rest = _MD_CODE_SPAN.sub("", line)
+    return None if "`" in rest else spans
 
+
+def _md_line(line: str, cell: bool = False, keep_code: bool = True) -> str:
+    """One line of LLM markdown: inline code spans kept verbatim, the rest escaped."""
+    spans = _md_spans(line) if keep_code else None
+    if not spans:
+        return _md_text_segment(line, cell)
+    out, pos = [], 0
+    for m in spans:
+        out.append(_md_text_segment(line[pos:m.start()], cell))
+        out.append(m.group(0))
+        pos = m.end()
+    out.append(_md_text_segment(line[pos:], cell))
+    return "".join(out)
+
+
+def _md_inline(value: Any, cell: bool = False) -> str:
+    """A single-line field (title, component, ...) inserted in a heading, list or table cell."""
+    text = " ".join(str(value if value is not None else "").split())
+    return _md_line(text, cell, keep_code=not (cell and "|" in text))
+
+
+def _md_prose(value: Any) -> str:
+    """A multi-line LLM field (description, explanation, remediation, summary):
+    markdown formatting and fenced code are kept, raw HTML is shown as text, and a
+    code block left open is closed so it cannot swallow the rest of the report."""
+    out: List[str] = []
+    block: List[str] = []
+
+    def flush() -> None:
+        # inline code is kept only when every backtick of the paragraph belongs to a
+        # single-line span (a span may otherwise run across lines)
+        keep = all(_md_spans(ln) is not None for ln in block)
+        out.extend(_md_line(ln, keep_code=keep) for ln in block)
+        block.clear()
+
+    fence: Optional[str] = None
+    for line in str(value if value is not None else "").replace("\r\n", "\n").split("\n"):
+        if fence is not None:
+            out.append(line)
+            if re.match(r"^ {0,3}" + re.escape(fence) + r"[`~]*[ \t]*$", line):
+                fence = None
+            continue
+        m = _MD_FENCE_OPEN.match(line)
+        if m and not (m.group(1)[0] == "`" and "`" in m.group(2)):
+            flush()
+            fence = m.group(1)
+            out.append(line[:m.start(2)] + m.group(2).translate(_HTML_ESC))
+            continue
+        if not line.strip():
+            flush()
+            out.append(line)
+            continue
+        block.append(line)
+    flush()
+    if fence is not None:
+        out.append(fence)
+    return "\n".join(out)
+
+
+def _md_code(value: Any) -> str:
+    """A single-line value shown as inline code (ids, endpoints, vectors) in a table
+    cell: the backtick delimiter is longer than any backtick run in the value, and
+    pipes stay escaped so the table cannot split the span."""
+    text = " ".join(str(value if value is not None else "").split())
+    text = re.sub(r"(\\*)\|", lambda m: m.group(1) + ("\\" if len(m.group(1)) % 2 == 0 else "") + "|", text)
+    runs = [len(r) for r in re.findall(r"`+", text)]
+    tick = "`" * (max(runs, default=0) + 1)
+    pad = " " if text.startswith("`") or text.endswith("`") or not text else ""
+    return f"{tick}{pad}{text}{pad}{tick}"
+
+
+def _md_fence(body: str, lang: str = "") -> str:
+    """Raw target data in a fenced code block whose fence is longer than any
+    backtick run in the data: the data can never close the block."""
+    runs = [len(r) for r in re.findall(r"`+", body)]
+    fence = "`" * max(3, max(runs, default=0) + 1)
+    if not body.endswith("\n"):
+        body += "\n"
+    return f"{fence}{lang}\n{body}{fence}\n\n"
+
+
+def is_quarantined(v: Dict[str, Any]) -> bool:
+    """A record held by a strict privacy policy (``quarantined`` and not reviewed by
+    an operator) is kept out of the report. Community never sets the flag itself."""
+    return bool(v.get("quarantined")) and not v.get("quarantine_reviewed_by")
+
+
+# -----------------------------------------------------------------------
+# 4. Report auto-generator (finalize always builds the report from the store)
+# -----------------------------------------------------------------------
 
 def _generate_report_from_db(
     campaign_id: str,
@@ -968,32 +1037,35 @@ def _generate_report_from_db(
     executive_summary: str = "",
 ) -> str:
     """
-    Generate a full markdown report directly from the DB findings.
-    Called automatically by finalize_campaign when the agent passes a file
-    path or short reference instead of the actual report content.
+    Generate a full markdown report directly from the stored findings, then append
+    the report annex (remediation priorities, attack paths, infrastructure map,
+    fix first, framework mapping) computed from the campaign's own data.
     """
     from api.json_storage import VULNERABILITIES_DIR
 
     vuln_path = _resolve_inside(VULNERABILITIES_DIR, campaign_id)
     vulns: List[Dict[str, Any]] = _read_json(vuln_path) or []
+    vulns = [v for v in vulns if isinstance(v, dict)]
     stored_order = list(vulns)  # push order: the declared-link checks (forward references) depend on it
+    held = [v for v in vulns if is_quarantined(v)]
+    vulns = [v for v in vulns if not is_quarantined(v)]
 
     target_id = campaign.get("target_id", "unknown")
     target = load_target(target_id)
     host = target.get("host", target_id) if target else target_id
+    host = _md_inline(host)
 
     SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
     def _cvss_num(v: Dict) -> float:
         # Defensive: an agent may push a non-numeric cvss_score ("9.8 (High)",
-        # "N/A", ""). A bare float() there raises ValueError and 500s the whole
+        # "N/A", ""). A bare float() there raises ValueError and fails the whole
         # report. Parse the leading number if present, else 0.
         raw = v.get("cvss_score")
         try:
             return float(raw)
         except (TypeError, ValueError):
-            import re as _re
-            m = _re.search(r"\d+(?:\.\d+)?", str(raw or ""))
+            m = re.search(r"\d+(?:\.\d+)?", str(raw or ""))
             return float(m.group()) if m else 0.0
 
     vulns = sorted(
@@ -1008,12 +1080,20 @@ def _generate_report_from_db(
                   "unconfirmed": "Unconfirmed"}
 
     def sev(v: Dict) -> str:
-        return SEV_LABEL.get(str(v.get("severity", "")).lower(), str(v.get("severity", "")).upper())
+        return SEV_LABEL.get(str(v.get("severity", "")).lower(), _md_inline(str(v.get("severity", "")).upper(), cell=True))
 
     def stat(v: Dict) -> str:
-        return STAT_LABEL.get(str(v.get("status", "")).lower(), str(v.get("status", "")))
+        return STAT_LABEL.get(str(v.get("status", "")).lower(), _md_inline(v.get("status", ""), cell=True))
 
     stats = campaign.get("stats", {})
+    if held:
+        # the report counts only what it shows: held findings are left out
+        stats = dict(stats)
+        for key in ("critical", "high", "medium", "low", "info"):
+            stats[key] = sum(1 for v in vulns if str(v.get("severity", "")).lower() == key)
+        stats["total_findings"] = len(vulns)
+        stats["exploited"] = sum(1 for v in vulns if v.get("status") == "exploited")
+        stats["confirmed"] = sum(1 for v in vulns if v.get("status") == "confirmed")
     exploited = stats.get("exploited", 0)
     confirmed = stats.get("confirmed", 0)
     now = _now_iso()
@@ -1022,7 +1102,7 @@ def _generate_report_from_db(
     A = L.append
 
     # ── MANAGEMENT SUMMARY ──────────────────────────────────────────
-    overall_risk = campaign.get("overall_risk", "unknown").upper()
+    overall_risk = _md_inline(str(campaign.get("overall_risk") or "unknown").upper())
     n_crit  = stats.get("critical", 0)
     n_high  = stats.get("high", 0)
     n_total = stats.get("total_findings", len(vulns))
@@ -1032,7 +1112,20 @@ def _generate_report_from_db(
     A(f"**Generated:** {now}  \n")
     A(f"**Target:** {host}  \n")
     A(f"**Campaign:** {campaign_id}  \n")
-    A(f"**Methodology:** ISO 27001 / NIST SP 800-115 / MITRE ATT&CK  \n\n---\n\n")
+    # The campaign's declared methodology, not a fixed label: a synthetic or partial run must not be presented as a
+    # full ISO 27001 / NIST SP 800-115 assessment in the report header.
+    methodology = _md_inline(str(campaign.get("methodology") or "").strip() or "ISO 27001 / NIST SP 800-115 / MITRE ATT&CK")
+    A(f"**Methodology:** {methodology}  \n")
+    # A partial run says so in the report itself
+    _st = str(campaign.get("status") or "").lower()
+    _partial = {"stopped": "Stopped by the operator", "aborted": "Aborted", "error": "Ended with an error",
+                "failed": "Failed", "running": "In progress"}.get(_st) or (_md_inline(_st.capitalize()) if _st and _st != "completed" else None)
+    if _st == "running":
+        A("**Status:** In progress — interim report: the run is still going, findings may be added  \n")
+    elif _partial:
+        A(f"**Status:** {_partial} — partial results: the run did not complete; the findings cover what was tested "
+          f"before it ended  \n")
+    A("\n---\n\n")
 
     A("## MANAGEMENT SUMMARY\n\n")
     A("> *For non-technical readers and decision-makers.*\n\n")
@@ -1066,7 +1159,7 @@ def _generate_report_from_db(
         for i, v in enumerate(top3, 1):
             desc = (v.get("description") or "").strip()
             plain = desc[:200] + "..." if len(desc) > 200 else desc
-            A(f"**{i}. {v.get('title','')}**  \n{plain}\n\n")
+            A(f"**{i}. {_md_inline(v.get('title',''))}**  \n{_md_prose(plain)}\n\n")
 
     A("### Required Actions\n\n")
     A("| Timeframe | Action |\n|-----------|--------|\n")
@@ -1079,7 +1172,7 @@ def _generate_report_from_db(
     # ── EXECUTIVE SUMMARY ───────────────────────────────────────────
     A("## 1. EXECUTIVE SUMMARY\n\n")
     if executive_summary:
-        A(f"> {executive_summary}\n\n")
+        A("> " + _md_prose(executive_summary).replace("\n", "\n> ") + "\n\n")
     A(f"**Overall Risk Level: {overall_risk}**\n\n")
     A("### Findings Summary\n\n")
     A("| Severity | Count | Exploited | Confirmed |\n|----------|-------|-----------|----------|\n")
@@ -1099,7 +1192,7 @@ def _generate_report_from_db(
         ep    = (v.get("endpoint") or "").replace("https://","").replace("http://","")
         ep    = ep[:50]+"..." if len(ep)>50 else ep
         title = v.get("title","")[:50]+"..." if len(v.get("title",""))>50 else v.get("title","")
-        A(f"| {i+1} | `{v.get('id','')}` | {title} | {sev(v)} | {cvss} | {stat(v)} | `{ep}` |\n")
+        A(f"| {i+1} | {_md_code(v.get('id',''))} | {_md_inline(title, cell=True)} | {sev(v)} | {cvss} | {stat(v)} | {_md_code(ep)} |\n")
     A("\n---\n\n")
 
     # ── VULNERABILITY DETAILS ────────────────────────────────────────
@@ -1107,48 +1200,56 @@ def _generate_report_from_db(
     for i, v in enumerate(vulns):
         cvss_score = f"{_cvss_num(v):.1f}" if v.get("cvss_score") else "N/A"
         cvss_vec   = v.get("cvss_vector") or "N/A"
-        ev         = v.get("evidence", {})
-        commands   = ev.get("commands", [])
-        raw_req    = (ev.get("raw_request") or "").strip()
-        raw_resp   = (ev.get("raw_response") or "").strip()
-        logs       = ev.get("logs", [])
-        expl       = (ev.get("explanation") or "").strip()
-        remediation = (v.get("remediation") or "").strip()
+        ev         = v.get("evidence") if isinstance(v.get("evidence"), dict) else {}
+        commands   = ev.get("commands") or []
+        raw_req    = str(ev.get("raw_request") or "").strip()
+        raw_resp   = str(ev.get("raw_response") or "").strip()
+        logs       = ev.get("logs") or []
+        expl       = str(ev.get("explanation") or "").strip()
+        remediation = str(v.get("remediation") or "").strip()
         ep         = v.get("endpoint","N/A")
         ep_d       = ep[:70]+"..." if len(ep)>70 else ep
 
-        A(f"---\n\n### 3.{i+1} — {v.get('title','')}\n\n")
+        A(f"---\n\n### 3.{i+1} — {_md_inline(v.get('title',''))}\n\n")
         A("| Field | Value |\n|-------|-------|\n")
-        A(f"| **ID** | `{v.get('id','')}` |\n")
+        A(f"| **ID** | {_md_code(v.get('id',''))} |\n")
         A(f"| **Severity** | {sev(v)} |\n")
         A(f"| **CVSS Score** | {cvss_score} |\n")
-        A(f"| **CVSS Vector** | `{cvss_vec}` |\n")
-        A(f"| **Status** | {str(v.get('status','')).upper()} |\n")
-        A(f"| **Category** | `{v.get('category','N/A')}` |\n")
+        A(f"| **CVSS Vector** | {_md_code(cvss_vec)} |\n")
+        A(f"| **Status** | {_md_inline(str(v.get('status','')).upper(), cell=True)} |\n")
+        A(f"| **Category** | {_md_code(v.get('category','N/A'))} |\n")
         if v.get("mitre_attack_id"):
-            A(f"| **MITRE ATT&CK** | `{v['mitre_attack_id']}` — {v.get('mitre_attack_name','')} |\n")
+            A(f"| **MITRE ATT&CK** | {_md_code(v['mitre_attack_id'])} — {_md_inline(v.get('mitre_attack_name',''), cell=True)} |\n")
         if v.get("iso27001_control"):
-            A(f"| **ISO 27001** | `{v['iso27001_control']}` |\n")
-        A(f"| **Endpoint** | `{ep_d}` |\n")
+            A(f"| **ISO 27001** | {_md_code(v['iso27001_control'])} |\n")
+        try:   # IEC 62443-3-3 requirement(s) concerned, derived by the server (same rules as the framework mapping)
+            from api.frameworks import iec62443_refs
+            _iec = ", ".join(r["sr"] for r in iec62443_refs(v))
+        except Exception:
+            _iec = ""
+        if _iec:
+            A(f"| **IEC 62443-3-3** | {_md_code(_iec)} |\n")
+        A(f"| **Endpoint** | {_md_code(ep_d)} |\n")
         if v.get("plugin_or_component"):
-            A(f"| **Component** | {v['plugin_or_component']} |\n")
-        A(f"| **Discovered by** | `{v.get('discovered_by_agent','N/A')}` |\n")
-        A(f"| **Discovered at** | {v.get('discovered_at','N/A')} |\n\n")
+            A(f"| **Component** | {_md_inline(v['plugin_or_component'], cell=True)} |\n")
+        A(f"| **Discovered by** | {_md_code(v.get('discovered_by_agent','N/A'))} |\n")
+        A(f"| **Discovered at** | {_md_inline(v.get('discovered_at','N/A'), cell=True)} |\n\n")
 
         desc = (v.get("description") or "").strip()
-        if desc: A(f"#### Description\n\n{desc}\n\n")
-        if expl: A(f"#### Technical Analysis\n\n{expl}\n\n")
+        if desc: A(f"#### Description\n\n{_md_prose(desc)}\n\n")
+        if expl: A(f"#### Technical Analysis\n\n{_md_prose(expl)}\n\n")
+        # raw target data: the fence is longer than any backtick run inside it
         if commands:
-            A("#### Exploitation Commands\n\n```bash\n")
-            for cmd in commands: A(cmd[:500]+"\n")
-            A("```\n\n")
-        if raw_req:  A(f"#### Raw Request\n\n```http\n{raw_req[:600]}\n```\n\n")
-        if raw_resp: A(f"#### Raw Response\n\n```http\n{raw_resp[:600]}\n```\n\n")
+            A("#### Exploitation Commands\n\n" + _md_fence("\n".join(str(c)[:500] for c in commands), "bash"))
+        if raw_req:  A("#### Raw Request\n\n" + _md_fence(raw_req[:600], "http"))
+        if raw_resp: A("#### Raw Response\n\n" + _md_fence(raw_resp[:600], "http"))
         if logs:
-            A("#### Evidence / Logs\n\n```\n")
-            for log in logs: A(log[:500]+"\n")
-            A("```\n\n")
-        A(f"#### Remediation\n\n{remediation if remediation else '> Not specified — contact the security team.'}\n\n")
+            A("#### Evidence / Logs\n\n" + _md_fence("\n".join(str(l)[:500] for l in logs)))
+        A(f"#### Remediation\n\n{_md_prose(remediation) if remediation else '> Not specified — contact the security team.'}\n\n")
+
+    if held:
+        A("---\n\n> **Held for review:** " + str(len(held)) + " finding(s) are not included in this report: "
+          "they are held by the privacy policy until an operator reviews them.\n\n")
 
     # ── REMEDIATION ROADMAP ──────────────────────────────────────────
     A("---\n\n## 4. REMEDIATION ROADMAP\n\n")
@@ -1162,11 +1263,22 @@ def _generate_report_from_db(
         if not items: continue
         A(f"### {priority} — {timeframe}\n\n| Finding | Effort |\n|---------|--------|\n")
         for v in items:
-            t = v["title"][:60]+"..." if len(v.get("title",""))>60 else v.get("title","")
-            A(f"| {t} | High |\n")
+            t = v.get("title","")[:60]+"..." if len(v.get("title",""))>60 else v.get("title","")
+            A(f"| {_md_inline(t, cell=True)} | High |\n")
         A("\n")
 
-    _append_attack_paths_section(A, campaign_id, stored_order)
+    # ── REPORT ANNEX (computed from the campaign's own data) ─────────
+    # Darkmoon Pro shows these sections next to the report in its dashboard; Community
+    # has no dashboard, so they are part of the report file. Advisory: a failure leaves
+    # the report without them rather than failing the finalisation.
+    try:
+        from api.report_annex_local import annex_markdown
+        annex = annex_markdown(campaign_id, campaign, stored_order)
+    except Exception:
+        logging.getLogger("darkmoon.report").warning("report annex skipped", exc_info=True)
+        annex = ""
+    if annex:
+        A("---\n\n" + annex.rstrip("\n") + "\n\n")
 
     A("---\n\n")
     A(f"*Report auto-generated by Darkmoon AI Security Platform*  \n")

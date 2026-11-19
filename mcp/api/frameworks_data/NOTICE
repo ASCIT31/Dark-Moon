@@ -1,0 +1,19 @@
+Darkmoon framework views — third-party data in this directory
+
+MITRE ATT&CK
+  The ATT&CK extract read by the framework mapping lives in ../vendor/mitre_attack/attack-enterprise-20.0.min.json,
+  with the single ATT&CK licence (LICENSE.txt) and notice (NOTICE) of Darkmoon in that directory.
+
+MITRE ATLAS (atlas-2026.10.min.json)
+  Reduced extract (IDs, names, tactics, parents, IDs removed since 2026.09) of ATLAS 2026.10,
+  https://github.com/mitre-atlas/atlas-data. Copyright 2021-2026 MITRE. Licensed under the Apache License 2.0:
+  LICENSE-ATLAS.txt. Modified: reduced to the fields above. The upstream repository has no NOTICE file.
+
+OWASP Top 10 for LLM Applications 2025 (llm-atlas-crosswalk.json)
+  Only the entry IDs are cited (CC BY-SA 4.0, OWASP Foundation); no OWASP text is reproduced.
+  The crosswalk itself is curated by Darkmoon and is NOT an official MITRE or OWASP mapping.
+
+ISO/IEC 27001: no ISO text or title is embedded; the views show the control ID written by the agent.
+ANSSI EBIOS Risk Manager: the scale names and the crossed grid of fiche méthode 8 are quoted in api/frameworks.py.
+
+Darkmoon is not affiliated with, sponsored or endorsed by The MITRE Corporation, OWASP, ISO or the ANSSI.

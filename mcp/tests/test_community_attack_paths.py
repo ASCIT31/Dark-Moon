@@ -1,5 +1,6 @@
 """Community attack paths: agent-declared links (enabled_by) pushed through the MCP tool, stored in the JSON store,
-turned into an attack-path document without a web server, and printed in the report as declarations only."""
+turned into an attack-path document without a web server, and printed in the report annex as declarations and
+hypotheses only."""
 from __future__ import annotations
 
 import asyncio
@@ -107,7 +108,7 @@ def test_report_lists_declared_links_without_calling_them_proven(store):
     a = _push("Default credentials")
     _push("Authenticated RCE", enabled_by=[a["vuln_id"], "vuln_nope"])
     report = live_push._generate_report_from_db(CID, json_storage.load_campaign(CID), "summary")
-    section = report[report.index("## 5. ATTACK PATHS AND DECLARED LINKS"):]
+    section = report[report.index("### Links declared by the agents"):report.index("## INFRASTRUCTURE MAP")]
     assert "declared by the testing agents" in section and "not a proof" in section
     assert "Declared by the agent · not verified by the server" in section
     assert "Rejected declaration" in section and "`vuln_nope`" in section
@@ -115,12 +116,18 @@ def test_report_lists_declared_links_without_calling_them_proven(store):
     assert len(rows) == 2
     for row in rows:
         assert not re.search(r"\b(proven|observed|demonstrated)\b", row, re.I), row
+    paths = report[report.index("## ATTACK PATHS"):report.index("### Links declared by the agents")]
+    assert "0 observed attack paths" in paths and "declared by the agent (not verified by the server)" in paths
+    assert "### Paths declared by the agent (not verified by the server)" in paths
 
 
-def test_campaign_without_declared_links_keeps_the_old_report(store):
+def test_campaign_without_declared_links_still_gets_a_valid_report(store):
+    # an older campaign (no enabled_by anywhere): the report and its annex are built, without the declared-link list
     _push("Default credentials")
     report = live_push._generate_report_from_db(CID, json_storage.load_campaign(CID), "summary")
-    assert "## 5. ATTACK PATHS" not in report and "## 4. REMEDIATION ROADMAP" in report
+    assert "## 4. REMEDIATION ROADMAP" in report and "## ATTACK PATHS" in report and "## FIX FIRST" in report
+    assert "### Links declared by the agents" not in report
+    assert report.rstrip().endswith(f"*Campaign: {CID} | Target: app.example.test*")
 
 
 def test_mcp_tool_exposes_enabled_by_and_stores_it(store, monkeypatch):
@@ -155,7 +162,7 @@ def test_report_checks_links_in_push_order_not_severity_order(store):
     live_push.push_finding(CID, {"title": "Admin file read", "severity": "critical", "status": "exploited",
                                  "category": "lfi", "endpoint": "/admin/export", "enabled_by": [a["vuln_id"]]})
     report = live_push._generate_report_from_db(CID, json_storage.load_campaign(CID), "summary")
-    section = report[report.index("## 5. ATTACK PATHS AND DECLARED LINKS"):]
+    section = report[report.index("### Links declared by the agents"):report.index("## INFRASTRUCTURE MAP")]
     assert "forward" not in section and "Declared by the agent · not verified by the server" in section
 
 
@@ -185,9 +192,10 @@ def test_a_value_shared_by_two_agent_written_evidences_is_never_a_proof(store, d
     assert not [l for l in doc.get("observed_links") or [] if l.get("kind") in ("R1", "R2", "R3")]
     assert JWT not in __import__("json").dumps(doc)  # evidence text never reaches the path document
     report = live_push._generate_report_from_db(CID, json_storage.load_campaign(CID), "s")
-    if declare:
-        section = report[report.index("## 5."):]
-        assert not re.search(r"proven by the server", section, re.I)
+    annex = report[report.index("## REMEDIATION PRIORITIES & ATTACK PATHS"):]
+    assert JWT not in annex  # the annex is built from the path document, never from the evidence text
+    assert "0 observed attack paths" in annex
+    assert not re.search(r"proven by the server", annex, re.I)
 
 
 def test_evidence_counts_survive_without_the_text(store):
@@ -215,13 +223,14 @@ def test_a_repush_that_changes_the_finding_keeps_both_versions(store):
     assert stored[first["vuln_id"]]["status"] == "confirmed"
 
 
-def test_section_5_lists_links_even_if_the_path_engine_fails(store, monkeypatch):
+def test_declared_links_are_listed_even_if_the_path_engine_fails(store, monkeypatch):
     import api.attack_paths_local as apl
     a = _push("Default credentials")
     _push("Authenticated RCE", enabled_by=[a["vuln_id"]])
     monkeypatch.setattr(apl, "attack_paths_doc", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("engine bug")))
     report = live_push._generate_report_from_db(CID, json_storage.load_campaign(CID), "s")
-    assert "Declared by the agent · not verified by the server" in report[report.index("## 5."):]
+    assert "Declared by the agent · not verified by the server" in report[report.index("### Links declared by the agents"):]
+    assert "could not be computed" in report and "## 4. REMEDIATION ROADMAP" in report
 
 
 def test_init_with_a_crafted_session_id_writes_nothing(store):

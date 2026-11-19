@@ -1,0 +1,41 @@
+{
+  "name": "Darkmoon LLM finding -> OWASP LLM Top 10 (2025) -> MITRE ATLAS crosswalk",
+  "status": "curated by Darkmoon, NOT an official MITRE or OWASP mapping",
+  "atlas_version": "2026.10",
+  "owasp_version": "OWASP Top 10 for LLM Applications 2025 (CC BY-SA 4.0): only IDs and short titles are used, no description is reproduced",
+  "relations": {
+    "demonstrated": "the finding was exploited: the adversary technique was actually performed against the target",
+    "enabled": "the finding shows a weakness that makes the technique possible; the technique itself was not performed"
+  },
+  "relation_rule": "relation = demonstrated only if the finding status is 'exploited' AND the entry allows it (max_relation); otherwise enabled",
+  "sources": {
+    "owasp-cited": "ATLAS ID cited in the OWASP LLM 2025 entry (Related Frameworks and Taxonomies); citation not machine-verifiable (client-rendered page), checked by hand on 2026-11-03",
+    "atlas-cited": "the ATLAS 2026.10 technique cites this OWASP LLM 2025 entry in its references (verifiable in the vendored YAML)",
+    "owasp-cited-renumbered": "OWASP 2025 cites an ATLAS ID removed in 2026.10; replaced by its successor listed in lineage",
+    "curated": "Darkmoon reading of the ATLAS technique description; no citation in either source"
+  },
+  "lineage": {
+    "_note": "IDs removed between ATLAS 2026.09 and 2026.10 (computed by build_frameworks_data.py) and the successor Darkmoon uses. basis: same_name = identical technique name in 2026.10; curated = Darkmoon judgement; none = no successor asserted",
+    "AML.T0024.000": {"old_name": "Infer Training Data Membership", "successor": "AML.T0137.000", "basis": "curated"},
+    "AML.T0024.001": {"old_name": "Invert AI Model", "successor": "AML.T0137.002", "basis": "same_name"},
+    "AML.T0024.002": {"old_name": "Extract AI Model", "successor": null, "basis": "none"},
+    "AML.T0056": {"old_name": "Extract LLM System Prompt", "successor": null, "basis": "none"},
+    "AML.T0057": {"old_name": "LLM Data Leakage", "successor": null, "basis": "none"}
+  },
+  "categories": {
+    "prompt_injection_direct":   {"owasp_llm": "LLM01:2025", "atlas": [{"id": "AML.T0051.000", "max_relation": "demonstrated", "source": "owasp-cited"}]},
+    "prompt_injection_indirect": {"owasp_llm": "LLM01:2025", "atlas": [{"id": "AML.T0051.001", "max_relation": "demonstrated", "source": "owasp-cited"}]},
+    "llm_jailbreak":             {"owasp_llm": "LLM01:2025", "atlas": [{"id": "AML.T0054", "max_relation": "demonstrated", "source": "owasp-cited"}]},
+    "system_prompt_leakage":     {"owasp_llm": "LLM07:2025", "atlas": [{"id": "AML.T0085.003", "max_relation": "demonstrated", "source": "atlas-cited"}]},
+    "llm_sensitive_information_disclosure": {"owasp_llm": "LLM02:2025", "atlas": [{"id": "AML.T0085.002", "max_relation": "demonstrated", "source": "atlas-cited"}]},
+    "llm_training_data_extraction": {"owasp_llm": "LLM02:2025", "atlas": [{"id": "AML.T0137.003", "max_relation": "demonstrated", "source": "curated"}]},
+    "llm_membership_inference":  {"owasp_llm": "LLM02:2025", "atlas": [{"id": "AML.T0137.000", "max_relation": "demonstrated", "source": "owasp-cited-renumbered", "replaces": "AML.T0024.000"}]},
+    "llm_model_inversion":       {"owasp_llm": "LLM02:2025", "atlas": [{"id": "AML.T0137.002", "max_relation": "demonstrated", "source": "owasp-cited-renumbered", "replaces": "AML.T0024.001"}]},
+    "llm_improper_output_handling": {"owasp_llm": "LLM05:2025", "atlas": []},
+    "llm_output_rendering_exfiltration": {"owasp_llm": "LLM05:2025", "atlas": [{"id": "AML.T0077", "max_relation": "demonstrated", "source": "curated"}]},
+    "llm_excessive_agency":      {"owasp_llm": "LLM06:2025", "atlas": [{"id": "AML.T0053", "max_relation": "demonstrated", "source": "curated"}]},
+    "llm_unbounded_consumption": {"owasp_llm": "LLM10:2025", "atlas": [{"id": "AML.T0034.001", "max_relation": "enabled", "source": "atlas-cited", "source_note": "T0034.001 cites the OWASP 2025 Top 10 document as a whole, not LLM10 specifically"}, {"id": "AML.T0029", "max_relation": "enabled", "source": "owasp-cited"}]},
+    "llm_unauthenticated_inference_api": {"owasp_llm": null, "atlas": [{"id": "AML.T0040", "max_relation": "demonstrated", "source": "curated"}]},
+    "llm_model_information_disclosure": {"owasp_llm": null, "atlas": [{"id": "AML.T0014", "max_relation": "demonstrated", "source": "curated"}]}
+  }
+}
