@@ -146,3 +146,14 @@ def test_mcp_tool_exposes_enabled_by_and_stores_it(store, monkeypatch):
     stored = {v["title"]: v for v in json_storage.load_vulnerabilities(CID)}
     assert stored["Admin upload"]["enabled_by"] == [vid, "x" * 120]
     assert "enabled_by" not in stored["Default credentials"]
+
+
+def test_report_checks_links_in_push_order_not_severity_order(store):
+    # the report lists findings by severity; a low finding pushed FIRST enabling a critical one is still valid
+    a = live_push.push_finding(CID, {"title": "Open registration", "severity": "low", "status": "exploited",
+                                     "category": "auth", "endpoint": "/register"})
+    live_push.push_finding(CID, {"title": "Admin file read", "severity": "critical", "status": "exploited",
+                                 "category": "lfi", "endpoint": "/admin/export", "enabled_by": [a["vuln_id"]]})
+    report = live_push._generate_report_from_db(CID, json_storage.load_campaign(CID), "summary")
+    section = report[report.index("## 5. ATTACK PATHS AND DECLARED LINKS"):]
+    assert "forward" not in section and "Declared by the agent · not verified by the server" in section
