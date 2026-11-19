@@ -1,9 +1,9 @@
 # =========================
 # Stage 1 — Builder
 # =========================
-# Pinned to opencode's packageManager (root package.json: bun@1.3.14); the
-# upstream build hard-fails on an older bun. Track after each fork sync.
-FROM oven/bun:1.3.11 AS builder
+# Pinned to opencode's packageManager (root package.json at OPENCODE_REF: bun@1.4.4); the
+# upstream build hard-fails on another bun. Track after each fork sync.
+FROM oven/bun:1.4.4@sha256:1d22548f177f4ff38e0c15baa3c2c46c6c2060ba2d1bc573bb4720b407548f1d AS builder
 
 WORKDIR /app
 
@@ -13,8 +13,17 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone OpenCode
-RUN git clone https://github.com/ASCIT31/opencode.git .
+# OpenCode fork pinned to an immutable commit (was an unpinned clone of the default branch: a fork
+# update changed every Community build). f4e363c8 = upstream v1.19.6 = ASCIT31/opencode `dev` (18/11/2026).
+# 1.19 carries the TUI plugin API used by the Darkmoon explorer. Update: new SHA, align the bun image on
+# its packageManager, check packages/tui/src/logo.ts, bump OPENCODE_VERSION, build, run the branding test.
+ARG OPENCODE_REPO=https://github.com/ASCIT31/opencode.git
+ARG OPENCODE_REF=f4e363c8295fa90a03dddc451882fffe8fbce357
+RUN git init -q . \
+ && git remote add origin "${OPENCODE_REPO}" \
+ && git fetch -q --depth 1 origin "${OPENCODE_REF}" \
+ && git checkout -q --detach FETCH_HEAD \
+ && test "$(git rev-parse HEAD)" = "${OPENCODE_REF}"
 
 # Install deps
 # Resilience: the synced opencode pulls ghostty-web from a GitHub tarball
@@ -30,18 +39,21 @@ RUN n=0; until bun install; do \
 # for full rationale): upstream moved the TUI to @opencode-ai/tui and rewrote
 # installation/index.ts + cli/ui.ts (Effect). The old full-file overrides are stale
 # and break the build. Minimal, resilient footprint instead:
-#   1) Logo    -> overwrite the single data module packages/opencode/src/cli/logo.ts.
+#   1) Logo    -> overwrite the single data module packages/tui/src/logo.ts
+#                 (packages/opencode/src/cli/logo.ts re-exports it).
 #   2) Version -> OPENCODE_VERSION env (script resolver is env-first -> InstallationVersion).
 COPY conf/tui/logo.ts \
-     /app/packages/opencode/src/cli/logo.ts
+     /app/packages/tui/src/logo.ts
 
-ENV OPENCODE_VERSION=opencode-darkmoon-1.3.0
+ENV OPENCODE_VERSION=opencode-darkmoon-1.19.6
 
-# No sed needed: cli/ui.ts (head-less banner) and cli/cmd/tui/component/logo.tsx
-# (TUI) both import the single logo module we replaced above, so the DARK MOON
-# art renders in both. The old sed on cli/ui.ts's "wordmark" loop is obsolete
-# since the 2026-10 fork resync (upstream merged packages/tui into packages/opencode).
-# Guarded by tools/opencode-branding-test.sh after each image build.
+# opencode 1.19 keeps two hard-coded copies of the stock wordmark outside the logo module:
+# the non-TTY banner in cli/ui.ts and the session exit epilogue in tui/util/presentation.ts.
+# Point both at the logo module; the grep guards fail the build if upstream rewrites them.
+RUN perl -0pi -e 's/\Aconst logo = \{\n.*?\n\}\n/import { logo } from "..\/logo"\n/s' packages/tui/src/util/presentation.ts \
+ && grep -q '^import { logo } from "../logo"' packages/tui/src/util/presentation.ts \
+ && perl -0pi -e 's/for \(const row of wordmark\) \{/for (const row of glyphs.left.map((l, i) => (l + " " + (glyphs.right[i] ?? "")).replace(\/[_^~,]\/g, " "))) {/' packages/opencode/src/cli/ui.ts \
+ && grep -q 'const row of glyphs.left.map' packages/opencode/src/cli/ui.ts
 
 ENV BUN_INSTALL_CACHE_DIR=/tmp/bun-cache
 RUN rm -rf ~/.bun /tmp/bun-cache
@@ -143,6 +155,8 @@ COPY --from=builder /opencode-bin /usr/local/bin/opencode
 RUN chmod +x /usr/local/bin/opencode
 
 ENV TERM=xterm-256color
+# The binary is Darkmoon's build: opencode's own /update would replace it with the stock one.
+ENV OPENCODE_DISABLE_AUTOUPDATE=1
 ENV LANG=C.UTF-8
 
 RUN mkdir -p /root/.local/share/opencode/sessions \
