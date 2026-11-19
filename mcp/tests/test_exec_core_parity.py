@@ -34,7 +34,7 @@ CORE = MCP / "api" / "exec_core"
 FIXTURES = MCP / "tests" / "fixtures" / "exec_core"
 VENDORED = MCP.parent / "conf" / "plugins" / "darkmoon-explorer" / "_vendor" / "exec_core"
 
-INIT_SHA256 = "78b4d758bf55d30ccb80b166f8ffe8940596057dd686e7190718e9a6a6d7ee9f"
+INIT_SHA256 = "327aff01f26437f8af9607d2b764a2227a59c3e5aa0a745dda20ca917351f161"
 SHARED_SHA256 = {
     "coverage_signals.py": "c800cf3d5ba6f3c873ec01b9991a35b4e43d9219b13da79d655f17366017ac64",
     "exec_score.py": "94e6bd24282becd2e382dc02556cd4ae90eea7ba5b898473516d112615b3bd94",
@@ -43,9 +43,11 @@ SHARED_SHA256 = {
 SHARED_TESTS_SHA256 = {
     "test_exec_core_actions.py": "3bea2178676f730838a1edddf68078ab0e517827488bd7be549f91b63aab049e",
     "test_exec_core_frameworks.py": "ba9b0ba3d5dffb8cdca8d00693a18479804bb85afeae0ceedde59afa6a1a8730",
+    "test_exec_core_report_model.py": "1a671d67afee0fd8cefd7e03f774fe38c8bacf7296fb380bb46741d86e05e910",
 }
 TREATMENT_FIXTURES_SHA256 = "3ea1f25ed7e7f9799f6ee0e30196f673d2b6097fdd49b998c6fd26b8676773c5"
 FRAMEWORK_FIXTURES_SHA256 = "fee0eaeca54d097a7f2cfc5f51193a13fd00e1b2ae8df23cb81d1f66eec3bf0a"
+REPORT_FIXTURES_SHA256 = "b0a2f6dba8c6008ebdd7e4d354d28dea484ad21024069526b07b99a57e6a10f0"
 FIXTURES_SHA256 = "40443c8253d7900390de4abf34167f6d8ae35c8c032e4fa4ca01760111c55a8d"
 
 STDLIB_ALLOWED = {"__future__", "datetime", "hashlib", "json", "math", "re", "typing", "urllib.parse"}
@@ -107,6 +109,11 @@ def test_treatment_plan_fixtures_and_tests_are_identical():
 def test_framework_assessment_fixtures_are_identical():
     """The framework-assessment / profile parity fixture and its expected output run unchanged in both editions."""
     assert _fixtures_digest(FIXTURES / "frameworks") == FRAMEWORK_FIXTURES_SHA256
+
+
+def test_report_model_fixtures_are_identical():
+    """The report-model parity fixture and its expected models (core and store level) run unchanged in both editions."""
+    assert _fixtures_digest(FIXTURES / "report") == REPORT_FIXTURES_SHA256
 
 
 def _expected_for(doc):
@@ -172,4 +179,5 @@ if __name__ == "__main__":
     print("}")
     print(f'TREATMENT_FIXTURES_SHA256 = "{_fixtures_digest(FIXTURES / "treatment")}"')
     print(f'FRAMEWORK_FIXTURES_SHA256 = "{_fixtures_digest(FIXTURES / "frameworks")}"')
+    print(f'REPORT_FIXTURES_SHA256 = "{_fixtures_digest(FIXTURES / "report")}"')
     print(f'FIXTURES_SHA256 = "{_fixtures_digest()}"')

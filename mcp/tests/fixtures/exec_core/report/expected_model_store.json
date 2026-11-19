@@ -1,0 +1,2651 @@
+{
+ "campaign": {
+  "date": "2026-11-20T10:00:00Z",
+  "id": "camp_fx_report",
+  "methodology": "OWASP WSTG / NIST SP 800-115",
+  "project_id": "proj_fx_report",
+  "project_name": "Fixture project",
+  "status": "completed",
+  "target": "app.local"
+ },
+ "classification": "CONFIDENTIAL",
+ "counts": {
+  "confirmed": 3,
+  "critical": 1,
+  "exploited": 2,
+  "high": 2,
+  "info": 1,
+  "low": 1,
+  "medium": 0,
+  "total_findings": 6,
+  "unconfirmed": 1
+ },
+ "edition_specific": [
+  "edition",
+  "sections.attack_paths",
+  "sections.evidence_methodology.privacy",
+  "sections.evidence_methodology.masking",
+  "sections.treatment_plan.verification",
+  "blocks with id verification-note / masking-note"
+ ],
+ "generated_at": "2026-11-20T11:05:00Z",
+ "language": "en",
+ "legend": {
+  "declaration": {
+   "corroborated": {
+    "label": "Corroborated",
+    "meaning": "The server found evidence that supports it."
+   },
+   "declared": {
+    "label": "Declared",
+    "meaning": "Stated by an agent or a person; not verified by the server."
+   }
+  },
+  "evidence_status": {
+   "confirmed": {
+    "label": "Confirmed",
+    "meaning": "The weakness was observed; it was not used further."
+   },
+   "exploited": {
+    "label": "Exploited",
+    "meaning": "The weakness was used during the test; proof is on file."
+   },
+   "unconfirmed": {
+    "label": "To confirm",
+    "meaning": "Reported by an agent without enough proof yet."
+   }
+  },
+  "grade": {
+   "A": "Low exposure found in the tested scope",
+   "B": "Limited exposure found in the tested scope",
+   "C": "Notable exposure found in the tested scope",
+   "D": "High exposure found in the tested scope",
+   "E": "Severe exposure found in the tested scope"
+  },
+  "path_kind": {
+   "evidence_backed": {
+    "label": "Evidence-Backed Attack Path",
+    "meaning": "Every step is backed by evidence the server observed during the campaign."
+   },
+   "possible": {
+    "label": "Possible Attack Path",
+    "meaning": "A chain of weaknesses that could be combined; a hypothesis, not observed."
+   }
+  },
+  "score_status": {
+   "limited": {
+    "label": "Limited test",
+    "meaning": "The campaign was below the coverage floor; the rating is capped and indicative."
+   },
+   "not_rated": {
+    "label": "Not rated",
+    "meaning": "No rating: the campaign did not complete, was a retest, or its coverage is unknown."
+   },
+   "rated": {
+    "label": "Rated",
+    "meaning": "The campaign met the coverage floor; the rating applies to its scope."
+   }
+  },
+  "severity": {
+   "critical": "Critical",
+   "high": "High",
+   "info": "Informational",
+   "low": "Low",
+   "medium": "Medium"
+  },
+  "treatment": {
+   "in_progress": {
+    "label": "Treatment in Progress",
+    "meaning": "A fix is planned, under way or declared applied; not verified."
+   },
+   "not_reproduced": {
+    "label": "Not reproduced at retest",
+    "meaning": "A completed retest did not reproduce it; this is not a proof of resolution."
+   },
+   "risk_accepted": {
+    "label": "Risk accepted",
+    "meaning": "Accepted by its owner until a stated date."
+   },
+   "to_do": {
+    "label": "To do",
+    "meaning": "No treatment recorded yet."
+   }
+  },
+  "version": "darkmoon-legend/1"
+ },
+ "schema_version": "darkmoon-report/v2",
+ "section_order": [
+  "cyber_score",
+  "method_coverage",
+  "executive_summary",
+  "application_profile",
+  "business_impact",
+  "critical_risks",
+  "framework_assessment",
+  "resilience",
+  "treatment_plan",
+  "attack_paths",
+  "detailed_findings",
+  "evidence_methodology",
+  "limitations"
+ ],
+ "sections": [
+  {
+   "blocks": [
+    {
+     "items": [
+      {
+       "id": "score",
+       "label": "Cyber Score",
+       "source": "exec_core.score",
+       "value": "34 / 100"
+      },
+      {
+       "id": "grade",
+       "label": "Grade",
+       "source": "exec_core.score",
+       "value": "E"
+      },
+      {
+       "id": "status",
+       "label": "Status",
+       "source": "exec_core.score",
+       "value": "Rated"
+      }
+     ],
+     "type": "kpis"
+    },
+    {
+     "text": "Grade E: Severe exposure found in the tested scope.",
+     "type": "paragraph"
+    },
+    {
+     "text": "The campaign met the coverage floor; the rating applies to its scope.",
+     "type": "paragraph"
+    },
+    {
+     "text": "Coverage recorded by the server: full campaign, 2 test agent(s), 60 min measured, 3 asset(s) registered, 120 toolbox command(s) executed.",
+     "type": "paragraph"
+    },
+    {
+     "blocks": [
+      {
+       "columns": [
+        "Rule",
+        "Maximum score",
+        "Findings"
+       ],
+       "id": "score-caps",
+       "rows": [
+        [
+         "exploited critical",
+         "39",
+         "1"
+        ],
+        [
+         "exploited high",
+         "59",
+         "1"
+        ]
+       ],
+       "source": "exec_core.score",
+       "type": "table"
+      }
+     ],
+     "id": "cyber-score-caps",
+     "title": "Caps by worst evidence",
+     "type": "subsection"
+    },
+    {
+     "text": "Sum of the penalties of the weakness classes: 66.1 (rating = 100 minus this sum, bounded 0 to 100, then the caps by worst evidence).",
+     "type": "paragraph"
+    },
+    {
+     "blocks": [
+      {
+       "items": [
+        "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+        "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+        "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+        "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+        "1 finding(s) without a recognised severity were weighted from their CVSS vector, else as high (conservative).",
+        "1 finding(s) held for privacy review are not counted.",
+        "1 finding(s) marked false positive by an agent or an operator are not counted.",
+        "1 unconfirmed critical/high finding(s) to confirm; they weigh less than proven ones and never set a cap."
+       ],
+       "type": "list"
+      }
+     ],
+     "id": "cyber-score-limitations",
+     "title": "Limitations of the rating",
+     "type": "subsection"
+    },
+    {
+     "text": "An exposure rating of what this campaign found in its tested scope (methodology darkmoon-cyber-score/1); not a security level, a compliance statement or a probability.",
+     "type": "note"
+    }
+   ],
+   "grade": "E",
+   "id": "cyber_score",
+   "numbers": {
+    "caps": {
+     "source": "exec_core.score",
+     "value": 2
+    },
+    "grade": {
+     "source": "exec_core.score",
+     "value": "E"
+    },
+    "penalty_total": {
+     "source": "exec_core.score",
+     "value": 66.1
+    },
+    "score": {
+     "source": "exec_core.score",
+     "value": 34
+    },
+    "score_status": {
+     "source": "exec_core.score",
+     "value": "rated"
+    }
+   },
+   "score": 34,
+   "sources": [
+    "exec_core.score"
+   ],
+   "status": "rated",
+   "title": "Cyber Score"
+  },
+  {
+   "blocks": [
+    {
+     "text": "Facts recorded by the Darkmoon server during the campaign (not declared by the agents).",
+     "type": "paragraph"
+    },
+    {
+     "rows": [
+      {
+       "label": "Target (in scope)",
+       "value": "app.local"
+      },
+      {
+       "label": "Campaign",
+       "value": "camp_fx_report"
+      },
+      {
+       "label": "Campaign status",
+       "value": "completed"
+      },
+      {
+       "label": "Campaign kind",
+       "value": "full"
+      },
+      {
+       "label": "Started",
+       "value": "2026-11-20T10:00:00Z"
+      },
+      {
+       "label": "Finalised",
+       "value": "2026-11-20T11:00:00Z"
+      },
+      {
+       "label": "Measured duration",
+       "value": "60 min (3600 s)"
+      },
+      {
+       "label": "Test agents dispatched",
+       "value": "headless-browser, php"
+      },
+      {
+       "label": "Assets registered",
+       "value": "3"
+      },
+      {
+       "label": "Toolbox commands executed",
+       "value": "120"
+      },
+      {
+       "label": "Declared methodology",
+       "value": "OWASP WSTG / NIST SP 800-115"
+      }
+     ],
+     "source": "campaign record + coverage_signals",
+     "type": "facts"
+    },
+    {
+     "text": "Findings counted: 6. Held for privacy review (not counted): 1. Marked false positive (not counted): 1.",
+     "type": "paragraph"
+    },
+    {
+     "text": "Coverage floor of the rating: 30 min measured, 2 specialised agents, 1 asset registered, 10 toolbox commands.",
+     "type": "paragraph"
+    },
+    {
+     "text": "Framework coverage: Coverage recorded: 2 test agent(s); classes exercised: 20.",
+     "type": "paragraph"
+    }
+   ],
+   "id": "method_coverage",
+   "numbers": {
+    "agents_dispatched": {
+     "source": "coverage_signals",
+     "value": 2
+    },
+    "assets_registered": {
+     "source": "coverage_signals",
+     "value": 3
+    },
+    "commands_executed": {
+     "source": "coverage_signals",
+     "value": 120
+    },
+    "findings_counted": {
+     "source": "exec_core.stats",
+     "value": 6
+    },
+    "findings_false_positive": {
+     "source": "exec_core.stats",
+     "value": 1
+    },
+    "findings_quarantined": {
+     "source": "exec_core.stats",
+     "value": 1
+    },
+    "measured_duration_seconds": {
+     "source": "coverage_signals",
+     "value": 3600
+    }
+   },
+   "sources": [
+    "campaign record",
+    "coverage_signals",
+    "exec_core.stats"
+   ],
+   "title": "Method and test coverage"
+  },
+  {
+   "blocks": [
+    {
+     "text": "Cyber Score 34 / 100, grade E (rated).",
+     "type": "paragraph"
+    },
+    {
+     "text": "6 findings counted in the tested scope (1 critical, 2 high, 1 low, 1 info, 1 without a recognised severity); 2 exploited, 3 confirmed, 1 to confirm.",
+     "type": "paragraph"
+    },
+    {
+     "columns": [
+      "Severity",
+      "Findings",
+      "Exploited"
+     ],
+     "id": "findings-by-severity",
+     "rows": [
+      [
+       "Critical",
+       "1",
+       "1"
+      ],
+      [
+       "High",
+       "2",
+       "1"
+      ],
+      [
+       "Medium",
+       "0",
+       "0"
+      ],
+      [
+       "Low",
+       "1",
+       "0"
+      ],
+      [
+       "Informational",
+       "1",
+       "0"
+      ],
+      [
+       "Total",
+       "6",
+       "2"
+      ]
+     ],
+     "source": "exec_core.stats",
+     "type": "table"
+    },
+    {
+     "text": "Attack paths: 0 evidence-backed, 1 possible (hypotheses). Attack paths are not part of the rating.",
+     "type": "paragraph"
+    },
+    {
+     "blocks": [
+      {
+       "items": [
+        "1. Fix SQL injection in /search (q) — table « clients » dumped (Findings covered: 1)",
+        "2. Fix IDOR on /api/orders/{id} (Findings covered: 1)",
+        "3. Fix stored XSS | in `comments` 中文 ✓ (Findings covered: 1)"
+       ],
+       "links": [
+        "action-act_c9a665657465c467",
+        "action-act_f6824516c363205a",
+        "action-act_69af3ccf825a5b7e"
+       ],
+       "type": "list"
+      }
+     ],
+     "id": "top-actions",
+     "title": "First actions of the treatment plan",
+     "type": "subsection"
+    },
+    {
+     "text": "Frameworks: Technical findings relevant to: ISO/IEC 27001:2022 Annex A (5 controls with a weakness observed); GDPR (EU) 2016/679, art. 32 and 25 (1 control with a weakness observed); NIS2 Directive (EU) 2022/2555, art. 21(2) (2 controls with a weakness observed).",
+     "type": "paragraph"
+    },
+    {
+     "label": "Written by the testing agent (quoted as written, not verified by the server).",
+     "source": "testing_agent",
+     "text": "The application was tested for 1 hour. Critical SQL injection exposes the customer table; « données personnelles » were reachable. <script>alert(1)</script>",
+     "type": "quote"
+    }
+   ],
+   "id": "executive_summary",
+   "numbers": {
+    "actions": {
+     "source": "exec_core.actions",
+     "value": 5
+    },
+    "confirmed": {
+     "source": "exec_core.stats",
+     "value": 3
+    },
+    "critical": {
+     "source": "exec_core.stats",
+     "value": 1
+    },
+    "exploited": {
+     "source": "exec_core.stats",
+     "value": 2
+    },
+    "findings_counted": {
+     "source": "exec_core.stats",
+     "value": 6
+    },
+    "high": {
+     "source": "exec_core.stats",
+     "value": 2
+    },
+    "info": {
+     "source": "exec_core.stats",
+     "value": 1
+    },
+    "low": {
+     "source": "exec_core.stats",
+     "value": 1
+    },
+    "medium": {
+     "source": "exec_core.stats",
+     "value": 0
+    },
+    "unconfirmed": {
+     "source": "exec_core.stats",
+     "value": 1
+    }
+   },
+   "sources": [
+    "exec_core.actions",
+    "exec_core.frameworks_assess",
+    "exec_core.score",
+    "exec_core.stats",
+    "testing_agent (quoted)"
+   ],
+   "title": "Executive summary"
+  },
+  {
+   "blocks": [
+    {
+     "text": "Business facts come only from the organisation; detected technologies are what the agents reported, not confirmed. A field nobody provided is shown as Unknown.",
+     "type": "paragraph"
+    },
+    {
+     "columns": [
+      "Field",
+      "Value",
+      "Provenance"
+     ],
+     "id": "profile-fields",
+     "rows": [
+      [
+       "Description",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Business purpose",
+       "Customer portal for orders",
+       "Declared by the organisation"
+      ],
+      [
+       "Business owner (role)",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Technical owner (role)",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Business processes",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "User categories",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Data categories",
+       "contact details, orders",
+       "Declared by the organisation"
+      ],
+      [
+       "Personal data",
+       "yes",
+       "Declared and verified by the organisation"
+      ],
+      [
+       "Languages",
+       "PHP 8.2",
+       "Detected by a campaign, not confirmed"
+      ],
+      [
+       "Frameworks",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Databases",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Infrastructure",
+       "PHP 8.2",
+       "Detected by a campaign, not confirmed"
+      ],
+      [
+       "External dependencies",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Criticality",
+       "high",
+       "Declared by the organisation"
+      ],
+      [
+       "Availability requirement",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Recovery time objective (RTO)",
+       "4h",
+       "Declared by the organisation"
+      ],
+      [
+       "Recovery point objective (RPO)",
+       "30min",
+       "Declared by the organisation"
+      ],
+      [
+       "Service level (SLA)",
+       "99.5% monthly",
+       "Declared by the organisation"
+      ],
+      [
+       "Data residency",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Sector",
+       "health",
+       "Declared by the organisation"
+      ],
+      [
+       "NIS2 entity type",
+       "important",
+       "Declared by the organisation"
+      ],
+      [
+       "ISO/IEC 27001 ISMS scope",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "AI system declared",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "AI risk class",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Last verification date",
+       "Unknown",
+       "Not provided"
+      ]
+     ],
+     "source": "exec_core.profile",
+     "type": "table"
+    },
+    {
+     "columns": [
+      "Provenance",
+      "Fields"
+     ],
+     "id": "profile-provenance",
+     "rows": [
+      [
+       "Detected by a campaign, not confirmed",
+       "2"
+      ],
+      [
+       "Inferred by Darkmoon, not confirmed",
+       "0"
+      ],
+      [
+       "Declared by the organisation",
+       "8"
+      ],
+      [
+       "Declared and verified by the organisation",
+       "1"
+      ],
+      [
+       "Not provided",
+       "14"
+      ]
+     ],
+     "source": "exec_core.profile",
+     "type": "table"
+    }
+   ],
+   "id": "application_profile",
+   "numbers": {
+    "fields_declared_by_customer": {
+     "source": "exec_core.profile",
+     "value": 8
+    },
+    "fields_detected": {
+     "source": "exec_core.profile",
+     "value": 2
+    },
+    "fields_inferred": {
+     "source": "exec_core.profile",
+     "value": 0
+    },
+    "fields_unknown": {
+     "source": "exec_core.profile",
+     "value": 14
+    },
+    "fields_verified": {
+     "source": "exec_core.profile",
+     "value": 1
+    }
+   },
+   "sources": [
+    "exec_core.profile"
+   ],
+   "title": "Application profile"
+  },
+  {
+   "blocks": [
+    {
+     "text": "Darkmoon does not estimate business impact, financial loss or return on investment. This section lists only the facts the organisation declared and the counts measured by this campaign; relating them is the system owner's decision.",
+     "type": "note"
+    },
+    {
+     "text": "Business facts declared by the organisation: 4 of 6.",
+     "type": "paragraph"
+    },
+    {
+     "columns": [
+      "Declared fact",
+      "Value",
+      "Provenance"
+     ],
+     "id": "business-facts",
+     "rows": [
+      [
+       "Business purpose",
+       "Customer portal for orders",
+       "Declared by the organisation"
+      ],
+      [
+       "Business processes",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "User categories",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Data categories",
+       "contact details, orders",
+       "Declared by the organisation"
+      ],
+      [
+       "Personal data",
+       "yes",
+       "Declared and verified by the organisation"
+      ],
+      [
+       "Criticality",
+       "high",
+       "Declared by the organisation"
+      ]
+     ],
+     "source": "exec_core.profile",
+     "type": "table"
+    },
+    {
+     "columns": [
+      "Measured by this campaign",
+      "Count"
+     ],
+     "id": "measured-exposure",
+     "rows": [
+      [
+       "Findings counted",
+       "6"
+      ],
+      [
+       "Critical or high findings",
+       "3"
+      ],
+      [
+       "Critical or high findings exploited",
+       "2"
+      ],
+      [
+       "Weakness classes with an open finding",
+       "5"
+      ],
+      [
+       "Evidence-backed attack paths",
+       "0"
+      ],
+      [
+       "Actions in the treatment plan",
+       "5"
+      ]
+     ],
+     "source": "exec_core.stats + exec_core.score + attack-path engine + exec_core.actions",
+     "type": "table"
+    }
+   ],
+   "id": "business_impact",
+   "numbers": {
+    "critical_high": {
+     "source": "exec_core.stats",
+     "value": 3
+    },
+    "critical_high_exploited": {
+     "source": "exec_core.stats",
+     "value": 2
+    },
+    "declared_business_facts": {
+     "source": "exec_core.profile",
+     "value": 4
+    },
+    "evidence_backed_paths": {
+     "source": "attack-path engine",
+     "value": 0
+    },
+    "weakness_classes": {
+     "source": "exec_core.score",
+     "value": 5
+    }
+   },
+   "sources": [
+    "attack-path engine",
+    "exec_core.actions",
+    "exec_core.profile",
+    "exec_core.score",
+    "exec_core.stats"
+   ],
+   "title": "Business context and exposure"
+  },
+  {
+   "blocks": [
+    {
+     "text": "Weakness classes ordered by their weight in the Cyber Score (severity reported by the agent, proof on file, distinct weaknesses). The worst finding of each class is named; every finding is in Detailed findings.",
+     "type": "paragraph"
+    },
+    {
+     "text": "Weakness classes with an open finding in the rating: 5.",
+     "type": "paragraph"
+    },
+    {
+     "columns": [
+      "Weakness class",
+      "Worst severity",
+      "Proof",
+      "Findings",
+      "Distinct weaknesses",
+      "Worst finding"
+     ],
+     "id": "critical-risks",
+     "row_links": [
+      "finding-vuln_sqli",
+      "finding-vuln_idor",
+      "finding-vuln_xss",
+      "finding-vuln_nosev",
+      "finding-vuln_hdr"
+     ],
+     "rows": [
+      [
+       "sql injection",
+       "Critical",
+       "Exploited",
+       "1",
+       "1",
+       "SQL injection in /search (q) — table « clients » dumped"
+      ],
+      [
+       "access control",
+       "High",
+       "Exploited",
+       "1",
+       "1",
+       "IDOR on /api/orders/{id}"
+      ],
+      [
+       "xss",
+       "High",
+       "Confirmed",
+       "1",
+       "1",
+       "Stored XSS | in `comments` 中文 ✓"
+      ],
+      [
+       "business logic",
+       "High",
+       "To confirm",
+       "1",
+       "1",
+       "Odd behaviour without a recognised severity"
+      ],
+      [
+       "security headers",
+       "Low",
+       "Confirmed",
+       "1",
+       "1",
+       "Missing security headers"
+      ]
+     ],
+     "source": "exec_core.score components",
+     "type": "table"
+    },
+    {
+     "text": "Findings reported without enough proof, listed as to confirm: 1.",
+     "type": "paragraph"
+    }
+   ],
+   "id": "critical_risks",
+   "numbers": {
+    "to_confirm": {
+     "source": "exec_core.score",
+     "value": 1
+    },
+    "weakness_classes": {
+     "source": "exec_core.score",
+     "value": 5
+    }
+   },
+   "sources": [
+    "exec_core.score"
+   ],
+   "title": "Critical risks"
+  },
+  {
+   "blocks": [
+    {
+     "text": "Technical findings relevant to these frameworks, from one campaign in its tested scope. This is not an audit, a certification or a legal opinion: « No weakness observed in the tested scope » is not a proof of absence, and organisational measures are not assessed.",
+     "type": "note"
+    },
+    {
+     "columns": [
+      "Framework",
+      "Applicability",
+      "Weakness observed",
+      "No weakness observed in the tested scope",
+      "Not tested by this campaign",
+      "Not assessable by a technical test"
+     ],
+     "id": "framework-states",
+     "rows": [
+      [
+       "ISO/IEC 27001:2022 Annex A",
+       "Applicability to be confirmed by the organisation",
+       "5",
+       "7",
+       "4",
+       "23"
+      ],
+      [
+       "GDPR (EU) 2016/679, art. 32 and 25",
+       "Applicable, as declared by the organisation",
+       "1",
+       "0",
+       "2",
+       "3"
+      ],
+      [
+       "NIS2 Directive (EU) 2022/2555, art. 21(2)",
+       "Applicable, as declared by the organisation",
+       "2",
+       "1",
+       "1",
+       "6"
+      ],
+      [
+       "EU AI Act (EU) 2024/1689, art. 15",
+       "Applicability to be confirmed by the organisation",
+       "0",
+       "0",
+       "3",
+       "4"
+      ]
+     ],
+     "source": "exec_core.frameworks_assess",
+     "type": "table"
+    },
+    {
+     "text": "Technical findings relevant to: ISO/IEC 27001:2022 Annex A (5 controls with a weakness observed); GDPR (EU) 2016/679, art. 32 and 25 (1 control with a weakness observed); NIS2 Directive (EU) 2022/2555, art. 21(2) (2 controls with a weakness observed).",
+     "type": "paragraph"
+    },
+    {
+     "blocks": [
+      {
+       "text": "No declaration about an ISO/IEC 27001 ISMS scope.",
+       "type": "paragraph"
+      },
+      {
+       "columns": [
+        "Control",
+        "State",
+        "Findings",
+        "What a test observes / why"
+       ],
+       "id": "controls-iso27001",
+       "row_links": [
+        null,
+        "finding-vuln_idor",
+        null,
+        null,
+        "finding-vuln_idor",
+        null,
+        null,
+        null,
+        null,
+        null,
+        "finding-vuln_info",
+        null,
+        null,
+        null,
+        "finding-vuln_nosev",
+        "finding-vuln_sqli"
+       ],
+       "rows": [
+        [
+         "A.5.14",
+         "Not tested by this campaign",
+         "0",
+         "No dispatched agent covers: cryptography."
+        ],
+        [
+         "A.5.15",
+         "Weakness observed",
+         "1",
+         "The application enforces who may reach which function or record (authorisation bypass, object references, privilege escalation)."
+        ],
+        [
+         "A.5.17",
+         "No weakness observed in the tested scope",
+         "0",
+         "Default, weak, guessable or exposed login secrets, and how they are handled by the tested surface."
+        ],
+        [
+         "A.8.2",
+         "No weakness observed in the tested scope",
+         "0",
+         "Escalation from an ordinary account to administrative functions."
+        ],
+        [
+         "A.8.3",
+         "Weakness observed",
+         "1",
+         "Reading or changing records of other users or tenants without authorisation."
+        ],
+        [
+         "A.8.4",
+         "No weakness observed in the tested scope",
+         "0",
+         "Source code or repositories exposed through the tested surface (.git, backups, source maps)."
+        ],
+        [
+         "A.8.5",
+         "No weakness observed in the tested scope",
+         "0",
+         "Login and session handling: «redacted:credentials» bypass, brute-force resistance, session token handling."
+        ],
+        [
+         "A.8.6",
+         "Not tested by this campaign",
+         "0",
+         "No dispatched agent covers: availability."
+        ],
+        [
+         "A.8.8",
+         "No weakness observed in the tested scope",
+         "0",
+         "Known-vulnerable or end-of-life components found on the tested surface (version evidence, CVE references)."
+        ],
+        [
+         "A.8.9",
+         "No weakness observed in the tested scope",
+         "0",
+         "Insecure settings observed: debug modes, default pages, missing security headers, permissive CORS, exposed admin consoles."
+        ],
+        [
+         "A.8.12",
+         "Weakness observed",
+         "1",
+         "Sensitive data returned or exposed to an unauthorised party (credentials, personal or internal data in responses, errors or files)."
+        ],
+        [
+         "A.8.20",
+         "Not tested by this campaign",
+         "0",
+         "No dispatched agent covers: network_exposure."
+        ],
+        [
+         "A.8.22",
+         "No weakness observed in the tested scope",
+         "0",
+         "Reaching internal networks from the tested surface (server-side request forgery, pivoting)."
+        ],
+        [
+         "A.8.24",
+         "Not tested by this campaign",
+         "0",
+         "No dispatched agent covers: cryptography."
+        ],
+        [
+         "A.8.26",
+         "Weakness observed",
+         "3",
+         "How the application handles requests: injection, cross-site scripting, request forgery, unsafe file handling, business-logic abuse."
+        ],
+        [
+         "A.8.28",
+         "Weakness observed",
+         "2",
+         "Flaws whose root cause is in the code: injection, unsafe deserialisation, path traversal, missing output encoding."
+        ]
+       ],
+       "source": "exec_core.frameworks_assess",
+       "type": "table"
+      },
+      {
+       "text": "23 controls not assessable by a technical test (organisational or process measures) are not listed.",
+       "type": "paragraph"
+      },
+      {
+       "items": [
+        "One campaign, its tested scope only; a control is never declared satisfied.",
+        "A finding is linked to a control by its weakness class, CWE, ATT&CK technique or the ISO control the agent cited: a mislabelled category lands under another control.",
+        "« No weakness observed » requires server-recorded coverage of the control's weakness classes by a dispatched agent; it does not prove that every test of that class was run.",
+        "Applicability uses only facts declared or verified by the organisation; detection never decides it.",
+        "Clauses 4-10 and the organisational, people and physical controls are not assessed.",
+        "Agents' ISO citations are indicative; 2013 identifiers are mapped to 2022 identifiers by number."
+       ],
+       "type": "list"
+      },
+      {
+       "text": "Source: ISO/IEC 27001:2022, Annex A (https://www.iso.org/standard/27001)",
+       "type": "paragraph"
+      }
+     ],
+     "id": "framework-iso27001",
+     "title": "ISO/IEC 27001:2022 Annex A",
+     "type": "subsection"
+    },
+    {
+     "blocks": [
+      {
+       "text": "The organisation declares that the application processes personal data.",
+       "type": "paragraph"
+      },
+      {
+       "columns": [
+        "Control",
+        "State",
+        "Findings",
+        "What a test observes / why"
+       ],
+       "id": "controls-gdpr",
+       "row_links": [
+        null,
+        "finding-vuln_idor",
+        null
+       ],
+       "rows": [
+        [
+         "Art.32(1)(a)",
+         "Not tested by this campaign",
+         "0",
+         "No dispatched agent covers: cryptography."
+        ],
+        [
+         "Art.32(1)(b)-ci",
+         "Weakness observed",
+         "4",
+         "Confidentiality and integrity of the systems processing the data: weaknesses that let an attacker read or alter data or take over the system."
+        ],
+        [
+         "Art.32(1)(b)-ar",
+         "Not tested by this campaign",
+         "0",
+         "No dispatched agent covers: availability."
+        ]
+       ],
+       "source": "exec_core.frameworks_assess",
+       "type": "table"
+      },
+      {
+       "text": "3 controls not assessable by a technical test (organisational or process measures) are not listed.",
+       "type": "paragraph"
+      },
+      {
+       "items": [
+        "One campaign, its tested scope only; a control is never declared satisfied.",
+        "A finding is linked to a control by its weakness class, CWE, ATT&CK technique or the ISO control the agent cited: a mislabelled category lands under another control.",
+        "« No weakness observed » requires server-recorded coverage of the control's weakness classes by a dispatched agent; it does not prove that every test of that class was run.",
+        "Applicability uses only facts declared or verified by the organisation; detection never decides it.",
+        "Only the technical side of art. 32 is covered; art. 33-34 and the other obligations are not.",
+        "Personal data categories are never inferred from findings."
+       ],
+       "type": "list"
+      },
+      {
+       "text": "Source: Regulation (EU) 2016/679, articles 25 and 32 (https://eur-lex.europa.eu/eli/reg/2016/679/oj)",
+       "type": "paragraph"
+      }
+     ],
+     "id": "framework-gdpr",
+     "title": "GDPR (EU) 2016/679, art. 32 and 25",
+     "type": "subsection"
+    },
+    {
+     "blocks": [
+      {
+       "text": "The organisation declares itself an important entity under NIS2 (sector declared: health).",
+       "type": "paragraph"
+      },
+      {
+       "columns": [
+        "Control",
+        "State",
+        "Findings",
+        "What a test observes / why"
+       ],
+       "id": "controls-nis2",
+       "row_links": [
+        "finding-vuln_nosev",
+        null,
+        "finding-vuln_idor",
+        null
+       ],
+       "rows": [
+        [
+         "Art.21(2)(e)",
+         "Weakness observed",
+         "3",
+         "Security of the systems as built and maintained: vulnerabilities found in the tested scope (the vulnerability handling process itself is not assessed)."
+        ],
+        [
+         "Art.21(2)(h)",
+         "Not tested by this campaign",
+         "0",
+         "No dispatched agent covers: cryptography."
+        ],
+        [
+         "Art.21(2)(i)",
+         "Weakness observed",
+         "1",
+         "Authorisation enforcement observed on the tested surface (human resources security and asset management are not assessed)."
+        ],
+        [
+         "Art.21(2)(j)",
+         "No weakness observed in the tested scope",
+         "0",
+         "Authentication strength observed where the tested surface offers a login (secured voice, video, text and emergency communications are not assessed)."
+        ]
+       ],
+       "source": "exec_core.frameworks_assess",
+       "type": "table"
+      },
+      {
+       "text": "6 controls not assessable by a technical test (organisational or process measures) are not listed.",
+       "type": "paragraph"
+      },
+      {
+       "items": [
+        "One campaign, its tested scope only; a control is never declared satisfied.",
+        "A finding is linked to a control by its weakness class, CWE, ATT&CK technique or the ISO control the agent cited: a mislabelled category lands under another control.",
+        "« No weakness observed » requires server-recorded coverage of the control's weakness classes by a dispatched agent; it does not prove that every test of that class was run.",
+        "Applicability uses only facts declared or verified by the organisation; detection never decides it.",
+        "Entity type and sector are declared by the organisation; national transposition is not covered.",
+        "Measures (a)-(d), (f), (g) are organisational and not assessed."
+       ],
+       "type": "list"
+      },
+      {
+       "text": "Source: Directive (EU) 2022/2555, article 21(2)(a)-(j) (https://eur-lex.europa.eu/eli/dir/2022/2555/oj)",
+       "type": "paragraph"
+      }
+     ],
+     "id": "framework-nis2",
+     "title": "NIS2 Directive (EU) 2022/2555, art. 21(2)",
+     "type": "subsection"
+    },
+    {
+     "blocks": [
+      {
+       "text": "No declaration of a high-risk AI system; art. 15 applies only to one.",
+       "type": "paragraph"
+      },
+      {
+       "columns": [
+        "Control",
+        "State",
+        "Findings",
+        "What a test observes / why"
+       ],
+       "id": "controls-ai_act",
+       "row_links": [
+        null,
+        null,
+        null
+       ],
+       "rows": [
+        [
+         "Art.15(5)-manipulation",
+         "Not tested by this campaign",
+         "0",
+         "No dispatched agent covers: ai_manipulation."
+        ],
+        [
+         "Art.15(5)-confidentiality",
+         "Not tested by this campaign",
+         "0",
+         "No dispatched agent covers: ai_confidentiality."
+        ],
+        [
+         "Art.15(5)-exposure",
+         "Not tested by this campaign",
+         "0",
+         "No dispatched agent covers: ai_exposure."
+        ]
+       ],
+       "source": "exec_core.frameworks_assess",
+       "type": "table"
+      },
+      {
+       "text": "4 controls not assessable by a technical test (organisational or process measures) are not listed.",
+       "type": "paragraph"
+      },
+      {
+       "items": [
+        "One campaign, its tested scope only; a control is never declared satisfied.",
+        "A finding is linked to a control by its weakness class, CWE, ATT&CK technique or the ISO control the agent cited: a mislabelled category lands under another control.",
+        "« No weakness observed » requires server-recorded coverage of the control's weakness classes by a dispatched agent; it does not prove that every test of that class was run.",
+        "Applicability uses only facts declared or verified by the organisation; detection never decides it.",
+        "Applies only to a system the organisation declares high-risk; an AI component detected by the campaign does not make it one.",
+        "Accuracy, poisoning and the risk-management system are not assessed by a security test."
+       ],
+       "type": "list"
+      },
+      {
+       "text": "Source: Regulation (EU) 2024/1689, article 15 (https://eur-lex.europa.eu/eli/reg/2024/1689/oj)",
+       "type": "paragraph"
+      }
+     ],
+     "id": "framework-ai_act",
+     "title": "EU AI Act (EU) 2024/1689, art. 15",
+     "type": "subsection"
+    }
+   ],
+   "id": "framework_assessment",
+   "numbers": {
+    "ai_act_none_observed_in_tested_scope": {
+     "source": "exec_core.frameworks_assess",
+     "value": 0
+    },
+    "ai_act_not_technically_assessable": {
+     "source": "exec_core.frameworks_assess",
+     "value": 4
+    },
+    "ai_act_not_tested": {
+     "source": "exec_core.frameworks_assess",
+     "value": 3
+    },
+    "ai_act_weakness_observed": {
+     "source": "exec_core.frameworks_assess",
+     "value": 0
+    },
+    "gdpr_none_observed_in_tested_scope": {
+     "source": "exec_core.frameworks_assess",
+     "value": 0
+    },
+    "gdpr_not_technically_assessable": {
+     "source": "exec_core.frameworks_assess",
+     "value": 3
+    },
+    "gdpr_not_tested": {
+     "source": "exec_core.frameworks_assess",
+     "value": 2
+    },
+    "gdpr_weakness_observed": {
+     "source": "exec_core.frameworks_assess",
+     "value": 1
+    },
+    "iso27001_none_observed_in_tested_scope": {
+     "source": "exec_core.frameworks_assess",
+     "value": 7
+    },
+    "iso27001_not_technically_assessable": {
+     "source": "exec_core.frameworks_assess",
+     "value": 23
+    },
+    "iso27001_not_tested": {
+     "source": "exec_core.frameworks_assess",
+     "value": 4
+    },
+    "iso27001_weakness_observed": {
+     "source": "exec_core.frameworks_assess",
+     "value": 5
+    },
+    "nis2_none_observed_in_tested_scope": {
+     "source": "exec_core.frameworks_assess",
+     "value": 1
+    },
+    "nis2_not_technically_assessable": {
+     "source": "exec_core.frameworks_assess",
+     "value": 6
+    },
+    "nis2_not_tested": {
+     "source": "exec_core.frameworks_assess",
+     "value": 1
+    },
+    "nis2_weakness_observed": {
+     "source": "exec_core.frameworks_assess",
+     "value": 2
+    }
+   },
+   "sources": [
+    "exec_core.frameworks_assess"
+   ],
+   "title": "Framework technical assessment"
+  },
+  {
+   "blocks": [
+    {
+     "text": "Recovery and availability figures are declared by the organisation and shown as declared: Darkmoon does not test recovery, backups or load, and does not assess these figures.",
+     "type": "note"
+    },
+    {
+     "columns": [
+      "Declared figure",
+      "Value (declared, not assessed)",
+      "Provenance"
+     ],
+     "id": "resilience-declared",
+     "rows": [
+      [
+       "Criticality",
+       "high",
+       "Declared by the organisation"
+      ],
+      [
+       "Availability requirement",
+       "Unknown",
+       "Not provided"
+      ],
+      [
+       "Recovery time objective (RTO)",
+       "4h",
+       "Declared by the organisation"
+      ],
+      [
+       "Recovery point objective (RPO)",
+       "30min",
+       "Declared by the organisation"
+      ],
+      [
+       "Service level (SLA)",
+       "99.5% monthly",
+       "Declared by the organisation"
+      ]
+     ],
+     "source": "exec_core.profile",
+     "type": "table"
+    },
+    {
+     "columns": [
+      "Framework",
+      "Control",
+      "State"
+     ],
+     "id": "availability-controls",
+     "rows": [
+      [
+       "ISO/IEC 27001:2022 Annex A",
+       "A.8.6",
+       "Not tested by this campaign"
+      ],
+      [
+       "GDPR (EU) 2016/679, art. 32 and 25",
+       "Art.32(1)(b)-ar",
+       "Not tested by this campaign"
+      ]
+     ],
+     "source": "exec_core.frameworks_assess",
+     "type": "table"
+    }
+   ],
+   "id": "resilience",
+   "numbers": {
+    "declared_figures": {
+     "source": "exec_core.profile",
+     "value": 4
+    }
+   },
+   "sources": [
+    "exec_core.frameworks_assess",
+    "exec_core.profile"
+   ],
+   "title": "Resilience and availability"
+  },
+  {
+   "blocks": [
+    {
+     "text": "Actions recommended in priority order to reduce security exposure, address related findings and interrupt relevant attack paths.",
+     "type": "paragraph"
+    },
+    {
+     "text": "Start at the top: each action lists the findings it addresses and the attack paths it interrupts. Recording a treatment does not change the rating: only a new campaign or a completed retest shows its effect.",
+     "type": "paragraph"
+    },
+    {
+     "text": "Order: By reported severity × proof. Not an attack-path ranking. Order: severity reported by the agent, then proof level (exploited, confirmed, unconfirmed), then proven attack chains of several findings broken, then regression after a retest, then the CVSS score computed from the finding's vector. Equal keys share the same rank. Severity is the agent's rating, not an impact on your business assets.",
+     "type": "paragraph"
+    },
+    {
+     "text": "Actions: 5 · findings covered: 5 of 6 open findings.",
+     "type": "paragraph"
+    },
+    {
+     "columns": [
+      "Status",
+      "Actions"
+     ],
+     "id": "treatment-status",
+     "rows": [
+      [
+       "proposed",
+       "5"
+      ]
+     ],
+     "source": "exec_core.actions",
+     "type": "table"
+    },
+    {
+     "columns": [
+      "Priority",
+      "Action",
+      "Severity",
+      "Findings",
+      "Attack paths",
+      "Status",
+      "Owner"
+     ],
+     "id": "treatment-actions",
+     "row_links": [
+      "action-act_c9a665657465c467",
+      "action-act_f6824516c363205a",
+      "action-act_69af3ccf825a5b7e",
+      "action-act_faf40a3498ec04b9",
+      "action-act_86976bc58f35694f"
+     ],
+     "rows": [
+      [
+       "1",
+       "Fix SQL injection in /search (q) — table « clients » dumped",
+       "Critical",
+       "1",
+       "1",
+       "Proposed",
+       "unknown"
+      ],
+      [
+       "2",
+       "Fix IDOR on /api/orders/{id}",
+       "High",
+       "1",
+       "1",
+       "Proposed",
+       "unknown"
+      ],
+      [
+       "3",
+       "Fix stored XSS | in `comments` 中文 ✓",
+       "High",
+       "1",
+       "0",
+       "Proposed",
+       "unknown"
+      ],
+      [
+       "4",
+       "Add the security headers",
+       "Low",
+       "1",
+       "0",
+       "Proposed",
+       "unknown"
+      ],
+      [
+       "5",
+       "Fix odd behaviour without a recognised severity",
+       "Not recognised",
+       "1",
+       "0",
+       "Proposed",
+       "unknown"
+      ]
+     ],
+     "source": "exec_core.actions",
+     "type": "table"
+    },
+    {
+     "blocks": [
+      {
+       "rows": [
+        {
+         "label": "Priority",
+         "value": "1"
+        },
+        {
+         "label": "Objective",
+         "value": "Ordered by reported severity, then proof: critical (reported); exploited. Addresses 1 finding."
+        },
+        {
+         "label": "Findings covered",
+         "value": "1"
+        },
+        {
+         "label": "Attack paths concerned",
+         "value": "1"
+        },
+        {
+         "label": "Expected impact",
+         "value": "Findings covered: 1"
+        },
+        {
+         "label": "Status",
+         "value": "Proposed"
+        },
+        {
+         "label": "Owner",
+         "value": "unknown"
+        },
+        {
+         "label": "Service interruption risk",
+         "value": "unknown"
+        },
+        {
+         "label": "Treatment type",
+         "value": "Code change"
+        },
+        {
+         "label": "Verification required",
+         "value": "Yes: a completed retest or a new campaign must show the effect"
+        }
+       ],
+       "source": "exec_core.actions",
+       "type": "facts"
+      },
+      {
+       "items": [
+        "vuln_sqli · SQL injection in /search (q) — table « clients » dumped"
+       ],
+       "links": [
+        "finding-vuln_sqli"
+       ],
+       "title": "Findings",
+       "type": "list"
+      },
+      {
+       "items": [
+        "SQL injection in /search (q) — table « clients » dumped (inferred)"
+       ],
+       "links": [
+        "path-ap_ac6fe5bb3c00"
+       ],
+       "title": "Attack paths concerned",
+       "type": "list"
+      },
+      {
+       "label": "Recommended by the testing agent (quoted as written, not verified)",
+       "source": "testing_agent",
+       "text": "Use parameterised queries for the q parameter.",
+       "type": "quote"
+      }
+     ],
+     "id": "action-act_c9a665657465c467",
+     "title": "1. Fix SQL injection in /search (q) — table « clients » dumped",
+     "type": "subsection"
+    },
+    {
+     "blocks": [
+      {
+       "rows": [
+        {
+         "label": "Priority",
+         "value": "2"
+        },
+        {
+         "label": "Objective",
+         "value": "Ordered by reported severity, then proof: high (reported); confirmed. Addresses 1 finding."
+        },
+        {
+         "label": "Findings covered",
+         "value": "1"
+        },
+        {
+         "label": "Attack paths concerned",
+         "value": "1"
+        },
+        {
+         "label": "Expected impact",
+         "value": "Findings covered: 1"
+        },
+        {
+         "label": "Status",
+         "value": "Proposed"
+        },
+        {
+         "label": "Owner",
+         "value": "unknown"
+        },
+        {
+         "label": "Service interruption risk",
+         "value": "unknown"
+        },
+        {
+         "label": "Treatment type",
+         "value": "Code change"
+        },
+        {
+         "label": "Verification required",
+         "value": "Yes: a completed retest or a new campaign must show the effect"
+        }
+       ],
+       "source": "exec_core.actions",
+       "type": "facts"
+      },
+      {
+       "items": [
+        "vuln_idor · IDOR on /api/orders/{id}"
+       ],
+       "links": [
+        "finding-vuln_idor"
+       ],
+       "title": "Findings",
+       "type": "list"
+      },
+      {
+       "items": [
+        "SQL injection in /search (q) — table « clients » dumped (inferred)"
+       ],
+       "links": [
+        "path-ap_ac6fe5bb3c00"
+       ],
+       "title": "Attack paths concerned",
+       "type": "list"
+      },
+      {
+       "label": "Recommended by the testing agent (quoted as written, not verified)",
+       "source": "testing_agent",
+       "text": "Check the order owner on every read.",
+       "type": "quote"
+      }
+     ],
+     "id": "action-act_f6824516c363205a",
+     "title": "2. Fix IDOR on /api/orders/{id}",
+     "type": "subsection"
+    },
+    {
+     "blocks": [
+      {
+       "rows": [
+        {
+         "label": "Priority",
+         "value": "3"
+        },
+        {
+         "label": "Objective",
+         "value": "Ordered by reported severity, then proof: high (reported); confirmed. Addresses 1 finding."
+        },
+        {
+         "label": "Findings covered",
+         "value": "1"
+        },
+        {
+         "label": "Attack paths concerned",
+         "value": "0"
+        },
+        {
+         "label": "Expected impact",
+         "value": "Findings covered: 1"
+        },
+        {
+         "label": "Status",
+         "value": "Proposed"
+        },
+        {
+         "label": "Owner",
+         "value": "unknown"
+        },
+        {
+         "label": "Service interruption risk",
+         "value": "unknown"
+        },
+        {
+         "label": "Treatment type",
+         "value": "Code change"
+        },
+        {
+         "label": "Verification required",
+         "value": "Yes: a completed retest or a new campaign must show the effect"
+        }
+       ],
+       "source": "exec_core.actions",
+       "type": "facts"
+      },
+      {
+       "items": [
+        "vuln_xss · Stored XSS | in `comments` 中文 ✓"
+       ],
+       "links": [
+        "finding-vuln_xss"
+       ],
+       "title": "Findings",
+       "type": "list"
+      },
+      {
+       "label": "Recommended by the testing agent (quoted as written, not verified)",
+       "source": "testing_agent",
+       "text": "Encode output in the comment template.",
+       "type": "quote"
+      }
+     ],
+     "id": "action-act_69af3ccf825a5b7e",
+     "title": "3. Fix stored XSS | in `comments` 中文 ✓",
+     "type": "subsection"
+    },
+    {
+     "blocks": [
+      {
+       "rows": [
+        {
+         "label": "Priority",
+         "value": "4"
+        },
+        {
+         "label": "Objective",
+         "value": "Ordered by reported severity, then proof: low (reported); confirmed. Addresses 1 finding."
+        },
+        {
+         "label": "Findings covered",
+         "value": "1"
+        },
+        {
+         "label": "Attack paths concerned",
+         "value": "0"
+        },
+        {
+         "label": "Expected impact",
+         "value": "Findings covered: 1"
+        },
+        {
+         "label": "Status",
+         "value": "Proposed"
+        },
+        {
+         "label": "Owner",
+         "value": "unknown"
+        },
+        {
+         "label": "Service interruption risk",
+         "value": "unknown"
+        },
+        {
+         "label": "Treatment type",
+         "value": "Not determined"
+        },
+        {
+         "label": "Verification required",
+         "value": "Yes: a completed retest or a new campaign must show the effect"
+        }
+       ],
+       "source": "exec_core.actions",
+       "type": "facts"
+      },
+      {
+       "items": [
+        "vuln_hdr · Missing security headers"
+       ],
+       "links": [
+        "finding-vuln_hdr"
+       ],
+       "title": "Findings",
+       "type": "list"
+      },
+      {
+       "text": "No remediation text was recorded by the testing agent for these findings.",
+       "type": "paragraph"
+      }
+     ],
+     "id": "action-act_faf40a3498ec04b9",
+     "title": "4. Add the security headers",
+     "type": "subsection"
+    },
+    {
+     "blocks": [
+      {
+       "rows": [
+        {
+         "label": "Priority",
+         "value": "5"
+        },
+        {
+         "label": "Objective",
+         "value": "Ordered by reported severity, then proof: severity unknown; unconfirmed. Addresses 1 finding."
+        },
+        {
+         "label": "Findings covered",
+         "value": "1"
+        },
+        {
+         "label": "Attack paths concerned",
+         "value": "0"
+        },
+        {
+         "label": "Expected impact",
+         "value": "Findings covered: 1"
+        },
+        {
+         "label": "Status",
+         "value": "Proposed"
+        },
+        {
+         "label": "Owner",
+         "value": "unknown"
+        },
+        {
+         "label": "Service interruption risk",
+         "value": "unknown"
+        },
+        {
+         "label": "Treatment type",
+         "value": "Code change"
+        },
+        {
+         "label": "Verification required",
+         "value": "Yes: a completed retest or a new campaign must show the effect"
+        }
+       ],
+       "source": "exec_core.actions",
+       "type": "facts"
+      },
+      {
+       "items": [
+        "vuln_nosev · Odd behaviour without a recognised severity"
+       ],
+       "links": [
+        "finding-vuln_nosev"
+       ],
+       "title": "Findings",
+       "type": "list"
+      },
+      {
+       "text": "No remediation text was recorded by the testing agent for these findings.",
+       "type": "paragraph"
+      }
+     ],
+     "id": "action-act_86976bc58f35694f",
+     "title": "5. Fix odd behaviour without a recognised severity",
+     "type": "subsection"
+    }
+   ],
+   "id": "treatment_plan",
+   "numbers": {
+    "actions": {
+     "source": "exec_core.actions",
+     "value": 5
+    },
+    "findings_covered": {
+     "source": "exec_core.actions",
+     "value": 5
+    },
+    "open_findings": {
+     "source": "exec_core.actions",
+     "value": 6
+    },
+    "status_proposed": {
+     "source": "exec_core.actions",
+     "value": 5
+    }
+   },
+   "sources": [
+    "exec_core.actions"
+   ],
+   "title": "Prioritized Treatment Plan"
+  },
+  {
+   "blocks": [],
+   "id": "attack_paths",
+   "sources": [],
+   "title": "Attack paths"
+  },
+  {
+   "blocks": [
+    {
+     "text": "Titles, descriptions, technical analyses and remediation texts of the findings are written by the testing agents and quoted as written; severities, proof levels, counts and CVSS scores are the server's.",
+     "type": "note"
+    },
+    {
+     "columns": [
+      "#",
+      "ID",
+      "Title",
+      "Severity",
+      "CVSS",
+      "Proof",
+      "Endpoint"
+     ],
+     "id": "findings-table",
+     "row_links": [
+      "finding-vuln_sqli",
+      "finding-vuln_idor",
+      "finding-vuln_xss",
+      "finding-vuln_hdr",
+      "finding-vuln_info",
+      "finding-vuln_nosev"
+     ],
+     "rows": [
+      [
+       "1",
+       "vuln_sqli",
+       "SQL injection in /search (q) — table « clients » dumped",
+       "Critical",
+       "9.8 (reported 9.1)",
+       "Exploited",
+       "http://app.local/search?q=1"
+      ],
+      [
+       "2",
+       "vuln_idor",
+       "IDOR on /api/orders/{id}",
+       "High",
+       "6.5",
+       "Exploited",
+       "http://app.local/api/orders/2"
+      ],
+      [
+       "3",
+       "vuln_xss",
+       "Stored XSS | in `comments` 中文 ✓",
+       "High",
+       "6.1 (reported 8.8)",
+       "Confirmed",
+       "http://app.local/comments"
+      ],
+      [
+       "4",
+       "vuln_hdr",
+       "Missing security headers",
+       "Low",
+       "N/A",
+       "Confirmed",
+       "http://app.local/"
+      ],
+      [
+       "5",
+       "vuln_info",
+       "Server banner",
+       "Informational",
+       "N/A",
+       "Confirmed",
+       "http://app.local/"
+      ],
+      [
+       "6",
+       "vuln_nosev",
+       "Odd behaviour without a recognised severity",
+       "Not recognised",
+       "N/A",
+       "To confirm",
+       "-"
+      ]
+     ],
+     "source": "findings store + cvss31 recompute",
+     "type": "table"
+    },
+    {
+     "action": "action-act_c9a665657465c467",
+     "analysis": "The UNION returned the users table.",
+     "controls": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.8.26",
+      "iso27001:A.8.28",
+      "nis2:Art.21(2)(e)"
+     ],
+     "cvss": {
+      "computed": 9.8,
+      "reported": 9.1,
+      "status": "mismatch",
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+     },
+     "description": "Boolean and UNION injection in q.\n# not a heading\n<img src=x onerror=alert(1)>",
+     "evidence": {
+      "commands": [
+       "sqlmap -u 'http://app.local/search?q=1' --password='«redacted:password»'"
+      ],
+      "logs": [
+       "aws_access_key_id=«redacted:api-key»"
+      ],
+      "raw_request": "GET /search?q=1'+UNION+SELECT+password+FROM+users-- HTTP/1.1\nHost: app.local\nAuthorization: Bearer «redacted:authorization»\nCookie: PHPSESSID=«redacted:cookie»",
+      "raw_response": "HTTP/1.1 200 OK\n\nadmin:«redacted:known-secret»\n```\nbreak-out attempt\n```"
+     },
+     "facts": [
+      {
+       "label": "ID",
+       "value": "vuln_sqli"
+      },
+      {
+       "label": "Severity",
+       "value": "Critical"
+      },
+      {
+       "label": "Proof",
+       "value": "Exploited"
+      },
+      {
+       "label": "CVSS 3.1",
+       "value": "9.8 (computed from the vector; reported by the agent: 9.1)"
+      },
+      {
+       "label": "CVSS vector",
+       "value": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+      },
+      {
+       "label": "Category",
+       "value": "sql_injection"
+      },
+      {
+       "label": "Weakness class",
+       "value": "sql injection"
+      },
+      {
+       "label": "Endpoint",
+       "value": "http://app.local/search?q=1"
+      },
+      {
+       "label": "MITRE ATT&CK",
+       "value": "T1190"
+      },
+      {
+       "label": "CWE",
+       "value": "CWE-89"
+      },
+      {
+       "label": "Discovered by",
+       "value": "php"
+      }
+     ],
+     "finding_id": "vuln_sqli",
+     "id": "finding-vuln_sqli",
+     "proof": "exploited",
+     "remediation": "Use parameterised queries for the q parameter.",
+     "severity": "critical",
+     "title": "SQL injection in /search (q) — table « clients » dumped",
+     "type": "finding"
+    },
+    {
+     "action": "action-act_f6824516c363205a",
+     "analysis": null,
+     "controls": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.5.15",
+      "iso27001:A.8.3",
+      "nis2:Art.21(2)(i)"
+     ],
+     "cvss": {
+      "computed": 6.5,
+      "reported": null,
+      "status": "reported-invalid",
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N"
+     },
+     "description": null,
+     "evidence": {},
+     "facts": [
+      {
+       "label": "ID",
+       "value": "vuln_idor"
+      },
+      {
+       "label": "Severity",
+       "value": "High"
+      },
+      {
+       "label": "Proof",
+       "value": "Exploited"
+      },
+      {
+       "label": "CVSS 3.1",
+       "value": "6.5 (computed from the vector)"
+      },
+      {
+       "label": "CVSS vector",
+       "value": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N"
+      },
+      {
+       "label": "Category",
+       "value": "idor"
+      },
+      {
+       "label": "Weakness class",
+       "value": "access control"
+      },
+      {
+       "label": "Endpoint",
+       "value": "http://app.local/api/orders/2"
+      },
+      {
+       "label": "Discovered by",
+       "value": "php"
+      }
+     ],
+     "finding_id": "vuln_idor",
+     "id": "finding-vuln_idor",
+     "proof": "exploited",
+     "remediation": "Check the order owner on every read.",
+     "severity": "high",
+     "title": "IDOR on /api/orders/{id}",
+     "type": "finding"
+    },
+    {
+     "action": "action-act_69af3ccf825a5b7e",
+     "analysis": null,
+     "controls": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.8.26",
+      "iso27001:A.8.28",
+      "nis2:Art.21(2)(e)"
+     ],
+     "cvss": {
+      "computed": 6.1,
+      "reported": 8.8,
+      "status": "mismatch",
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+     },
+     "description": null,
+     "evidence": {
+      "raw_request": "POST /comments HTTP/1.1\n\nbody=<script>alert(1)</script>"
+     },
+     "facts": [
+      {
+       "label": "ID",
+       "value": "vuln_xss"
+      },
+      {
+       "label": "Severity",
+       "value": "High"
+      },
+      {
+       "label": "Proof",
+       "value": "Confirmed"
+      },
+      {
+       "label": "CVSS 3.1",
+       "value": "6.1 (computed from the vector; reported by the agent: 8.8)"
+      },
+      {
+       "label": "CVSS vector",
+       "value": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+      },
+      {
+       "label": "Category",
+       "value": "xss_stored"
+      },
+      {
+       "label": "Weakness class",
+       "value": "xss"
+      },
+      {
+       "label": "Endpoint",
+       "value": "http://app.local/comments"
+      },
+      {
+       "label": "Discovered by",
+       "value": "headless-browser"
+      }
+     ],
+     "finding_id": "vuln_xss",
+     "id": "finding-vuln_xss",
+     "proof": "confirmed",
+     "remediation": "Encode output in the comment template.",
+     "severity": "high",
+     "title": "Stored XSS | in `comments` 中文 ✓",
+     "type": "finding"
+    },
+    {
+     "action": "action-act_faf40a3498ec04b9",
+     "analysis": null,
+     "controls": [],
+     "cvss": {
+      "computed": null,
+      "reported": null,
+      "status": "no-valid-vector",
+      "vector": null
+     },
+     "description": null,
+     "evidence": {},
+     "facts": [
+      {
+       "label": "ID",
+       "value": "vuln_hdr"
+      },
+      {
+       "label": "Severity",
+       "value": "Low"
+      },
+      {
+       "label": "Proof",
+       "value": "Confirmed"
+      },
+      {
+       "label": "CVSS 3.1",
+       "value": "N/A"
+      },
+      {
+       "label": "CVSS vector",
+       "value": "N/A"
+      },
+      {
+       "label": "Category",
+       "value": "security_headers"
+      },
+      {
+       "label": "Weakness class",
+       "value": "security headers"
+      },
+      {
+       "label": "Endpoint",
+       "value": "http://app.local/"
+      },
+      {
+       "label": "Discovered by",
+       "value": "php"
+      }
+     ],
+     "finding_id": "vuln_hdr",
+     "id": "finding-vuln_hdr",
+     "proof": "confirmed",
+     "remediation": null,
+     "severity": "low",
+     "title": "Missing security headers",
+     "type": "finding"
+    },
+    {
+     "action": null,
+     "analysis": null,
+     "controls": [
+      "gdpr:Art.32(1)(b)-ci",
+      "iso27001:A.8.12"
+     ],
+     "cvss": {
+      "computed": null,
+      "reported": null,
+      "status": "no-valid-vector",
+      "vector": null
+     },
+     "description": null,
+     "evidence": {},
+     "facts": [
+      {
+       "label": "ID",
+       "value": "vuln_info"
+      },
+      {
+       "label": "Severity",
+       "value": "Informational"
+      },
+      {
+       "label": "Proof",
+       "value": "Confirmed"
+      },
+      {
+       "label": "CVSS 3.1",
+       "value": "N/A"
+      },
+      {
+       "label": "CVSS vector",
+       "value": "N/A"
+      },
+      {
+       "label": "Category",
+       "value": "information_disclosure"
+      },
+      {
+       "label": "Weakness class",
+       "value": "information disclosure"
+      },
+      {
+       "label": "Endpoint",
+       "value": "http://app.local/"
+      },
+      {
+       "label": "Discovered by",
+       "value": "N/A"
+      }
+     ],
+     "finding_id": "vuln_info",
+     "id": "finding-vuln_info",
+     "proof": "confirmed",
+     "remediation": null,
+     "severity": "info",
+     "title": "Server banner",
+     "type": "finding"
+    },
+    {
+     "action": "action-act_86976bc58f35694f",
+     "analysis": null,
+     "controls": [
+      "iso27001:A.8.26",
+      "nis2:Art.21(2)(e)"
+     ],
+     "cvss": {
+      "computed": null,
+      "reported": null,
+      "status": "no-valid-vector",
+      "vector": null
+     },
+     "description": null,
+     "evidence": {},
+     "facts": [
+      {
+       "label": "ID",
+       "value": "vuln_nosev"
+      },
+      {
+       "label": "Severity",
+       "value": "Not recognised"
+      },
+      {
+       "label": "Proof",
+       "value": "To confirm"
+      },
+      {
+       "label": "CVSS 3.1",
+       "value": "N/A"
+      },
+      {
+       "label": "CVSS vector",
+       "value": "N/A"
+      },
+      {
+       "label": "Category",
+       "value": "business_logic"
+      },
+      {
+       "label": "Weakness class",
+       "value": "business logic"
+      },
+      {
+       "label": "Endpoint",
+       "value": "N/A"
+      },
+      {
+       "label": "Discovered by",
+       "value": "N/A"
+      }
+     ],
+     "finding_id": "vuln_nosev",
+     "id": "finding-vuln_nosev",
+     "proof": "unconfirmed",
+     "remediation": null,
+     "severity": "unknown",
+     "title": "Odd behaviour without a recognised severity",
+     "type": "finding"
+    },
+    {
+     "text": "Held for review: 1 finding(s) are not included in this report nor in its counts: their text still holds privacy placeholders the platform could not restore safely. An operator must review them before they are reported.",
+     "type": "note"
+    },
+    {
+     "text": "Not listed: 1 finding(s) marked false positive are not included in this report nor in its counts.",
+     "type": "note"
+    }
+   ],
+   "id": "detailed_findings",
+   "numbers": {
+    "cvss_mismatch": {
+     "source": "cvss31 recompute",
+     "value": 2
+    },
+    "findings_listed": {
+     "source": "findings store",
+     "value": 6
+    }
+   },
+   "sources": [
+    "cvss31 recompute",
+    "exec_core.identity",
+    "findings store"
+   ],
+   "title": "Detailed findings"
+  },
+  {
+   "blocks": [
+    {
+     "text": "Every count of this report comes from one stats function: findings held for privacy review and findings marked false positive are counted nowhere; informational findings are counted but weigh nothing in the rating. The severity shown is the one reported by the agent (aliases normalised); the CVSS 3.1 score shown is recomputed by the server from the vector, with the agent's value marked « reported » when it differs.",
+     "type": "paragraph"
+    },
+    {
+     "blocks": [
+      {
+       "columns": [
+        "Severity",
+        "CVSS 3.1 base score",
+        "Meaning"
+       ],
+       "id": "severity-scale",
+       "rows": [
+        [
+         "Critical",
+         "9.0 to 10.0",
+         "Direct compromise of the system or its data."
+        ],
+        [
+         "High",
+         "7.0 to 8.9",
+         "Significant compromise likely."
+        ],
+        [
+         "Medium",
+         "4.0 to 6.9",
+         "Exploitable under conditions or with limited impact."
+        ],
+        [
+         "Low",
+         "0.1 to 3.9",
+         "Minor weakness."
+        ],
+        [
+         "Informational",
+         "0.0",
+         "Observation without direct security impact."
+        ]
+       ],
+       "source": "exec_core.legend + CVSS 3.1 specification",
+       "type": "table"
+      }
+     ],
+     "id": "severity-scale",
+     "title": "Severity scale",
+     "type": "subsection"
+    },
+    {
+     "blocks": [
+      {
+       "columns": [
+        "Level",
+        "Meaning"
+       ],
+       "id": "proof-levels",
+       "rows": [
+        [
+         "Exploited",
+         "The weakness was used during the test; proof is on file."
+        ],
+        [
+         "Confirmed",
+         "The weakness was observed; it was not used further."
+        ],
+        [
+         "To confirm",
+         "Reported by an agent without enough proof yet."
+        ]
+       ],
+       "source": "exec_core.legend",
+       "type": "table"
+      }
+     ],
+     "id": "proof-levels",
+     "title": "Proof levels",
+     "type": "subsection"
+    },
+    {
+     "blocks": [
+      {
+       "columns": [
+        "Kind",
+        "Meaning"
+       ],
+       "id": "path-kinds",
+       "rows": [
+        [
+         "Possible Attack Path",
+         "A chain of weaknesses that could be combined; a hypothesis, not observed."
+        ],
+        [
+         "Evidence-Backed Attack Path",
+         "Every step is backed by evidence the server observed during the campaign."
+        ]
+       ],
+       "source": "exec_core.legend",
+       "type": "table"
+      }
+     ],
+     "id": "path-kinds",
+     "title": "Attack path vocabulary",
+     "type": "subsection"
+    },
+    {
+     "text": "Findings with evidence on file in this report: 2 of 6.",
+     "type": "paragraph"
+    }
+   ],
+   "id": "evidence_methodology",
+   "numbers": {
+    "findings_counted": {
+     "source": "exec_core.stats",
+     "value": 6
+    },
+    "findings_listed": {
+     "source": "findings store",
+     "value": 6
+    },
+    "findings_with_evidence": {
+     "source": "findings store",
+     "value": 2
+    }
+   },
+   "sources": [
+    "exec_core.legend",
+    "exec_core.stats",
+    "findings store"
+   ],
+   "title": "Evidence and methodology"
+  },
+  {
+   "blocks": [
+    {
+     "items": [
+      "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+      "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+      "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+      "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+      "1 finding(s) without a recognised severity were weighted from their CVSS vector, else as high (conservative).",
+      "1 finding(s) held for privacy review are not counted.",
+      "1 finding(s) marked false positive by an agent or an operator are not counted.",
+      "1 unconfirmed critical/high finding(s) to confirm; they weigh less than proven ones and never set a cap.",
+      "One campaign, its tested scope only; a control is never declared satisfied.",
+      "A finding is linked to a control by its weakness class, CWE, ATT&CK technique or the ISO control the agent cited: a mislabelled category lands under another control.",
+      "« No weakness observed » requires server-recorded coverage of the control's weakness classes by a dispatched agent; it does not prove that every test of that class was run.",
+      "Applicability uses only facts declared or verified by the organisation; detection never decides it.",
+      "This report results from an automated assessment: findings may include false positives, and the absence of a finding does not prove the absence of a weakness.",
+      "It describes the target at the time of the campaign and only its tested scope.",
+      "Recommendations quoted from the testing agents must be validated by the system owner before being applied."
+     ],
+     "type": "list"
+    }
+   ],
+   "id": "limitations",
+   "numbers": {},
+   "sources": [
+    "exec_core.frameworks_assess",
+    "exec_core.score",
+    "report model"
+   ],
+   "title": "Limitations"
+  }
+ ],
+ "title": "Security Assessment Report — app.local"
+}

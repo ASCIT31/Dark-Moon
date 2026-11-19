@@ -1,0 +1,206 @@
+{
+ "campaign": {
+  "coverage_signals": {
+   "agents_dispatched": [
+    {
+     "active_seconds": 0,
+     "agent": "php",
+     "sessions": 1
+    },
+    {
+     "active_seconds": 0,
+     "agent": "headless-browser",
+     "sessions": 1
+    }
+   ],
+   "agents_reporting": [],
+   "agents_source": "opencode_sessions",
+   "assets_registered": 3,
+   "campaign_kind": "full",
+   "campaign_kind_source": "fixture",
+   "commands_executed": 120,
+   "finalized_at": "2026-11-20T11:00:00Z",
+   "measured_duration_seconds": 3600,
+   "schema": "darkmoon-coverage-signals/1",
+   "started_at": "2026-11-20T10:00:00Z",
+   "workflows_executed": 0
+  },
+  "date": "2026-11-20T10:00:00Z",
+  "duration_seconds": 3600,
+  "executive_summary": "The application was tested for 1 hour. Critical SQL injection exposes the customer table; « données personnelles » were reachable. <script>alert(1)</script>",
+  "id": "camp_fx_report",
+  "is_subagent": false,
+  "methodology": "OWASP WSTG / NIST SP 800-115",
+  "project_id": "proj_fx_report",
+  "status": "completed",
+  "target_id": "tgt_fx_report"
+ },
+ "declarations": {
+  "business_purpose": "Customer portal for orders",
+  "criticality": "high",
+  "data_categories": [
+   "contact details",
+   "orders"
+  ],
+  "nis2_entity_type": "important",
+  "personal_data": {
+   "provenance": "verified",
+   "value": "yes"
+  },
+  "rpo": "30min",
+  "rto": "4h",
+  "sector": "health",
+  "sla": "99.5% monthly"
+ },
+ "description": "L6 report model parity fixture: synthetic campaign exercising every section (secrets in evidence, Unicode, missing fields, unrecognised severity, quarantine, false positive, CVSS mismatch, declared profile).",
+ "findings": [
+  {
+   "campaign_id": "camp_fx_report",
+   "category": "sql_injection",
+   "cvss_score": 9.1,
+   "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+   "cwe": "CWE-89",
+   "description": "Boolean and UNION injection in q.\n# not a heading\n<img src=x onerror=alert(1)>",
+   "discovered_by_agent": "php",
+   "endpoint": "http://app.local/search?q=1",
+   "evidence": {
+    "commands": [
+     "sqlmap -u 'http://app.local/search?q=1' --password='S3cr3t-Pa55w0rd!'"
+    ],
+    "explanation": "The UNION returned the users table.",
+    "logs": [
+     "aws_access_key_id=AKIAIOSFODNN7EXAMPLE"
+    ],
+    "raw_request": "GET /search?q=1'+UNION+SELECT+password+FROM+users-- HTTP/1.1\nHost: app.local\nAuthorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiJ9.c2lnbmF0dXJlLXZhbHVlLTEyMzQ1Njc4\nCookie: PHPSESSID=9f8e7d6c5b4a39281706f5e4d3c2b1a0",
+    "raw_response": "HTTP/1.1 200 OK\n\nadmin:S3cr3t-Pa55w0rd!\n```\nbreak-out attempt\n```"
+   },
+   "id": "vuln_sqli",
+   "mitre_attack_id": "T1190",
+   "remediation": "Use parameterised queries for the q parameter.",
+   "severity": "critical",
+   "status": "exploited",
+   "target_id": "tgt_fx_report",
+   "title": "SQL injection in /search (q) — table « clients » dumped"
+  },
+  {
+   "campaign_id": "camp_fx_report",
+   "category": "xss_stored",
+   "cvss_score": 8.8,
+   "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+   "discovered_by_agent": "headless-browser",
+   "endpoint": "http://app.local/comments",
+   "evidence": {
+    "raw_request": "POST /comments HTTP/1.1\n\nbody=<script>alert(1)</script>"
+   },
+   "id": "vuln_xss",
+   "remediation": "Encode output in the comment template.",
+   "severity": "high",
+   "status": "confirmed",
+   "target_id": "tgt_fx_report",
+   "title": "Stored XSS | in `comments` 中文 ✓"
+  },
+  {
+   "campaign_id": "camp_fx_report",
+   "category": "idor",
+   "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+   "discovered_by_agent": "php",
+   "endpoint": "http://app.local/api/orders/2",
+   "id": "vuln_idor",
+   "remediation": "Check the order owner on every read.",
+   "severity": "high",
+   "status": "exploited",
+   "target_id": "tgt_fx_report",
+   "title": "IDOR on /api/orders/{id}"
+  },
+  {
+   "campaign_id": "camp_fx_report",
+   "category": "security_headers",
+   "discovered_by_agent": "php",
+   "endpoint": "http://app.local/",
+   "id": "vuln_hdr",
+   "severity": "low",
+   "status": "confirmed",
+   "target_id": "tgt_fx_report",
+   "title": "Missing security headers"
+  },
+  {
+   "campaign_id": "camp_fx_report",
+   "category": "business_logic",
+   "id": "vuln_nosev",
+   "severity": "P1",
+   "status": "unconfirmed",
+   "target_id": "tgt_fx_report",
+   "title": "Odd behaviour without a recognised severity"
+  },
+  {
+   "campaign_id": "camp_fx_report",
+   "category": "information_disclosure",
+   "endpoint": "http://app.local/",
+   "id": "vuln_info",
+   "severity": "info",
+   "status": "confirmed",
+   "target_id": "tgt_fx_report",
+   "title": "Server banner"
+  },
+  {
+   "campaign_id": "camp_fx_report",
+   "category": "sql_injection",
+   "endpoint": "http://app.local/x",
+   "id": "vuln_fp",
+   "severity": "critical",
+   "status": "false_positive",
+   "target_id": "tgt_fx_report",
+   "title": "Reported then marked false positive"
+  },
+  {
+   "campaign_id": "camp_fx_report",
+   "category": "rce",
+   "endpoint": "http://app.local/y",
+   "id": "vuln_held",
+   "quarantined": true,
+   "severity": "high",
+   "status": "exploited",
+   "target_id": "tgt_fx_report",
+   "title": "Held for review [[CRED_001]]"
+  }
+ ],
+ "generated_at": "2026-11-20T11:05:00Z",
+ "nodes": [
+  {
+   "host": "app.local",
+   "id": "node_web",
+   "label": "app.local",
+   "node_type": "target"
+  },
+  {
+   "id": "node_http",
+   "label": "http",
+   "node_type": "service",
+   "parent_node_id": "node_web",
+   "port": 80,
+   "protocol": "tcp",
+   "technology": "PHP 8.2"
+  }
+ ],
+ "project": {
+  "id": "proj_fx_report",
+  "name": "Fixture project"
+ },
+ "secrets": [
+  "S3cr3t-Pa55w0rd!",
+  "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiJ9.c2lnbmF0dXJlLXZhbHVlLTEyMzQ1Njc4",
+  "AKIAIOSFODNN7EXAMPLE",
+  "9f8e7d6c5b4a39281706f5e4d3c2b1a0"
+ ],
+ "target": {
+  "host": "app.local",
+  "id": "tgt_fx_report"
+ },
+ "technologies": [
+  {
+   "category": "language",
+   "name": "PHP",
+   "version": "8.2"
+  }
+ ]
+}
