@@ -208,10 +208,29 @@ def _clean(sid: Any) -> str:
     return str(sid or "").replace("ses_", "").replace("-", "")
 
 
-def sessions_agents(db: Optional[Path], session_frag: str, started_at: Any) -> Optional[List[Dict[str, Any]]]:
+def _root_from_run_meta(session_frag: str) -> Optional[str]:
+    """Pro: the API's run sidecar (campaign_logs/<run_id>.meta.json, B-17) links a run key to its root session."""
+    frag = str(session_frag or "").lower()
+    if not frag:
+        return None
+    try:
+        logs = Path(json_storage.DATA_DIR) / "campaign_logs"
+        if not logs.is_dir():
+            return None
+        for p in logs.glob(f"*_{frag}.meta.json"):
+            meta = json.loads(p.read_text("utf-8"))
+            if str(meta.get("campaign_frag") or "").lower() == frag and meta.get("session_id"):
+                return str(meta["session_id"])
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+def sessions_agents(db: Optional[Path], session_frag: str, started_at: Any = None) -> Optional[List[Dict[str, Any]]]:
     """Agents of the sub-agent sessions under the campaign's root session, or None when the root is not found.
-    Root = the root session whose id starts with the campaign key, else the only root session opened in the
-    10 minutes before the campaign start."""
+    Root = the root session whose id starts with the campaign key (TUI / Community / heuristic key), else the root
+    session the API recorded for this run key (Pro run sidecar). Never guessed from timestamps: another run's
+    agents must never be attributed to this campaign."""
     if not db or not Path(db).exists():
         return None
     try:
@@ -227,13 +246,9 @@ def sessions_agents(db: Optional[Path], session_frag: str, started_at: Any) -> O
                     root = sid
                     break
             if root is None:
-                start = _parse(started_at)
-                if start is not None:
-                    hi = start.timestamp() * 1000 + 60_000
-                    lo = hi - 11 * 60_000
-                    near = [sid for sid, t in roots if t is not None and lo <= float(t) <= hi]
-                    if len(near) == 1:
-                        root = near[0]
+                meta_root = _root_from_run_meta(frag)
+                if meta_root and any(sid == meta_root for sid, _t in roots):
+                    root = meta_root
             if root is None:
                 return None
             rows = conn.execute(
