@@ -1,0 +1,557 @@
+{
+  "name": "IEC 62443-3-3 crosswalk (Darkmoon, curated, NOT official)",
+  "standard": "IEC 62443-3-3:2013 — System security requirements and security levels (foundational requirements FR 1-7, system requirements SR)",
+  "note": "Numbering only. Each 'summary' is Darkmoon's own wording of what the requirement is about; no IEC/ISA text or title is reproduced. A mapping says which requirement a finding concerns (indicative), never a conformity or security-level verdict. IEC 62443 targets industrial automation and control systems: on IT targets the mapping is a reading aid.",
+  "foundational_requirements": [
+    {
+      "id": "FR 1",
+      "code": "IAC",
+      "summary": "Who or what is acting: users, processes and devices are identified and authenticated"
+    },
+    {
+      "id": "FR 2",
+      "code": "UC",
+      "summary": "What an identified user may do: permissions enforced, sessions and actions accounted for"
+    },
+    {
+      "id": "FR 3",
+      "code": "SI",
+      "summary": "The system and its data are not altered without detection"
+    },
+    {
+      "id": "FR 4",
+      "code": "DC",
+      "summary": "Information is only readable by those entitled to it"
+    },
+    {
+      "id": "FR 5",
+      "code": "RDF",
+      "summary": "Data flows are limited to what the zones and conduits allow"
+    },
+    {
+      "id": "FR 6",
+      "code": "TRE",
+      "summary": "Security events are recorded, monitored and answered in time"
+    },
+    {
+      "id": "FR 7",
+      "code": "RA",
+      "summary": "The system stays available and recoverable"
+    }
+  ],
+  "system_requirements": [
+    {
+      "id": "SR 1.1",
+      "fr": "FR 1",
+      "summary": "people log in before they act"
+    },
+    {
+      "id": "SR 1.2",
+      "fr": "FR 1",
+      "summary": "software processes and devices prove who they are"
+    },
+    {
+      "id": "SR 1.3",
+      "fr": "FR 1",
+      "summary": "accounts are created, changed and removed under control"
+    },
+    {
+      "id": "SR 1.4",
+      "fr": "FR 1",
+      "summary": "identifiers are managed (unique, retired)"
+    },
+    {
+      "id": "SR 1.5",
+      "fr": "FR 1",
+      "summary": "passwords, keys and other secrets are managed (no default, no hard-coding, protected at rest)"
+    },
+    {
+      "id": "SR 1.6",
+      "fr": "FR 1",
+      "summary": "wireless access is identified and authenticated"
+    },
+    {
+      "id": "SR 1.7",
+      "fr": "FR 1",
+      "summary": "password rules make guessing impractical"
+    },
+    {
+      "id": "SR 1.8",
+      "fr": "FR 1",
+      "summary": "certificates come from a managed PKI"
+    },
+    {
+      "id": "SR 1.9",
+      "fr": "FR 1",
+      "summary": "public-key authentication is validated properly"
+    },
+    {
+      "id": "SR 1.10",
+      "fr": "FR 1",
+      "summary": "login feedback does not reveal secrets"
+    },
+    {
+      "id": "SR 1.11",
+      "fr": "FR 1",
+      "summary": "repeated failed logins are limited"
+    },
+    {
+      "id": "SR 1.12",
+      "fr": "FR 1",
+      "summary": "a use notice is shown before access"
+    },
+    {
+      "id": "SR 1.13",
+      "fr": "FR 1",
+      "summary": "access from untrusted networks is controlled"
+    },
+    {
+      "id": "SR 1.14",
+      "fr": "FR 1",
+      "summary": "symmetric-key authentication is strong enough"
+    },
+    {
+      "id": "SR 2.1",
+      "fr": "FR 2",
+      "summary": "every request is checked against the caller's permissions"
+    },
+    {
+      "id": "SR 2.2",
+      "fr": "FR 2",
+      "summary": "wireless use is restricted"
+    },
+    {
+      "id": "SR 2.3",
+      "fr": "FR 2",
+      "summary": "portable and mobile devices are restricted"
+    },
+    {
+      "id": "SR 2.4",
+      "fr": "FR 2",
+      "summary": "mobile code (scripts, macros) is controlled"
+    },
+    {
+      "id": "SR 2.5",
+      "fr": "FR 2",
+      "summary": "idle sessions are locked"
+    },
+    {
+      "id": "SR 2.6",
+      "fr": "FR 2",
+      "summary": "remote sessions end when they should"
+    },
+    {
+      "id": "SR 2.7",
+      "fr": "FR 2",
+      "summary": "concurrent sessions are limited"
+    },
+    {
+      "id": "SR 2.8",
+      "fr": "FR 2",
+      "summary": "security-relevant actions are logged"
+    },
+    {
+      "id": "SR 2.9",
+      "fr": "FR 2",
+      "summary": "log storage does not run out"
+    },
+    {
+      "id": "SR 2.10",
+      "fr": "FR 2",
+      "summary": "logging failures are handled"
+    },
+    {
+      "id": "SR 2.11",
+      "fr": "FR 2",
+      "summary": "log records carry reliable time"
+    },
+    {
+      "id": "SR 2.12",
+      "fr": "FR 2",
+      "summary": "actions cannot be denied afterwards"
+    },
+    {
+      "id": "SR 3.1",
+      "fr": "FR 3",
+      "summary": "data in transit cannot be altered unnoticed"
+    },
+    {
+      "id": "SR 3.2",
+      "fr": "FR 3",
+      "summary": "malicious code is prevented, detected and contained"
+    },
+    {
+      "id": "SR 3.3",
+      "fr": "FR 3",
+      "summary": "security functions are verified"
+    },
+    {
+      "id": "SR 3.4",
+      "fr": "FR 3",
+      "summary": "software and information are protected from unauthorised change"
+    },
+    {
+      "id": "SR 3.5",
+      "fr": "FR 3",
+      "summary": "inputs are validated before use"
+    },
+    {
+      "id": "SR 3.6",
+      "fr": "FR 3",
+      "summary": "outputs stay predictable under attack"
+    },
+    {
+      "id": "SR 3.7",
+      "fr": "FR 3",
+      "summary": "errors are handled without leaking internals"
+    },
+    {
+      "id": "SR 3.8",
+      "fr": "FR 3",
+      "summary": "sessions cannot be hijacked or forged"
+    },
+    {
+      "id": "SR 3.9",
+      "fr": "FR 3",
+      "summary": "audit information is protected"
+    },
+    {
+      "id": "SR 4.1",
+      "fr": "FR 4",
+      "summary": "information is kept confidential, at rest and in transit"
+    },
+    {
+      "id": "SR 4.2",
+      "fr": "FR 4",
+      "summary": "information is purged when a component is released"
+    },
+    {
+      "id": "SR 4.3",
+      "fr": "FR 4",
+      "summary": "cryptography is current and correctly used"
+    },
+    {
+      "id": "SR 5.1",
+      "fr": "FR 5",
+      "summary": "networks are segmented by zone"
+    },
+    {
+      "id": "SR 5.2",
+      "fr": "FR 5",
+      "summary": "zone boundaries are protected"
+    },
+    {
+      "id": "SR 5.3",
+      "fr": "FR 5",
+      "summary": "general-purpose messaging is restricted"
+    },
+    {
+      "id": "SR 5.4",
+      "fr": "FR 5",
+      "summary": "applications are partitioned from each other"
+    },
+    {
+      "id": "SR 6.1",
+      "fr": "FR 6",
+      "summary": "audit logs can be read by those entitled"
+    },
+    {
+      "id": "SR 6.2",
+      "fr": "FR 6",
+      "summary": "the system is monitored continuously"
+    },
+    {
+      "id": "SR 7.1",
+      "fr": "FR 7",
+      "summary": "denial of service is resisted"
+    },
+    {
+      "id": "SR 7.2",
+      "fr": "FR 7",
+      "summary": "resources cannot be exhausted"
+    },
+    {
+      "id": "SR 7.3",
+      "fr": "FR 7",
+      "summary": "backups exist and are protected"
+    },
+    {
+      "id": "SR 7.4",
+      "fr": "FR 7",
+      "summary": "the system can be recovered to a known state"
+    },
+    {
+      "id": "SR 7.5",
+      "fr": "FR 7",
+      "summary": "power loss is handled"
+    },
+    {
+      "id": "SR 7.6",
+      "fr": "FR 7",
+      "summary": "network and security settings are hardened and kept"
+    },
+    {
+      "id": "SR 7.7",
+      "fr": "FR 7",
+      "summary": "only needed functions, ports and services are enabled"
+    },
+    {
+      "id": "SR 7.8",
+      "fr": "FR 7",
+      "summary": "components are inventoried (versions known, patches tracked)"
+    }
+  ],
+  "rules": [
+    {
+      "match": "sql.?inject|nosql|command.?inject|code.?inject|os.?command|template.?inject|ssti|xxe|xml external|ldap.?inject|xpath|deserializ|path.?travers|directory.?travers|\\blfi\\b|\\brfi\\b|file.?inclusion|header.?inject|crlf|prototype.?pollution|\\bxss\\b|cross.?site.?script|open.?redirect|input.?validation|injection",
+      "srs": [
+        "SR 3.5"
+      ],
+      "why": "untrusted input reaches an interpreter, a file path or the page"
+    },
+    {
+      "match": "remote.?code|\\brce\\b|code.?execution|command.?execution|arbitrary.?code",
+      "srs": [
+        "SR 3.5",
+        "SR 3.4"
+      ],
+      "why": "code runs on the target without authorisation"
+    },
+    {
+      "match": "file.?upload|unrestricted.?upload|webshell|web.?shell|malware",
+      "srs": [
+        "SR 3.2",
+        "SR 3.5"
+      ],
+      "why": "attacker-controlled code or files are accepted"
+    },
+    {
+      "match": "default.{0,15}(cred|password|account|login)|hard.?coded|hardcoded|weak.?password|password.?polic|guessable",
+      "srs": [
+        "SR 1.5",
+        "SR 1.7"
+      ],
+      "why": "secrets are default, hard-coded or guessable"
+    },
+    {
+      "match": "brute.?force|credential.?stuff|password.?spray|no.?lockout|account.?lockout|login.?rate|unlimited.?login",
+      "srs": [
+        "SR 1.11"
+      ],
+      "why": "login attempts are not limited"
+    },
+    {
+      "match": "auth(entication)?.?bypass|broken.?auth|missing.?auth|no.?auth|without.?auth|unauthenticated|anonymous.?access|improper.?authentication",
+      "srs": [
+        "SR 1.1"
+      ],
+      "why": "an action is reachable without logging in"
+    },
+    {
+      "match": "idor|insecure.?direct|access.?control(?!.?allow)|authori[sz]ation|privilege|unauthori[sz]ed|forced.?browsing|mass.?assignment|admin.?(endpoint|panel|interface|route)|bola|bfla",
+      "srs": [
+        "SR 2.1"
+      ],
+      "why": "permissions are not enforced on the request"
+    },
+    {
+      "match": "csrf|cross.?site.?request",
+      "srs": [
+        "SR 3.8",
+        "SR 2.1"
+      ],
+      "why": "requests can be forged in the user's session"
+    },
+    {
+      "match": "session|cookie|\\bjwt\\b|token.?(forg|reuse|fixation|leak)|fixation",
+      "srs": [
+        "SR 3.8"
+      ],
+      "why": "sessions or tokens can be hijacked, forged or reused"
+    },
+    {
+      "match": "information.?disclos|sensitive.?(data|file|information)|data.?(exposure|leak)|exposed?|leak|directory.?listing|listing|backup.?file|\\.git|\\.env|config(uration)?.?(file|exposed|disclos)|pii|personal.?data|enumeration",
+      "srs": [
+        "SR 4.1"
+      ],
+      "why": "information is readable by someone not entitled to it"
+    },
+    {
+      "match": "password.?hash|credential|secret|api.?key|private.?key|access.?token|keepass|\\.kdbx",
+      "srs": [
+        "SR 1.5"
+      ],
+      "why": "secrets are exposed or poorly protected"
+    },
+    {
+      "match": "verbose.?error|stack.?trace|debug|error.?message|exception.?(page|detail)",
+      "srs": [
+        "SR 3.7"
+      ],
+      "why": "errors reveal internal details"
+    },
+    {
+      "match": "cleartext|clear.?text|plain.?text|unencrypted|no.?tls|without.?tls|http.?only.?transport|missing.?hsts|\\bhsts\\b|ssl.?strip|insecure.?transport",
+      "srs": [
+        "SR 4.1",
+        "SR 3.1"
+      ],
+      "why": "traffic can be read or altered in transit"
+    },
+    {
+      "match": "weak.?(cipher|crypto|tls|ssl|hash|algorithm|key)|\\bmd5\\b|\\bsha-?1\\b|\\brc4\\b|\\bdes\\b|sslv|tlsv1\\.[01]|self.?signed|expired.?cert|certificate",
+      "srs": [
+        "SR 4.3"
+      ],
+      "why": "cryptography is outdated or misused"
+    },
+    {
+      "match": "ssrf|server.?side.?request",
+      "srs": [
+        "SR 5.2",
+        "SR 3.5"
+      ],
+      "why": "the server can be made to reach other zones"
+    },
+    {
+      "match": "segmentation|lateral.?movement|flat.?network|pivot|internal.?network.?reach",
+      "srs": [
+        "SR 5.1"
+      ],
+      "why": "zones are not separated"
+    },
+    {
+      "match": "cors|cross.?origin|clickjack|frame.?options|security.?header|content.?security.?policy|\\bcsp\\b",
+      "srs": [
+        "SR 7.6"
+      ],
+      "why": "browser-facing security settings are missing or permissive"
+    },
+    {
+      "match": "misconfig|security.?config|default.?config|insecure.?config|hardening",
+      "srs": [
+        "SR 7.6"
+      ],
+      "why": "security settings are not hardened"
+    },
+    {
+      "match": "open.?port|exposed.?service|unnecessary.?service|admin.?interface.?expos|management.?interface|telnet|ftp.?(service|server)|anonymous.?ftp|snmp|debug.?endpoint|actuator|swagger|graphiql|phpinfo",
+      "srs": [
+        "SR 7.7"
+      ],
+      "why": "a function or service is enabled that is not needed"
+    },
+    {
+      "match": "outdated|end.?of.?life|\\beol\\b|unpatched|vulnerable.?(version|component|library|dependency)|known.?vulnerab|cve-\\d|version.?disclos",
+      "srs": [
+        "SR 7.8"
+      ],
+      "why": "a component version with known flaws runs (patch tracking: IEC 62443-2-3)"
+    },
+    {
+      "match": "denial.?of.?service|\\bdos\\b|rate.?limit|resource.?exhaust|redos|slowloris|amplification",
+      "srs": [
+        "SR 7.1",
+        "SR 7.2"
+      ],
+      "why": "availability can be exhausted"
+    },
+    {
+      "match": "logging|audit.?trail|no.?log|monitoring|alerting|detection",
+      "srs": [
+        "SR 2.8",
+        "SR 6.2"
+      ],
+      "why": "security events are not recorded or watched"
+    },
+    {
+      "match": "wireless|wi-?fi|wpa|bluetooth",
+      "srs": [
+        "SR 1.6"
+      ],
+      "why": "wireless access is not properly authenticated"
+    },
+    {
+      "match": "backup",
+      "srs": [
+        "SR 7.3"
+      ],
+      "why": "backups are exposed or unprotected"
+    }
+  ],
+  "iso2022_fallback": {
+    "A.5.15": [
+      "SR 2.1"
+    ],
+    "A.5.16": [
+      "SR 1.4"
+    ],
+    "A.5.17": [
+      "SR 1.5"
+    ],
+    "A.5.18": [
+      "SR 1.3",
+      "SR 2.1"
+    ],
+    "A.8.2": [
+      "SR 2.1"
+    ],
+    "A.8.3": [
+      "SR 2.1"
+    ],
+    "A.8.5": [
+      "SR 1.1"
+    ],
+    "A.8.6": [
+      "SR 7.2"
+    ],
+    "A.8.7": [
+      "SR 3.2"
+    ],
+    "A.8.8": [
+      "SR 7.8"
+    ],
+    "A.8.9": [
+      "SR 7.6"
+    ],
+    "A.8.11": [
+      "SR 4.1"
+    ],
+    "A.8.12": [
+      "SR 4.1"
+    ],
+    "A.8.13": [
+      "SR 7.3"
+    ],
+    "A.8.15": [
+      "SR 2.8"
+    ],
+    "A.8.16": [
+      "SR 6.2"
+    ],
+    "A.8.20": [
+      "SR 5.1"
+    ],
+    "A.8.21": [
+      "SR 5.2"
+    ],
+    "A.8.22": [
+      "SR 5.1"
+    ],
+    "A.8.24": [
+      "SR 4.3"
+    ],
+    "A.8.25": [
+      "SR 3.5"
+    ],
+    "A.8.26": [
+      "SR 3.5"
+    ],
+    "A.8.28": [
+      "SR 3.5"
+    ],
+    "A.8.29": [
+      "SR 3.3"
+    ]
+  }
+}

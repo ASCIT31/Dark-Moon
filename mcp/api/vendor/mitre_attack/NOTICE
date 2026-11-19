@@ -1,0 +1,14 @@
+MITRE ATT&CK data — the single ATT&CK directory of Darkmoon (one licence, one notice)
+
+Extract of the Enterprise ATT&CK STIX 2.1 bundle v20.0 published by The MITRE Corporation at
+https://github.com/mitre-attack/attack-stix-data (enterprise-attack-20.0.json,
+sha256 81113ba98afa2928f3dcff62022539f7ce30c315c32e14422f11ff95ce534352, recorded in the extract):
+  - attack-enterprise-20.0.min.json      read by api/frameworks.py (framework mapping of the report).
+Modified: reduced to technique and tactic IDs, names, tactics per technique, revoked/deprecated flags,
+revoked-by links and the tactic order of the matrix.
+
+© 2026 The MITRE Corporation. This work is reproduced and distributed with the permission of The MITRE Corporation.
+Copyright 2015-2026, The MITRE Corporation. MITRE ATT&CK® and ATT&CK® are registered trademarks of The MITRE Corporation.
+
+Darkmoon is not affiliated with, sponsored or endorsed by The MITRE Corporation. No MITRE logo is used.
+Licence terms: see LICENSE.txt in this directory.
