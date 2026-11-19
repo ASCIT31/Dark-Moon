@@ -1,0 +1,49 @@
+{
+ "description": "Declared short campaign with one confirmed medium: limited, capped at 69.",
+ "input": {
+  "campaign": {
+   "coverage_signals": {
+    "agents_dispatched": [
+     {
+      "active_seconds": 0,
+      "agent": "php",
+      "sessions": 1
+     }
+    ],
+    "agents_reporting": [],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 1,
+    "campaign_kind": "short",
+    "campaign_kind_source": "declared_at_init",
+    "commands_executed": 12,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "measured_duration_seconds": 600,
+    "schema": "darkmoon-coverage-signals/1",
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "date": "2026-11-20T09:00:00Z",
+   "duration_seconds": 0,
+   "id": "camp_fx_syn_short_run",
+   "is_subagent": false,
+   "project_id": "proj_fixture",
+   "session_id": "hort_run",
+   "status": "completed",
+   "target_id": "tgt_fx_syn"
+  },
+  "findings": [
+   {
+    "category": "xss",
+    "discovered_by_agent": "php",
+    "endpoint": "/app",
+    "id": "vuln_s0001",
+    "severity": "medium",
+    "status": "confirmed",
+    "target_id": "tgt_fx_syn",
+    "title": "xss #1"
+   }
+  ]
+ },
+ "name": "syn_short_run",
+ "source": "synthetic"
+}

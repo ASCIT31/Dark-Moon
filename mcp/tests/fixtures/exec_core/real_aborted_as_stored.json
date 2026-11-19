@@ -1,0 +1,18 @@
+{
+ "description": "Aborted run left in status running with 0 finding: a naive score would read 100 -> not rated.",
+ "input": {
+  "campaign": {
+   "date": "2026-11-19T10:30:20Z",
+   "duration_seconds": 0,
+   "id": "camp_fx_aborted",
+   "is_subagent": false,
+   "project_id": "proj_fixture",
+   "session_id": "_aborted",
+   "status": "running",
+   "target_id": "tgt_fx_aborted"
+  },
+  "findings": []
+ },
+ "name": "real_aborted_as_stored",
+ "source": "66-community-port/campaign-aborted-build-agent (camp_20261119_155f66d1)"
+}

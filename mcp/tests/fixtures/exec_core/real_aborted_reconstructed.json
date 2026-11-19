@@ -1,0 +1,32 @@
+{
+ "description": "Same run with its real activity as signals (68 s, no sub-agent, 8 commands, 2 workflows, 2 nodes): still not rated, the campaign did not complete.",
+ "input": {
+  "campaign": {
+   "coverage_signals": {
+    "agents_dispatched": [],
+    "agents_reporting": [],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 2,
+    "campaign_kind": "full",
+    "campaign_kind_source": "fixture_reconstruction",
+    "commands_executed": 8,
+    "finalized_at": "2026-11-19T10:31:28Z",
+    "measured_duration_seconds": 68,
+    "schema": "darkmoon-coverage-signals/1",
+    "started_at": "2026-11-19T10:30:20Z",
+    "workflows_executed": 2
+   },
+   "date": "2026-11-19T10:30:20Z",
+   "duration_seconds": 0,
+   "id": "camp_fx_aborted",
+   "is_subagent": false,
+   "project_id": "proj_fixture",
+   "session_id": "_aborted",
+   "status": "aborted",
+   "target_id": "tgt_fx_aborted"
+  },
+  "findings": []
+ },
+ "name": "real_aborted_reconstructed",
+ "source": "66-community-port/campaign-aborted-build-agent (camp_20261119_155f66d1); signals from the copied opencode.db"
+}
