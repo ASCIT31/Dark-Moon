@@ -68,6 +68,7 @@ export type AttackPath = {
   finding_ids?: string[]
   steps?: PathStep[]
   note?: string
+  corroboration?: { status?: string; unverified?: string[]; checked?: boolean }
 }
 
 export type AttackPaths = {
@@ -75,6 +76,52 @@ export type AttackPaths = {
   paths?: AttackPath[]
   fix_first?: unknown
 }
+
+// ---- executive views: documents computed by exec_core on the server (Pro) or by the local adapter (Community)
+
+type Doc = Record<string, any>
+export type ScoreBlock = Doc & {
+  score?: number | null
+  grade?: string | null
+  grade_meaning?: string | null
+  score_status?: string
+  status_label?: string
+  status_meaning?: string
+  status_reasons?: { code?: string; text?: string }[]
+  reason?: string | null
+  coverage_sentence?: string | null
+  caps_applied?: { rule?: string; cap?: number }[]
+}
+export type ActionRow = Doc & {
+  action_id: string
+  priority?: number
+  title?: string
+  severity?: string
+  proof?: string
+  status?: string
+  status_label?: string
+  status_text?: string
+  status_verified?: boolean
+  last_retest?: Doc | null
+}
+export type PlanSummary = Doc & { label?: string; actions_total?: number; by_status?: { status: string; label: string; count: number }[]; top_actions?: ActionRow[] }
+export type FrameworkRow = Doc & { framework: string; label?: string; applicability?: string | Doc; applicability_label?: string; counts?: Record<string, number> }
+export type Executive = Doc & {
+  schema_version?: string
+  campaign_id?: string
+  project_id?: string
+  score?: ScoreBlock
+  attack_paths?: { possible: number; evidence_backed: number } | null
+  treatment_plan?: PlanSummary | null
+  frameworks?: (Doc & { summary_line?: string; reading?: string; frameworks?: FrameworkRow[] }) | null
+  reference_campaign_id?: string | null
+  reference_campaign_date?: string | null
+  latest_campaign?: Doc | null
+}
+export type TreatmentPlan = Doc & { label?: string; definition?: string; plain?: string; actions?: ActionRow[]; summary?: Doc; statuses?: { value: string; label: string }[]; verification_note?: string; score_note?: string; declarations?: Doc }
+export type FrameworkAssessment = Doc & { reading?: string; summary_line?: string; states?: { value: string; label: string }[]; frameworks?: (FrameworkRow & { controls?: Doc[] })[]; coverage?: Doc }
+export type ProfileDoc = Doc & { profile?: { fields?: Record<string, Doc>; provenance_counts?: Record<string, number>; reading?: string }; declarations?: Doc; issues?: Doc[] }
+export type Legend = Doc & { path_kind?: Record<string, { label: string; meaning: string }>; evidence_status?: Record<string, { label: string; meaning: string }>; treatment?: Record<string, { label: string; meaning: string }>; score_status?: Record<string, { label: string; meaning: string }>; severity?: Record<string, string>; grade?: Record<string, string> }
 
 export type VulnStats = {
   by_severity?: Record<string, number>
@@ -96,6 +143,12 @@ export interface DataSource {
   vulnerabilities(filter?: { project_id?: string; campaign_id?: string }): Promise<{ data: Finding[]; stats?: VulnStats }>
   report(campaignId: string): Promise<string>
   attackPaths(campaignId: string): Promise<AttackPaths>
+  executive(campaignId: string): Promise<Executive>
+  projectExecutive(projectId: string): Promise<Executive>
+  plan(campaignId: string): Promise<TreatmentPlan>
+  frameworks(campaignId: string): Promise<FrameworkAssessment>
+  profile(projectId: string): Promise<ProfileDoc>
+  legend(): Promise<Legend>
 }
 
 export type ApiError = { kind: "auth" | "network" | "http" | "parse"; status?: number; message: string }
@@ -165,6 +218,25 @@ export class ExplorerApi implements DataSource {
 
   async attackPaths(campaignId: string): Promise<AttackPaths> {
     return await this.request<AttackPaths>(`/campaigns/${enc(campaignId)}/attack-paths?include=steps`)
+  }
+
+  executive(campaignId: string) {
+    return this.request<Executive>(`/campaigns/${enc(campaignId)}/executive`)
+  }
+  projectExecutive(projectId: string) {
+    return this.request<Executive>(`/projects/${enc(projectId)}/executive`)
+  }
+  plan(campaignId: string) {
+    return this.request<TreatmentPlan>(`/campaigns/${enc(campaignId)}/treatment-plan`)
+  }
+  frameworks(campaignId: string) {
+    return this.request<FrameworkAssessment>(`/campaigns/${enc(campaignId)}/framework-assessment`)
+  }
+  profile(projectId: string) {
+    return this.request<ProfileDoc>(`/projects/${enc(projectId)}/profile`)
+  }
+  legend() {
+    return this.request<Legend>("/executive/legend")
   }
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -330,13 +402,34 @@ export function remediationText(r: unknown): string {
 
 // ---------------------------------------------------------------- attack paths
 
-/** The server's proof contract: only hypothesis:false is proven; agent-declared and inferred stay hypotheses. */
-export function pathProof(p: AttackPath): { label: string; proven: boolean } {
-  if (p.hypothesis === false) return { label: "PROVEN · corroborated", proven: true }
+/** exec_core ``legend.path_kind_of`` (same rule, same cases in the tests): a hypothesis, or anything not backed by
+ *  evidence the server recorded, is a Possible Attack Path. ``observed`` is evidence-backed; ``derived`` only when the
+ *  engine checked every claim (``corroboration``: corroborated, nothing unverified, ``checked``). A declared path is
+ *  never shown as a proven exploitation. */
+export function pathKind(p: Partial<AttackPath> | undefined | null): "evidence_backed" | "possible" {
+  if (!p || p.hypothesis) return "possible"
+  const prov = String(p.provenance ?? "").trim().toLowerCase()
+  if (prov === "observed") return "evidence_backed"
+  const c = p.corroboration
+  if (prov === "derived" && c && c.status === "corroborated" && !(c.unverified ?? []).length && c.checked === true) return "evidence_backed"
+  return "possible"
+}
+
+export const PATH_KIND_LABEL = { evidence_backed: "Evidence-Backed Attack Path", possible: "Possible Attack Path" } as const
+
+/** The legend words of a path (exec_core.legend), with why a possible path is not proven. */
+export function pathProof(p: AttackPath): { label: string; short: string; proven: boolean; why: string } {
+  if (pathKind(p) === "evidence_backed") return { label: PATH_KIND_LABEL.evidence_backed, short: "EVIDENCE", proven: true, why: "every step backed by evidence the server recorded" }
   const prov = String(p.provenance ?? "").toLowerCase()
-  if (prov.includes("declared")) return { label: "DECLARED · not verified", proven: false }
-  if (prov === "inferred") return { label: "INFERRED · hypothesis", proven: false }
-  return { label: "HYPOTHESIS", proven: false }
+  const why = prov.includes("declared") ? "declared by the agent, not verified" : prov === "inferred" ? "inferred by the server, a hypothesis" : "a hypothesis, not observed"
+  return { label: PATH_KIND_LABEL.possible, short: "POSSIBLE", proven: false, why }
+}
+
+/** Counts of the two path kinds of an attack-path document (same rule as the executive block). */
+export function pathKindCounts(doc: AttackPaths | undefined): { total: number; evidence_backed: number; possible: number } {
+  const ps = doc?.paths ?? []
+  const eb = ps.filter((p) => pathKind(p) === "evidence_backed").length
+  return { total: ps.length, evidence_backed: eb, possible: ps.length - eb }
 }
 
 /** Unicode chain; solid arrow only for proven paths, dashed otherwise. */
@@ -476,6 +569,24 @@ export class FileSource implements DataSource {
   async attackPaths(campaignId: string) {
     return await this.call<AttackPaths>("paths", campaignId)
   }
+  executive(campaignId: string) {
+    return this.call<Executive>("executive", campaignId)
+  }
+  projectExecutive(projectId: string) {
+    return this.call<Executive>("executive", "--project", projectId)
+  }
+  plan(campaignId: string) {
+    return this.call<TreatmentPlan>("plan", campaignId)
+  }
+  frameworks(campaignId: string) {
+    return this.call<FrameworkAssessment>("frameworks", campaignId)
+  }
+  profile(projectId: string) {
+    return this.call<ProfileDoc>("profile", projectId)
+  }
+  legend() {
+    return this.call<Legend>("legend")
+  }
 }
 
 /** In-memory read-through cache: back-navigation never refetches; `r` invalidates. Nothing is written to disk. */
@@ -534,6 +645,24 @@ export class CachedSource implements DataSource {
   }
   attackPaths(id: string) {
     return this.get(`paths:${id}`, () => this.inner.attackPaths(id))
+  }
+  executive(id: string) {
+    return this.get(`exec:${id}`, () => this.inner.executive(id))
+  }
+  projectExecutive(id: string) {
+    return this.get(`pexec:${id}`, () => this.inner.projectExecutive(id))
+  }
+  plan(id: string) {
+    return this.get(`plan:${id}`, () => this.inner.plan(id))
+  }
+  frameworks(id: string) {
+    return this.get(`fw:${id}`, () => this.inner.frameworks(id))
+  }
+  profile(id: string) {
+    return this.get(`profile:${id}`, () => this.inner.profile(id))
+  }
+  legend() {
+    return this.get("legend", () => this.inner.legend())
   }
 }
 
@@ -671,4 +800,160 @@ export function durationText(seconds: unknown): string {
   if (!Number.isFinite(s) || s <= 0) return "—"
   const m = Math.round(s / 60)
   return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`
+}
+
+// ---------------------------------------------------------------- executive views (display only, words from exec_core)
+
+/** The headline of a score block: the grade and number only when the server rated the campaign; never a number for
+ *  « Not rated ». */
+export function scoreHeadline(s: ScoreBlock | undefined | null): { big: string; status: string; rated: boolean; limited: boolean } {
+  const st = String(s?.score_status ?? "not_rated")
+  const label = clean(s?.status_label ?? (st === "rated" ? "Rated" : st === "limited" ? "Limited test" : "Not rated"), 40)
+  const hasNumber = (st === "rated" || st === "limited") && s?.grade && typeof s?.score === "number"
+  if (!hasNumber) return { big: "Not rated", status: label, rated: false, limited: false }
+  return { big: `${clean(s!.grade, 2)}  ${s!.score}/100`, status: label, rated: st === "rated", limited: st === "limited" }
+}
+
+/** Why a block is not rated or limited: the server's first reason, else the status meaning. */
+export function scoreWhy(s: ScoreBlock | undefined | null): string {
+  const r = (s?.status_reasons ?? []).find((x) => x?.text)?.text ?? s?.reason ?? ""
+  return clean(r || s?.status_meaning || "", 300)
+}
+
+const RETEST_ONLY = new Set(["verified_resolved", "partially_resolved", "failed_verification"])
+const IN_PROGRESS = new Set(["approved", "scheduled", "in_progress", "applied", "verification_pending"])
+
+/** The status words of an action. « Applied » always reads « not verified »; a retest wording (« Not reproduced at
+ *  retest »…) only stands with the completed retest it comes from, otherwise the status is shown as unverified. */
+export function treatmentLabel(a: ActionRow | undefined | null): string {
+  const st = String(a?.status ?? "proposed")
+  let label = clean(a?.status_label ?? st.replace(/_/g, " "), 60)
+  if (st === "applied" && !/not verified/i.test(label)) label = `${label} — not verified`
+  if (RETEST_ONLY.has(st) && !(a?.last_retest && (a.last_retest as Doc).retest_id)) label = "Retest result not on file — not verified"
+  return label
+}
+
+/** Glyph of a treatment status (never colour alone; the words are always shown next to it). */
+export function treatmentMark(status: string | undefined, unicode = true): string {
+  const s = String(status ?? "proposed")
+  if (s === "verified_resolved") return unicode ? "◇" : "v"
+  if (s === "failed_verification" || s === "partially_resolved") return unicode ? "✗" : "x"
+  if (s === "risk_accepted") return unicode ? "⊘" : "a"
+  if (s === "deferred") return unicode ? "–" : "-"
+  if (IN_PROGRESS.has(s)) return unicode ? "◐" : "+"
+  return unicode ? "○" : "o"
+}
+
+export const FRAMEWORK_STATES = ["weakness_observed", "none_observed_in_tested_scope", "not_tested", "not_technically_assessable"] as const
+export const FRAMEWORK_STATE_SHORT: Record<string, string> = {
+  weakness_observed: "weakness observed",
+  none_observed_in_tested_scope: "none observed in tested scope",
+  not_tested: "not tested",
+  not_technically_assessable: "not technically assessable",
+}
+
+/** One line per framework: its four state counts in words (never a percentage, a grade or « compliant »). */
+export function frameworkLine(f: FrameworkRow, short = false): string {
+  const c = f.counts ?? {}
+  const n = (k: string) => Number(c[k] ?? 0) || 0
+  return short
+    ? `${n("weakness_observed")} weak · ${n("none_observed_in_tested_scope")} none obs. · ${n("not_tested")} not tested · ${n("not_technically_assessable")} n/a`
+    : FRAMEWORK_STATES.map((k) => `${n(k)} ${FRAMEWORK_STATE_SHORT[k]}`).join(" · ")
+}
+
+export function applicabilityOf(f: FrameworkRow): { status: string; label: string } {
+  const a = f.applicability
+  if (a && typeof a === "object") return { status: String(a.status ?? "to_confirm"), label: clean(a.label ?? "", 80) }
+  return { status: String(a ?? "to_confirm"), label: clean(f.applicability_label ?? "", 80) }
+}
+
+/** Provenance badge of a profile field: shape + word (Detected = dashed, Declared = filled, Verified = double). */
+export function provenanceBadge(p: string | undefined, unicode = true): { mark: string; word: string } {
+  const v = String(p ?? "unknown")
+  if (v === "verified") return { mark: unicode ? "◉" : "@", word: "Verified" }
+  if (v === "declared_by_customer" || v === "declared") return { mark: unicode ? "●" : "*", word: "Declared" }
+  if (v === "detected") return { mark: unicode ? "◌" : ":", word: "Detected" }
+  if (v === "inferred") return { mark: unicode ? "◌" : ":", word: "Inferred" }
+  return { mark: unicode ? "·" : ".", word: "Not provided" }
+}
+
+export function profileValue(v: unknown): string {
+  if (v == null || v === "") return "—"
+  if (Array.isArray(v)) return v.map((x) => clean(x, 60)).join(", ")
+  if (typeof v === "boolean") return v ? "yes" : "no"
+  return clean(typeof v === "object" ? JSON.stringify(v) : String(v), 200)
+}
+
+export const PROFILE_GROUPS = ["application", "ownership", "data", "exposure", "regulatory", "resilience", "technology", "operations"]
+
+/** Word-wrap into at most ``max`` lines of ``width`` cells; the last kept line ends with « … » when text is cut. */
+export function wrapLines(text: string, width: number, max: number): string[] {
+  const w = Math.max(4, width)
+  const out: string[] = []
+  let line = ""
+  for (const word of clean(text, 4000).split(/\s+/).filter(Boolean)) {
+    const next = line ? `${line} ${word}` : word
+    if (next.length <= w) {
+      line = next
+      continue
+    }
+    if (line) out.push(line)
+    line = word.length > w ? word.slice(0, w - 1) + "…" : word
+  }
+  if (line) out.push(line)
+  if (out.length <= max) return out
+  const kept = out.slice(0, Math.max(1, max))
+  const last = kept[kept.length - 1]
+  kept[kept.length - 1] = last.length >= w ? last.slice(0, w - 1) + "…" : last + "…"
+  return kept
+}
+
+/** The legend dialog text: shared words (exec_core.legend) + how the terminal draws them. ``compact``: labels only,
+ *  for short terminals (the dialog cannot scroll). */
+export function legendLines(l: Legend | undefined, unicode = true, compact = false): string[] {
+  const g = unicode ? { solid: "│", dashed: "┆", node: "●", open: "○" } : { solid: "|", dashed: ":", node: "*", open: "o" }
+  const pk = l?.path_kind ?? {}
+  const ev = l?.evidence_status ?? {}
+  const tr = l?.treatment ?? {}
+  const ss = l?.score_status ?? {}
+  const line = (mark: string, x: { label?: string; meaning?: string } | undefined, fb: string) => `${mark} ${clean(x?.label ?? fb, 40)} — ${clean(x?.meaning ?? "", 160)}`
+  const lab = (x: { label?: string } | undefined, fb: string) => clean(x?.label ?? fb, 40)
+  const pmk = (k: string) => {
+    const m = proofMark(k)
+    return unicode ? m : ({ "●": "*", "◐": "+", "○": "o" } as Record<string, string>)[m]
+  }
+  if (compact)
+    return [
+      "ATTACK PATHS",
+      ` ${g.solid} ${lab(pk.evidence_backed, "Evidence-Backed Attack Path")}`,
+      ` ${g.dashed} ${lab(pk.possible, "Possible Attack Path")} (a hypothesis, not observed)`,
+      ` ${g.node} a step with a finding   ${g.open} an exposure`,
+      "EVIDENCE STATUS (not severity)",
+      ` ${pmk("exploited")} ${lab(ev.exploited, "Exploited")}   ${pmk("confirmed")} ${lab(ev.confirmed, "Confirmed")}   ${pmk("")} ${lab(ev.unconfirmed, "To confirm")}`,
+      "TREATMENT",
+      ` ${treatmentMark("in_progress", unicode)} ${lab(tr.in_progress, "Treatment in Progress")}   ${treatmentMark("risk_accepted", unicode)} ${lab(tr.risk_accepted, "Risk accepted")}`,
+      ` ${treatmentMark("verified_resolved", unicode)} ${lab(tr.not_reproduced, "Not reproduced at retest")} (completed retest only)`,
+      " « Applied » is a declaration, never a verification.",
+      "CYBER SCORE",
+      ` ${lab(ss.rated, "Rated")} · ${lab(ss.limited, "Limited test")} · ${lab(ss.not_rated, "Not rated")} (no number)`,
+    ]
+  return [
+    "ATTACK PATHS",
+    line(` ${g.solid}`, pk.evidence_backed, "Evidence-Backed Attack Path"),
+    line(` ${g.dashed}`, pk.possible, "Possible Attack Path"),
+    ` ${g.node} a step with a finding   ${g.open} an exposure (no finding)`,
+    "",
+    "EVIDENCE STATUS (not severity)",
+    ...(["exploited", "confirmed", "unconfirmed"] as const).map((k) => line(` ${pmk(k === "unconfirmed" ? "" : k)}`, ev[k], k)),
+    " Severity (Critical … Informational) says how bad a weakness would be; evidence status says how much proof is on file.",
+    "",
+    "TREATMENT",
+    line(` ${treatmentMark("in_progress", unicode)}`, tr.in_progress, "Treatment in Progress"),
+    line(` ${treatmentMark("verified_resolved", unicode)}`, tr.not_reproduced, "Not reproduced at retest"),
+    line(` ${treatmentMark("risk_accepted", unicode)}`, tr.risk_accepted, "Risk accepted"),
+    " « Applied » is a declaration, never a verification.",
+    "",
+    "CYBER SCORE",
+    ...(["rated", "limited", "not_rated"] as const).map((k) => line(" ", ss[k], k)),
+  ]
 }

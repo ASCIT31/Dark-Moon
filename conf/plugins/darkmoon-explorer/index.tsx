@@ -14,6 +14,26 @@ import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 
 import { execFile } from "node:child_process"
 import {
   activityOf,
+  applicabilityOf,
+  frameworkLine,
+  legendLines,
+  pathKindCounts,
+  profileValue,
+  provenanceBadge,
+  scoreHeadline,
+  scoreWhy,
+  treatmentLabel,
+  treatmentMark,
+  wrapLines,
+  FRAMEWORK_STATES,
+  PATH_KIND_LABEL,
+  PROFILE_GROUPS,
+  type ActionRow,
+  type Executive,
+  type FrameworkAssessment,
+  type Legend,
+  type ProfileDoc,
+  type TreatmentPlan,
   buckets,
   durationText,
   glyphs,
@@ -34,6 +54,7 @@ import {
   page,
   palette,
   pathFindingIds,
+  pathKind,
   pathProof,
   proofMark,
   proofTag,
@@ -67,12 +88,12 @@ const ROUTE = "darkmoon.explorer"
 const PAGE = 50
 const BOLD = 1
 
-type Options = { source?: "api" | "files"; api?: string; data?: string; reports?: string; python?: string }
+type Options = { source?: "api" | "files"; api?: string; data?: string; reports?: string; python?: string; mcp?: string }
 
 function createSource(o: Options): CachedSource {
   if (o.source === "files") {
     const script = new URL("./darkmoon_explore.py", import.meta.url).pathname
-    const pre = [...(o.data ? ["--data", o.data] : []), ...(o.reports ? ["--reports", o.reports] : [])]
+    const pre = [...(o.data ? ["--data", o.data] : []), ...(o.reports ? ["--reports", o.reports] : []), ...(o.mcp ? ["--mcp", o.mcp] : [])]
     const run = (args: string[]) =>
       new Promise<{ code: number; stdout: string; stderr: string }>((resolve, reject) => {
         execFile(o.python ?? "python3", ["-I", "-B", script, ...pre, ...args], { timeout: 20000, maxBuffer: 64 << 20 }, (err, stdout, stderr) => {
@@ -90,12 +111,13 @@ function createSource(o: Options): CachedSource {
 
 // ------------------------------------------------------------------------------------------------ navigation model
 
-type Tab = "workspace" | "projects" | "campaigns" | "findings" | "paths" | "reports"
+type Tab = "workspace" | "projects" | "campaigns" | "findings" | "plan" | "paths" | "reports"
 const TABS: { id: Tab; label: string; short: string }[] = [
   { id: "workspace", label: "Workspace", short: "Work" },
   { id: "projects", label: "Projects", short: "Proj" },
   { id: "campaigns", label: "Campaigns", short: "Camp" },
   { id: "findings", label: "Findings", short: "Find" },
+  { id: "plan", label: "Plan", short: "Plan" },
   { id: "paths", label: "Attack paths", short: "Paths" },
   { id: "reports", label: "Reports", short: "Docs" },
 ]
@@ -104,13 +126,16 @@ type View =
   | { k: "login" }
   | { k: "workspace" }
   | { k: "projects" }
-  | { k: "campaigns"; project?: Project; purpose?: "paths" | "reports" }
+  | { k: "campaigns"; project?: Project; purpose?: "paths" | "reports" | "plan" }
   | { k: "campaign"; campaign: Campaign }
   | { k: "findings"; campaign?: Campaign }
   | { k: "finding"; id: string; title: string }
   | { k: "report"; campaign: Campaign }
   | { k: "paths"; campaign: Campaign }
   | { k: "path"; campaign: Campaign; path: AttackPath }
+  | { k: "plan"; campaign: Campaign }
+  | { k: "frameworks"; campaign: Campaign }
+  | { k: "profile"; project: Project }
 
 type Cell = { text: string; w?: number; fg?: string; bold?: boolean; right?: boolean }
 type Row = { key: string; header?: boolean; mark?: { glyph: string; fg: string }; cells: Cell[] }
@@ -118,6 +143,7 @@ type Row = { key: string; header?: boolean; mark?: { glyph: string; fg: string }
 function rootView(tab: Tab): View {
   if (tab === "paths") return { k: "campaigns", purpose: "paths" }
   if (tab === "reports") return { k: "campaigns", purpose: "reports" }
+  if (tab === "plan") return { k: "campaigns", purpose: "plan" }
   if (tab === "findings") return { k: "findings" }
   return { k: tab } as View
 }
@@ -156,6 +182,9 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
     if (v === "paths") return Math.min(l === "wide" ? 48 : 40, Math.floor(W() * 0.32))
     if (v === "findings") return l === "wide" ? Math.floor(W() * 0.5) : Math.floor(W() * 0.52)
     if (v === "campaign") return Math.min(52, Math.floor(W() * 0.4))
+    if (v === "plan") return l === "wide" ? Math.min(84, Math.floor(W() * 0.5)) : Math.floor(W() * 0.5)
+    if (v === "frameworks") return Math.min(l === "wide" ? 72 : 58, Math.floor(W() * 0.48))
+    if (v === "profile") return l === "wide" ? Math.min(96, Math.floor(W() * 0.6)) : Math.floor(W() * 0.58)
     return l === "wide" ? Math.min(84, Math.floor(W() * 0.5)) : Math.floor(W() * 0.5)
   })
   const [busy, setBusy] = createSignal(0)
@@ -178,6 +207,13 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
   const [matches, setMatches] = createSignal<number[]>([])
   const [section, setSection] = createSignal(0)
   const [step, setStep] = createSignal(0)
+  // executive views (documents computed by exec_core: the TUI only displays them)
+  type Loaded<T> = { doc?: T; error?: string }
+  const [execDocs, setExecDocs] = createSignal<Record<string, Loaded<Executive>>>({})
+  const [profiles, setProfiles] = createSignal<Record<string, Loaded<ProfileDoc>>>({})
+  const [plan, setPlan] = createSignal<TreatmentPlan>()
+  const [assessment, setAssessment] = createSignal<FrameworkAssessment>()
+  const [legendDoc, setLegendDoc] = createSignal<Legend>()
 
   let scroll: ScrollBoxRenderable | undefined
   const sectionNodes = new Map<number, BoxRenderable>()
@@ -256,6 +292,45 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
       case "path":
         await run(async () => setPaths(await src.attackPaths(v.campaign.id)))
         break
+      case "plan":
+        setPlan(undefined)
+        await run(async () => {
+          const [pl, pa] = await Promise.all([src.plan(v.campaign.id), src.attackPaths(v.campaign.id).catch(() => undefined)])
+          setPlan(pl)
+          if (pa) setPaths(pa)
+        })
+        break
+      case "frameworks":
+        setAssessment(undefined)
+        await run(async () => setAssessment(await src.frameworks(v.campaign.id)))
+        break
+      case "profile":
+        await run(async () => {
+          const d = await src.profile(v.project.id)
+          setProfiles((m) => ({ ...m, [v.project.id]: { doc: d } }))
+        })
+        break
+    }
+  }
+
+  // executive block of the campaign / project in context (lazy, cached; an older server simply has none)
+  async function loadExec(key: string) {
+    if (!key || execDocs()[key]?.doc) return
+    const [kind, id] = [key.slice(0, 1), key.slice(2)]
+    try {
+      const doc = kind === "p" ? await src.projectExecutive(id) : await src.executive(id)
+      setExecDocs((m) => ({ ...m, [key]: { doc } }))
+    } catch (e) {
+      setExecDocs((m) => ({ ...m, [key]: { error: errorText(e) } }))
+    }
+  }
+  async function loadProfile(id: string) {
+    if (!id || profiles()[id]?.doc) return
+    try {
+      const doc = await src.profile(id)
+      setProfiles((m) => ({ ...m, [id]: { doc } }))
+    } catch (e) {
+      setProfiles((m) => ({ ...m, [id]: { error: errorText(e) } }))
     }
   }
 
@@ -264,7 +339,8 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
       if (pathCounts()[c.id]) continue
       try {
         const doc = await src.attackPaths(c.id)
-        setPathCounts((m) => ({ ...m, [c.id]: (doc.summary ?? { paths_total: doc.paths?.length ?? 0 }) as Record<string, unknown> }))
+        const k = pathKindCounts(doc)
+        setPathCounts((m) => ({ ...m, [c.id]: { paths_total: k.total, evidence_backed: k.evidence_backed, possible: k.possible } }))
       } catch {
         /* the count stays unknown; the paths screen reports the error */
       }
@@ -292,7 +368,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
 
   function back() {
     if (api.ui.dialog.open) return api.ui.dialog.clear()
-    if (focus() === "detail" && (view().k === "findings" || view().k === "paths")) return setFocus("list")
+    if (focus() === "detail" && ["findings", "paths", "plan", "frameworks", "profile"].includes(view().k)) return setFocus("list")
     if (view().k === "login") return props.close()
     // at the root, esc does not leave: keys typed next would land in the chat prompt and reach the model
     if (stack().length <= 1) return api.ui.toast({ variant: "info", message: "Press q to return to the console." })
@@ -399,7 +475,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             mark: { glyph: "■", fg: sevHex(pa.criticality) },
             cells: [
               { text: clean(pa.title.replace(/\s*\((inferred|declared)\)\s*$/i, ""), 200), fg: p.ink },
-              ...(narrowList ? [] : [{ text: proof.label.split(" · ")[0], w: 8, fg: proof.proven ? p.alice : p.ink3, bold: proof.proven }]),
+              ...(narrowList ? [] : [{ text: proof.short, w: 8, fg: proof.proven ? p.alice : p.ink3, bold: proof.proven }]),
             ],
           }
         })
@@ -408,10 +484,78 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
           key: String(t.index),
           cells: [{ text: `${"  ".repeat(Math.max(0, t.level - 1))}${t.title}`, fg: t.level <= 2 ? p.ink : p.ink3, bold: t.level <= 1 }],
         }))
+      case "plan": {
+        const narrow = listWidth() < 76
+        // the status words are never cut: the column is as wide as the longest status of this plan
+        const sw = Math.min(28, Math.max(12, ...(plan()?.actions ?? []).map((a) => treatmentLabel(a).length)))
+        return [
+          { key: "h", header: true, cells: [{ text: "#", w: 3, right: true }, { text: "ACTION" }, ...(narrow ? [] : [{ text: "SEV", w: 4 }]), { text: "STATUS", w: sw }] },
+          ...(plan()?.actions ?? []).map((a) => ({
+            key: `a:${a.action_id}`,
+            mark: { glyph: treatmentMark(a.status, G.mark === "■"), fg: treatmentHex(a.status) },
+            cells: [
+              { text: num(a.priority), w: 3, right: true, fg: p.off },
+              { text: clean(a.title ?? a.action_id, 200), fg: p.ink },
+              ...(narrow ? [] : [{ text: severityTag(a.severity).trim(), w: 4, fg: p.ink3 }]),
+              { text: treatmentLabel(a), w: sw, fg: treatmentHex(a.status) },
+            ],
+          })),
+        ]
+      }
+      case "frameworks": {
+        const narrow = listWidth() < 56
+        return [
+          { key: "h", header: true, cells: [{ text: "FRAMEWORK" }, { text: "WEAK", w: 4, right: true }, { text: "NONE", w: 4, right: true }, { text: "N/T", w: 3, right: true }, ...(narrow ? [] : [{ text: "N/A", w: 3, right: true }])] },
+          ...(assessment()?.frameworks ?? []).map((f) => {
+            const c = (f.counts ?? {}) as Record<string, number>
+            const app = applicabilityOf(f)
+            return {
+              key: `w:${f.framework}`,
+              mark: { glyph: app.status === "declared_by_customer" ? G.node : app.status === "not_applicable_declared" ? "–" : G.nodeOpen, fg: p.ink3 },
+              cells: [
+                { text: clean(f.label ?? f.framework, 80), fg: p.ink },
+                { text: num(c.weakness_observed), w: 4, right: true, fg: Number(c.weakness_observed) ? p.ink : p.off },
+                { text: num(c.none_observed_in_tested_scope), w: 4, right: true, fg: p.ink3 },
+                { text: num(c.not_tested), w: 3, right: true, fg: p.ink3 },
+                ...(narrow ? [] : [{ text: num(c.not_technically_assessable), w: 3, right: true, fg: p.off }]),
+              ],
+            }
+          }),
+        ]
+      }
+      case "profile": {
+        const doc = profiles()[v.project.id]?.doc
+        const fields = Object.entries(doc?.profile?.fields ?? {})
+        const narrow = listWidth() < 60
+        const out: Row[] = []
+        const groups = [...PROFILE_GROUPS, ...new Set(fields.map(([, f]) => String(f.group ?? "other")).filter((g) => !PROFILE_GROUPS.includes(g)))]
+        for (const g of groups) {
+          const fs = fields.filter(([, f]) => String(f.group ?? "other") === g)
+          if (!fs.length) continue
+          out.push({ key: `h-${g}`, header: true, cells: [{ text: g.toUpperCase() }] })
+          for (const [name, f] of fs) {
+            const b = provenanceBadge(f.provenance, G.mark === "■")
+            out.push({
+              key: `f-${name}`,
+              mark: { glyph: b.mark, fg: f.provenance === "unknown" ? p.off : p.ink2 },
+              cells: [
+                { text: fieldLabel(name), w: narrow ? 18 : 24, fg: p.ink2 },
+                { text: profileValue(f.value), fg: f.value == null ? p.off : p.ink },
+                ...(narrow ? [] : [{ text: b.word, w: 12, fg: f.provenance === "unknown" ? p.off : p.ink3 }]),
+              ],
+            })
+          }
+        }
+        return out
+      }
       default:
         return []
     }
   })
+  const treatmentHex = (s: string | undefined) => {
+    const v = String(s ?? "")
+    return v === "proposed" || !v ? P().ink3 : v === "deferred" ? P().off : P().ink2
+  }
 
   function projectHeader(wide: boolean): Cell[] {
     return [
@@ -498,6 +642,28 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
   const selectedKey = () => selectedRow()?.key ?? ""
 
   createEffect(on(selectedKey, () => (view().k === "findings" || view().k === "paths") && focus() === "list" && setStep(0)))
+
+  // the executive block / profile of the row in context, fetched after the selection settles (cached)
+  let execTimer: ReturnType<typeof setTimeout> | undefined
+  const execKey = () => {
+    const v = view()
+    const key = selectedKey()
+    if (v.k === "workspace") return key.startsWith("c:") || key.startsWith("p:") ? key : campaigns()[0] ? `c:${campaigns()[0].id}` : ""
+    if (v.k === "campaigns") return key.startsWith("c:") ? key : ""
+    if (v.k === "projects") return key.startsWith("p:") ? key : ""
+    if (v.k === "campaign") return `c:${v.campaign.id}`
+    return ""
+  }
+  createEffect(
+    on(execKey, (key) => {
+      if (execTimer) clearTimeout(execTimer)
+      if (!key) return
+      execTimer = setTimeout(() => {
+        void loadExec(key)
+        if (key.startsWith("p:") && view().k === "projects") void loadProfile(key.slice(2))
+      }, 250)
+    }),
+  )
   createEffect(on(() => view().k, () => setFocus("list")))
 
   // keep the finding detail in sync with the list selection (cached: moving back and forth does not refetch)
@@ -529,6 +695,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
       if (!c) return
       if (v.k === "campaigns" && v.purpose === "paths") push({ k: "paths", campaign: c })
       else if (v.k === "campaigns" && v.purpose === "reports") push({ k: "report", campaign: c })
+      else if (v.k === "campaigns" && v.purpose === "plan") push({ k: "plan", campaign: c })
       else push({ k: "campaign", campaign: c })
     } else if (kind === "f") {
       if (v.k === "finding") return
@@ -554,8 +721,22 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
       push({ k: "path", campaign: v.campaign, path: pa }, cur())
     } else if (v.k === "report") {
       jumpSection(Number(row.key))
+    } else if (v.k === "plan") {
+      if (focus() === "detail") {
+        const a = selectedAction()
+        const fid = a?.head_finding_id ?? a?.finding_ids?.[0]
+        if (!fid) return
+        setDetail(undefined)
+        return push({ k: "finding", id: String(fid), title: clean(a?.title ?? fid, 80) })
+      }
+      scroll?.scrollTo?.(0)
+      setFocus("detail")
+    } else if (v.k === "frameworks" || v.k === "profile") {
+      scroll?.scrollTo?.(0)
+      setFocus(focus() === "detail" ? "list" : "detail")
     }
   }
+  const selectedAction = () => plan()?.actions?.find((a) => `a:${a.action_id}` === selectedKey())
 
   function openStep() {
     const pa = currentPath()
@@ -569,7 +750,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
   const scrolling = () => ["finding", "report"].includes(view().k)
   function move(delta: number) {
     const v = view()
-    if (v.k === "findings" && focus() === "detail") return scroll?.scrollBy(delta)
+    if (["findings", "plan", "frameworks", "profile"].includes(v.k) && focus() === "detail") return scroll?.scrollBy(delta)
     if (v.k === "path" || (v.k === "paths" && focus() === "detail")) {
       const n = currentPath()?.steps?.length ?? 0
       if (n) setStep(Math.min(n - 1, Math.max(0, step() + delta)))
@@ -714,6 +895,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
   }
   function switchFocus() {
     const k = view().k
+    if (k === "plan" || k === "frameworks" || k === "profile") return setFocus((f) => (f === "list" ? "detail" : "list"))
     if ((k === "findings" || k === "paths") && inline()) {
       if (focus() === "list" && k === "findings") return open()
       setFocus((f) => (f === "list" ? "detail" : "list"))
@@ -722,11 +904,58 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
   // the campaign in context (selected on the workspace or a list, or the one being viewed): F / R / P open it directly
   function contextCampaign(): Campaign | undefined {
     const v = view()
+    if (v.k === "plan" || v.k === "frameworks") return v.campaign
     if (v.k === "campaign" || v.k === "report" || v.k === "paths" || v.k === "path") return campaign() ?? (v as any).campaign
     const key = selectedKey()
     if (key.startsWith("c:")) return campaigns().find((c) => `c:${c.id}` === key)
     if (key.startsWith("p:")) return campaigns().find((c) => `p:${c.project_id}` === key)
     return campaigns()[0]
+  }
+  // the project in context: the selected project row, the project of the campaign in context, or the open one
+  function contextProject(): Project | undefined {
+    const v = view()
+    if (v.k === "profile") return v.project
+    if (v.k === "campaigns" && v.project) return v.project
+    const key = selectedKey()
+    if (key.startsWith("p:")) return projects().find((p) => `p:${p.id}` === key)
+    return projectOf(contextCampaign())
+  }
+  function quickExec(target: "plan" | "frameworks" | "profile") {
+    if (target === "profile") {
+      const pr = contextProject()
+      if (!pr) return api.ui.toast({ variant: "info", message: "No project in context." })
+      return push({ k: "profile", project: pr })
+    }
+    const c = contextCampaign()
+    if (!c) return api.ui.toast({ variant: "info", message: "No campaign yet." })
+    push({ k: target, campaign: c } as View)
+  }
+  async function showLegend() {
+    if (!legendDoc()) {
+      try {
+        setLegendDoc(await src.legend())
+      } catch {
+        // an older server: the words of the executive block in context, else the built-in labels
+        setLegendDoc(Object.values(execDocs()).find((x) => x.doc?.legend)?.doc?.legend as Legend | undefined)
+      }
+    }
+    api.ui.dialog.replace(() => (
+      <api.ui.DialogAlert
+        title="Legend · Darkmoon vocabulary"
+        message={legendText()}
+        onConfirm={() => api.ui.dialog.clear()}
+      />
+    ))
+    api.ui.dialog.setSize(legendSize())
+  }
+  // the dialog cannot scroll: the full legend (with meanings) only when it fits, else the labels only
+  const legendSize = () => (W() >= 120 ? "xlarge" : W() >= 92 ? "large" : "medium")
+  function legendText() {
+    const inner = ({ xlarge: 116, large: 88, medium: 60 } as const)[legendSize()] - 6
+    const tail = ["", "The same words on the dashboard, in the report and here."]
+    const full = [...legendLines(legendDoc(), G.mark === "■"), ...tail]
+    const rows = full.reduce((n, l) => n + Math.max(1, Math.ceil(l.length / inner)), 0)
+    return (rows <= dims().height - 9 ? full : [...legendLines(legendDoc(), G.mark === "■", true), ...tail]).join("\n")
   }
   function quick(target: "findings" | "report" | "paths") {
     const c = contextCampaign()
@@ -740,7 +969,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
       <api.ui.DialogAlert
         title="Darkmoon explorer"
         message={[
-          "1–6      sections",
+          "1–7      sections (5 = Prioritized Treatment Plan)",
           "↑↓ j k   move / scroll",
           "enter    open",
           "esc      back",
@@ -751,6 +980,8 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
           "c        clear filters",
           "tab      switch pane (list / inspector, path)",
           "F R P    findings, report, attack paths of the campaign",
+          "T X A    treatment plan, frameworks, application profile",
+          "L        legend (paths, evidence status, treatment, score)",
           "t        contents (report) / target filter",
           "] [      next / previous page, finding or chapter",
           "g        go to chapter",
@@ -795,6 +1026,10 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             { name: "dmx.cited", title: "Cited findings / open findings", run: () => (view().k === "report" ? citedPicker() : quick("findings")) },
             { name: "dmx.refresh", title: "Refresh", run: () => (src.invalidate(), setPathCounts({}), void load(view())) },
             { name: "dmx.help", title: "Keys", run: help },
+            { name: "dmx.plan", title: "Prioritized Treatment Plan", run: () => quickExec("plan") },
+            { name: "dmx.frameworks", title: "Frameworks (technical assessment)", run: () => quickExec("frameworks") },
+            { name: "dmx.profile", title: "Application profile", run: () => quickExec("profile") },
+            { name: "dmx.legend", title: "Legend", run: () => void showLegend() },
             ...TABS.map((t, i) => ({ name: `dmx.tab${i + 1}`, title: t.label, run: () => goTab(t.id) })),
           ],
           bindings: [
@@ -822,6 +1057,10 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             { key: "shift+f", cmd: "dmx.cited", desc: "Cited" },
             { key: "r", cmd: "dmx.refresh", desc: "Refresh" },
             { key: "?,shift+/", cmd: "dmx.help", desc: "Keys" },
+            { key: "shift+t", cmd: "dmx.plan", desc: "Plan" },
+            { key: "shift+x", cmd: "dmx.frameworks", desc: "Frameworks" },
+            { key: "shift+a", cmd: "dmx.profile", desc: "Profile" },
+            { key: "shift+l", cmd: "dmx.legend", desc: "Legend" },
             ...TABS.map((t, i) => ({ key: String(i + 1), cmd: `dmx.tab${i + 1}`, desc: t.label })),
           ],
         }
@@ -877,13 +1116,16 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
   const crumbs = createMemo(() =>
     stack()
       .map((v) =>
-        v.k === "campaigns" ? (v.project ? clean(v.project.name, 28) : v.purpose === "paths" ? "Attack paths" : v.purpose === "reports" ? "Reports" : "Campaigns")
+        v.k === "campaigns" ? (v.project ? clean(v.project.name, 28) : v.purpose === "paths" ? "Attack paths" : v.purpose === "reports" ? "Reports" : v.purpose === "plan" ? "Prioritized Treatment Plan" : "Campaigns")
         : v.k === "campaign" ? clean(v.campaign.id, 28)
         : v.k === "findings" ? (v.campaign ? "Findings" : "All findings")
         : v.k === "finding" ? clean(v.title, 40)
         : v.k === "report" ? `Report · ${clean(v.campaign.id, 24)}`
         : v.k === "paths" ? `Paths · ${clean(v.campaign.id, 24)}`
         : v.k === "path" ? clean(v.path.title, 40)
+        : v.k === "plan" ? `Plan · ${shortCampaign(v.campaign.id)}`
+        : v.k === "frameworks" ? `Frameworks · ${shortCampaign(v.campaign.id)}`
+        : v.k === "profile" ? `Profile · ${clean(v.project.name, 28)}`
         : v.k === "workspace" ? "Workspace"
         : v.k === "projects" ? "Projects"
         : "",
@@ -896,7 +1138,11 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
   // ---- chrome: section bar, breadcrumb, key hints
 
   const TopBar = () => {
-    const short = () => W() < 120
+    const short = () => W() < 130
+    const digitsOnly = () => W() < 100
+    // the tabs never shrink: a long status (an error) is cut instead
+    const tabsW = () =>
+      view().k === "login" || W() < 80 ? 0 : TABS.reduce((n, t) => n + (digitsOnly() && tab() !== t.id ? 3 : 4 + (short() ? t.short : t.label).length), 0)
     return (
       <box flexDirection="row" height={1} backgroundColor={C(P().surface)} paddingLeft={2} paddingRight={2}>
         <T fg={P().alice} bold>DARKMOON</T>
@@ -906,16 +1152,18 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             {(t, i) => {
               const active = () => tab() === t.id
               return (
-                <box flexDirection="row" backgroundColor={active() ? C(P().hover) : undefined} paddingLeft={1} paddingRight={1}>
+                <box flexDirection="row" flexShrink={0} backgroundColor={active() ? C(P().hover) : undefined} paddingLeft={1} paddingRight={1}>
                   <T fg={active() ? P().jordy : P().off}>{`${i() + 1}`}</T>
-                  <T fg={active() ? P().ink : P().ink3} bold={active()}>{` ${short() ? t.short : t.label}`}</T>
+                  <Show when={active() || !digitsOnly()}>
+                    <T fg={active() ? P().ink : P().ink3} bold={active()}>{` ${short() ? t.short : t.label}`}</T>
+                  </Show>
                 </box>
               )
             }}
           </For>
         </Show>
         <box flexGrow={1} />
-        <T fg={error() ? P().criticalInk : busy() ? P().jordy : P().off}>{status()}</T>
+        <T fg={error() ? P().criticalInk : busy() ? P().jordy : P().off}>{fit(status(), Math.max(10, W() - 17 - tabsW()))}</T>
       </box>
     )
   }
@@ -939,8 +1187,14 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
         ? [["↑↓", "node"], ["enter", "open finding"], ["tab", "paths"], ["esc", "paths"], ["?", "keys"]]
         : [["↑↓", "path"], ["enter", "walk"], ["tab", "walk"], ["esc", "back"], ["?", "keys"]]
     if (v === "path") return [["↑↓", "node"], ["enter", "open finding"], ["esc", "paths"], ["?", "keys"]]
-    if (v === "workspace" || v === "campaign") return [["↑↓", "move"], ["enter", "open"], ["F", "findings"], ["R", "report"], ["P", "paths"], ["1–6", "sections"], ["q", "console"], ["?", "keys"]]
-    return [["↑↓", "move"], ["enter", "open"], ["/", "search"], ["F R P", "open"], ["1–6", "sections"], ["esc", "back"], ["?", "keys"]]
+    if (v === "plan")
+      return f === "detail"
+        ? [["↑↓", "scroll"], ["enter", "finding"], ["esc", "actions"], ["L", "legend"], ["?", "keys"]]
+        : [["↑↓", "move"], ["enter", "inspect"], ["X", "frameworks"], ["L", "legend"], ["esc", "back"], ["?", "keys"]]
+    if (v === "frameworks" || v === "profile")
+      return f === "detail" ? [["↑↓", "scroll"], ["esc", "list"], ["L", "legend"], ["?", "keys"]] : [["↑↓", "move"], ["enter", "details"], ["T", "plan"], ["L", "legend"], ["esc", "back"], ["?", "keys"]]
+    if (v === "workspace" || v === "campaign") return [["↑↓", "move"], ["enter", "open"], ["T", "plan"], ["X", "frameworks"], ["L", "legend"], ["F R P", "open"], ["1–7", "sections"], ["q", "console"], ["?", "keys"]]
+    return [["↑↓", "move"], ["enter", "open"], ["/", "search"], ["T X A", "exec"], ["F R P", "open"], ["1–7", "sections"], ["esc", "back"], ["?", "keys"]]
   })
   const Footer = () => (
     <box flexDirection="row" height={1} backgroundColor={C(P().surface)} paddingLeft={2} paddingRight={1} overflow="hidden">
@@ -956,10 +1210,11 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
   )
 
   // ---- pane: a title strip on the surface step (no border); the focused pane carries the accent bar and full ink
-  const Pane = (p: { title: string; meta?: string; focused?: boolean; width?: number; grow?: boolean; children?: JSX.Element; pad?: number }) => (
+  const Pane = (p: { title: string; meta?: string; focused?: boolean; width?: number; height?: number; grow?: boolean; children?: JSX.Element; pad?: number }) => (
     <box
       flexDirection="column"
       width={p.width}
+      height={p.height}
       flexGrow={p.grow ? 1 : 0}
       flexShrink={p.grow ? 1 : 0}
       minWidth={0}
@@ -1197,9 +1452,10 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
     return (
       <box flexDirection="column">
         <box flexDirection="row" height={1}>
-          <T fg={proof().proven ? pal.alice : pal.ink3} bold>{proof().label}</T>
+          <T fg={proof().proven ? pal.alice : pal.ink3} bold>{`${proof().proven ? G.proven : G.hyp} ${proof().label}`}</T>
           <T fg={pal.off}>{`   ${steps().length} steps  ·  criticality ${p.path.criticality ?? "—"}`}</T>
         </box>
+        <T fg={pal.off} wrap>{`${proof().why}  ·  L legend`}</T>
         <box height={1} />
         <For each={steps()}>
           {(s: PathStep, i) => {
@@ -1240,7 +1496,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
                 <Show when={i() < steps().length - 1}>
                   <box flexDirection="row" height={1}>
                     <T fg={proof().proven ? pal.alice : pal.off}>{`${" ".repeat(Math.floor(inner() / 2) + 1)}${proof().proven ? G.proven : G.hyp}`}</T>
-                    <T fg={pal.off}>{proof().proven ? "  corroborated" : "  hypothesis"}</T>
+                    <T fg={pal.off}>{proof().proven ? "  evidence-backed" : "  possible · not observed"}</T>
                   </box>
                   <T fg={proof().proven ? pal.alice : pal.off}>{`${" ".repeat(Math.floor(inner() / 2) + 1)}${G.arrow}`}</T>
                 </Show>
@@ -1287,9 +1543,9 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             </box>
           </Show>
           <box flexDirection="column">
-            <Label>PROOF</Label>
-            <T fg={pathProof(p.path).proven ? pal.alice : pal.ink3} bold>{pathProof(p.path).label}</T>
-            <T fg={pal.off} wrap>Only the server marks a path proven. Declared and inferred paths stay hypotheses.</T>
+            <Label>PATH KIND</Label>
+            <T fg={pathProof(p.path).proven ? pal.alice : pal.ink3} bold wrap>{pathProof(p.path).label}</T>
+            <T fg={pal.off} wrap>{`${pathProof(p.path).why}. Only evidence the server recorded makes a path evidence-backed; declared and inferred paths stay possible.`}</T>
           </box>
         </box>
       </Show>
@@ -1307,20 +1563,20 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
     const tileW = () => Math.max(14, Math.floor((p.width - 2) / 4))
     return (
       <box flexDirection="column" gap={1}>
-        <box flexDirection="column">
+        <box flexDirection="column" flexShrink={0}>
           <box flexDirection="row" height={1}>
             <T fg={statusHex(p.c.status)}>{`${statusGlyph(p.c.status)}  `}</T>
             <T fg={pal.ink} bold>{clean(p.c.id, 80)}</T>
           </box>
           <T fg={pal.ink3} wrap>{[campaignTarget(p.c), shortDate(p.c.date), p.c.status, durationText((p.c as any).duration_seconds)].filter((x) => x && x !== "—").join("  ·  ")}</T>
         </box>
-        <box flexDirection="row">
+        <box flexDirection="row" flexShrink={0}>
           <Tile label="FINDINGS" value={num(list().length || (counts() as any).total_findings)} width={tileW()} sub={<SevStrip counts={counts()} width={tileW() - 4} />} />
           <Tile label="EXPLOITED" value={num(counts().exploited)} width={tileW()} sub={<T fg={pal.off}>{`of ${num(list().length || (counts() as any).total_findings)}`}</T>} />
           <Tile label="RISK" value={String(p.c.overall_risk ?? "—")} accent={p.c.overall_risk ? sevHex(p.c.overall_risk) : pal.off} width={tileW()} sub={<T fg={pal.off}>{p.c.report_path ? "report ✓" : "no report"}</T>} />
-          <Tile label="PATHS" value={pc() ? num(pc()!.paths_total) : "…"} width={tileW()} sub={<T fg={pal.off}>{pc() ? `${num(pc()!.proven_paths)} proven` : ""}</T>} />
+          <Tile label="PATHS" value={pc() ? num(pc()!.paths_total) : "…"} width={tileW()} sub={<T fg={pal.off}>{pc() ? fit(`${num(pc()!.evidence_backed)} ${tileW() - 3 >= 18 ? "evidence-backed" : "evidence"}`, tileW() - 3) : ""}</T>} />
         </box>
-        <box flexDirection="column">
+        <box flexDirection="column" flexShrink={0}>
           <Label>SEVERITY</Label>
           <SevRows counts={counts()} width={Math.min(p.width, 70)} />
         </box>
@@ -1371,6 +1627,99 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
     )
   }
 
+  // ---- executive block (H8): grade or « Not rated » / « Limited test », one coverage sentence, the first three
+  //      actions of the Prioritized Treatment Plan, one collapsed regulatory line. Every word comes from exec_core.
+  const ExecBlock = (p: { k: string; width: number; dense?: boolean }) => {
+    const pal = P()
+    const got = () => execDocs()[p.k]
+    const d = () => got()?.doc
+    const head = () => scoreHeadline(d()?.score)
+    const statusMark = () => (head().rated ? G.node : head().limited ? (G.mark === "■" ? "◐" : "+") : G.nodeOpen)
+    const top = () => d()?.treatment_plan?.top_actions ?? []
+    const total = () => Number(d()?.treatment_plan?.actions_total ?? 0)
+    const reg = () => d()?.frameworks?.summary_line
+    const w = () => Math.max(20, p.width)
+    const project = () => p.k.startsWith("p:")
+    const latest = () => d()?.latest_campaign as Record<string, any> | null | undefined
+    const coverage = () => {
+      const c = clean(d()?.score?.coverage_sentence ?? "", 400)
+      return !c ? "" : /^coverage\b/i.test(c) ? c : `Coverage: ${c}`
+    }
+    const sub = () => (head().rated || head().limited ? clean(d()?.score?.grade_meaning ?? "", 200) : scoreWhy(d()?.score))
+    return (
+      <Show
+        when={d()}
+        fallback={<T fg={got()?.error ? pal.ink3 : pal.off} wrap>{got()?.error ? `Executive view not available from this source (${fit(got()!.error!, 60)}).` : "Loading the executive view…"}</T>}
+      >
+        <box flexDirection="column">
+          <box flexDirection="row" height={1} flexShrink={0}>
+            <T fg={pal.ink} bold>{head().big}</T>
+            <Show when={head().rated || head().limited}>
+              <T fg={pal.off}>{"   "}</T>
+              <T fg={head().rated ? pal.ink2 : pal.ink3}>{`${statusMark()} ${head().status}`}</T>
+            </Show>
+            <Show when={p.dense && sub()}>
+              <T fg={pal.off}>{`  ·  ${fit(sub(), Math.max(0, w() - head().big.length - (head().rated || head().limited ? head().status.length + 5 : 0) - 6))}`}</T>
+            </Show>
+          </box>
+          <Show when={!p.dense && sub()}>
+            <T fg={pal.ink3}>{fit(sub(), w())}</T>
+          </Show>
+          <Show when={coverage()} fallback={<T fg={pal.off}>Coverage not recorded.</T>}>
+            <Show when={p.dense} fallback={<For each={wrapLines(coverage(), w(), 2)}>{(l) => <T fg={pal.ink2}>{l}</T>}</For>}>
+              <T fg={pal.ink2}>{fit(coverage(), w())}</T>
+            </Show>
+          </Show>
+          <Show when={project() && !p.dense}>
+            <T fg={pal.off}>
+              {fit(
+                d()?.reference_campaign_id
+                  ? `Reference: ${shortCampaign(String(d()!.reference_campaign_id))} of ${shortDate(String(d()!.reference_campaign_date ?? "")).slice(0, 10)}${latest() && latest()!.campaign_id !== d()!.reference_campaign_id ? ` · latest ${shortCampaign(String(latest()!.campaign_id))}: ${clean(latest()!.status_label, 20)}` : ""}`
+                  : "No rated full campaign of this target yet.",
+                w(),
+              )}
+            </T>
+          </Show>
+          <Show when={!p.dense}>
+            <box height={1} />
+          </Show>
+          <Show when={d()?.treatment_plan} fallback={<T fg={pal.off}>{d()?.campaign_status === "running" ? "Plan available when the campaign ends." : "No treatment plan."}</T>}>
+            <Show when={!p.dense}>
+              <Label>{`PRIORITIZED TREATMENT PLAN · ${total()} action${total() === 1 ? "" : "s"}`}</Label>
+            </Show>
+            <Show when={top().length} fallback={<T fg={pal.off}>No open finding to treat.</T>}>
+              <For each={top()}>
+                {(a: ActionRow) => {
+                  const st = () => treatmentLabel(a)
+                  // the status words are never cut (« Applied — not verified » must read in full)
+                  const sw = () => Math.min(40, Math.max(8, ...top().map((x) => treatmentLabel(x).length)))
+                  return (
+                    <box flexDirection="row" height={1}>
+                      <T fg={pal.off}>{`${String(a.priority ?? "").padStart(2)} `}</T>
+                      <T fg={treatmentHex(a.status)}>{`${treatmentMark(a.status, G.mark === "■")} `}</T>
+                      <T fg={pal.ink}>{fit(clean(a.title ?? a.action_id, 200), Math.max(6, w() - sw() - 7))}</T>
+                      <box flexGrow={1} />
+                      <T fg={treatmentHex(a.status)}>{fit(st(), sw())}</T>
+                    </box>
+                  )
+                }}
+              </For>
+            </Show>
+          </Show>
+          <Show when={!project()}>
+            <box flexDirection="row" height={1}>
+              <T fg={pal.jordy}>{`${G.mark === "■" ? "▸" : ">"} `}</T>
+              <T fg={pal.off}>{"Frameworks  "}</T>
+              <T fg={pal.ink3}>{fit(reg() ? clean(reg(), 400).replace(/^Technical findings relevant to:\s*/, "") : "No framework assessment.", Math.max(4, w() - 18))}</T>
+              <box flexGrow={1} />
+              <T fg={pal.jordy}>X</T>
+            </box>
+          </Show>
+        </box>
+      </Show>
+    )
+  }
+
   // ---- screens
 
   const paneH = () => bodyH() - 3
@@ -1383,16 +1732,31 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
     const contextC = () => contextCampaign() ?? latestCampaign()
     const allPaths = () =>
       Object.values(pathCounts()).reduce(
-        (a, s: any) => ({ t: a.t + (Number(s.paths_total) || 0), p: a.p + (Number(s.proven_paths) || 0), d: a.d + (Number(s.declared_paths) || 0), i: a.i + (Number(s.inferred_paths) || 0) }),
-        { t: 0, p: 0, d: 0, i: 0 },
+        (a, s: any) => ({ t: a.t + (Number(s.paths_total) || 0), e: a.e + (Number(s.evidence_backed) || 0), p: a.p + (Number(s.possible) || 0) }),
+        { t: 0, e: 0, p: 0 },
       )
     const leftW = () => (layout() === "single" || layout() === "compact" ? W() - 2 : Math.floor((W() - 3) * 0.48))
     const rightW = () => W() - 3 - leftW()
     const tileW = () => Math.max(16, Math.floor((W() - 6) / 4))
     const activity = () => activityOf(campaigns(), all(), 8)
     const two = () => layout() === "wide" || layout() === "split"
+    const ek = () => execKey()
+    const execTitle = () => {
+      const k = ek()
+      if (k.startsWith("p:")) return `EXECUTIVE · ${clean(projects().find((x) => x.id === k.slice(2))?.name ?? k.slice(2), 28)}`
+      return k ? `EXECUTIVE · campaign ${shortCampaign(k.slice(2))}` : "EXECUTIVE"
+    }
+    const execH = () => (ek().startsWith("p:") ? 12 : 12)
     return (
       <box flexDirection="column" flexGrow={1} minHeight={0}>
+        <Show when={!two()}>
+          <box flexDirection="column" paddingLeft={1} paddingRight={1} flexShrink={0}>
+            <Pane title={execTitle()} meta="T X L" width={W() - 2} height={8}>
+              <Show when={ek()} keyed>{(k) => <ExecBlock k={k} width={W() - 6} dense />}</Show>
+            </Pane>
+          </box>
+        </Show>
+        <Show when={two()}>
         <box flexDirection="row" paddingLeft={2} paddingTop={1} height={5} flexShrink={0}>
           <Tile label="FINDINGS" value={num(all().length)} width={tileW()} sub={<SevStrip counts={c()} width={tileW() - 4} />} />
           <Tile
@@ -1408,12 +1772,13 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             }
           />
           <Tile label="CRITICAL" value={num(c().critical)} accent={c().critical ? pal.criticalInk : pal.ink} width={tileW()} sub={<T fg={pal.off}>{`${num(c().high)} high  ·  ${num(c().medium)} medium`}</T>} />
-          <Tile label="ATTACK PATHS" value={num(allPaths().t)} width={tileW()} sub={<T fg={pal.off}>{fit(`${allPaths().p} proven · ${allPaths().d} decl. · ${allPaths().i} inferred`, tileW() - 3)}</T>} />
+          <Tile label="ATTACK PATHS" value={num(allPaths().t)} width={tileW()} sub={<T fg={pal.off}>{fit(tileW() >= 36 ? `${allPaths().e} evidence-backed · ${allPaths().p} possible` : `${allPaths().e} evidence-backed`, tileW() - 3)}</T>} />
         </box>
+        </Show>
         <box flexDirection="row" flexGrow={1} minHeight={0} gap={1} paddingLeft={1} paddingRight={1}>
           <box flexDirection="column" width={leftW()} flexShrink={0} minHeight={0} gap={1}>
             <Pane title="PROJECTS & CAMPAIGNS" meta={`${projects().length} · ${campaigns().length}`} focused width={leftW()} grow>
-              <ListBody width={leftW() - 4} height={two() ? Math.floor(paneH() * 0.55) : paneH() - 6} focused />
+              <ListBody width={leftW() - 4} height={two() ? Math.floor(paneH() * 0.55) : paneH() - 8} focused />
             </Pane>
             <Show when={two()}>
               <Pane title="ACTIVITY" meta="newest first" width={leftW()} grow>
@@ -1429,10 +1794,17 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
               </Pane>
             </Show>
           </box>
-          <Show when={two() && contextC()}>
-            <Pane title="CAMPAIGN" meta="F findings  R report  P paths" width={rightW()} grow>
-              <CampaignBoard c={contextC()!} width={rightW() - 3} />
-            </Pane>
+          <Show when={two()}>
+            <box flexDirection="column" width={rightW()} flexGrow={1} minHeight={0} gap={1}>
+              <Pane title={execTitle()} meta={rightW() >= 70 ? "T plan  X frameworks  L legend" : "T X L"} width={rightW()} height={execH()}>
+                <Show when={ek()} keyed>{(k) => <ExecBlock k={k} width={rightW() - 4} />}</Show>
+              </Pane>
+              <Show when={contextC()}>
+                <Pane title="CAMPAIGN" meta="F findings  R report  P paths" width={rightW()} grow>
+                  <CampaignBoard c={contextC()!} width={rightW() - 3} compact={bodyH() - 5 - execH() < 32} />
+                </Pane>
+              </Show>
+            </box>
           </Show>
         </box>
       </box>
@@ -1609,13 +1981,13 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
     const lw = () => (inline() ? listWidth() : W() - 2)
     const nw = () => (layout() === "wide" ? 40 : 0)
     const cw = () => W() - 3 - lw() - (nw() ? nw() + 1 : 0)
-    const sum = () => (paths()?.summary ?? {}) as Record<string, number>
+    const kinds = () => pathKindCounts(paths())
     const pa = () => currentPath()
     return (
       <box flexDirection="row" flexGrow={1} minHeight={0} gap={1} paddingLeft={1} paddingRight={1} paddingTop={1}>
         <Pane
           title="PATHS"
-          meta={`${num(sum().proven_paths)} proven · ${num(sum().declared_paths)} decl · ${num(sum().inferred_paths)} inf`}
+          meta={fitMeta(lw() - 12, [`${num(kinds().evidence_backed)} evidence-backed · ${num(kinds().possible)} possible`, `${num(kinds().evidence_backed)} evid. · ${num(kinds().possible)} poss.`, `${num(kinds().total)}`])}
           focused={focus() === "list"}
           width={lw()}
         >
@@ -1666,6 +2038,338 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
     )
   }
 
+
+  // ---- Prioritized Treatment Plan: actions (list) + the selected action (inspector)
+  const ActionDoc = (p: { a: ActionRow; width: number }) => {
+    const pal = P()
+    const a = p.a as Record<string, any>
+    const pl = plan()
+    const declared = (x: any) => (x && x.value != null && x.value !== "unknown" ? `${profileValue(x.value)}${x.provenance ? ` (${x.provenance === "declared" ? "declared" : clean(x.provenance, 20)})` : ""}` : "")
+    const byId = new Map((paths()?.paths ?? []).map((x) => [x.id, x]))
+    const rel: string[] = a.related_attack_paths ?? []
+    const eb = rel.filter((id) => pathKind(byId.get(id)) === "evidence_backed").length
+    const hist = [...(a.history ?? [])].reverse().slice(0, 4)
+    const kv = (k: string, v: unknown) =>
+      v ? (
+        <box flexDirection="row" flexShrink={0}>
+          <box width={14} flexShrink={0}>
+            <T fg={pal.off}>{k}</T>
+          </box>
+          <T fg={pal.ink2} wrap grow>{clean(String(v), 400)}</T>
+        </box>
+      ) : null
+    return (
+      <box flexDirection="column" gap={1}>
+        <box flexDirection="column">
+          <box flexDirection="row" height={1}>
+            <T fg={sevHex(a.severity)}>{`${G.mark} `}</T>
+            <T fg={pal.ink2}>{`#${num(a.priority)} of ${num(pl?.actions?.length)}  ·  ${String(a.severity ?? "info").toUpperCase()}  ·  ${proofTag(a.proof)}`}</T>
+          </box>
+          <T fg={pal.ink} bold wrap>{clean(a.title ?? a.action_id, 300)}</T>
+        </box>
+        <box flexDirection="column">
+          <box flexDirection="row" height={1}>
+            <box width={14} flexShrink={0}><T fg={pal.off}>Status</T></box>
+            <T fg={pal.ink}>{`${treatmentMark(a.status, G.mark === "■")} ${treatmentLabel(a)}`}</T>
+          </box>
+          {kv("", a.status_text && a.status_text !== treatmentLabel(a) ? a.status_text : "")}
+          {kv("Verification", a.status === "applied" ? "Declared by the owner, not verified: only a completed retest can verify it." : pl?.verification_note)}
+          {kv("Impact", a.expected_impact?.text)}
+          {kv("Treatment", a.treatment_type ? `${clean(a.treatment_type.label, 40)} · ${clean(a.treatment_type.basis, 120)}` : "")}
+          {kv("Owner", declared(a.owner))}
+          {kv("Due date", declared(a.due_date))}
+          {kv("Interruption", declared(a.service_interruption_risk))}
+          {kv("Accepted until", declared(a.risk_accepted_until))}
+          {kv("Last retest", a.last_retest ? a.last_retest.text : "")}
+        </box>
+        <Show when={a.explanation}>
+          <box flexDirection="column">
+            <Label>WHY THIS RANK</Label>
+            <T fg={pal.ink3} wrap>{clean(a.explanation, 600)}</T>
+          </box>
+        </Show>
+        <box flexDirection="column">
+          <Label>{`FINDINGS · ${num((a.finding_ids ?? []).length)}`}</Label>
+          <T fg={pal.ink2} wrap>{fit((a.finding_ids ?? []).map((x: string) => clean(x, 40)).join(", "), 600)}</T>
+          <T fg={pal.jordy}>enter  open the first finding</T>
+        </box>
+        <box flexDirection="column">
+          <Label>ATTACK PATHS</Label>
+          <T fg={pal.ink2} wrap>
+            {rel.length
+              ? `${rel.length} related: ${eb} ${PATH_KIND_LABEL.evidence_backed} · ${rel.length - eb} ${PATH_KIND_LABEL.possible}${(a.interrupts_attack_paths ?? []).length ? ` · interrupts ${(a.interrupts_attack_paths ?? []).length}` : ""}`
+              : "None related."}
+          </T>
+        </box>
+        <Show when={(a.related_controls ?? []).length}>
+          <box flexDirection="column">
+            <Label>FRAMEWORK CONTROLS</Label>
+            <T fg={pal.ink2} wrap>{(a.related_controls ?? []).map((x: string) => clean(x, 40)).join(", ")}</T>
+            <T fg={pal.off} wrap>{clean(a.related_controls_note ?? "", 300)}</T>
+          </box>
+        </Show>
+        <Show when={a.recommended_treatment?.text}>
+          <box flexDirection="column">
+            <Label>RECOMMENDED</Label>
+            <T fg={pal.off} wrap>{clean(a.recommended_treatment?.label ?? "Quoted as written, not verified", 200)}</T>
+            <T fg={pal.ink2} wrap>{clean(a.recommended_treatment?.text, 1200)}</T>
+          </box>
+        </Show>
+        <Show when={hist.length}>
+          <box flexDirection="column">
+            <Label>HISTORY · newest first</Label>
+            <For each={hist}>
+              {(h: any) => (
+                <T fg={pal.ink3} wrap>
+                  {fit(`${shortDate(h.at)}  ${clean(h.from ?? "", 24)}${h.from ? " → " : ""}${clean(h.to ?? h.status ?? "", 24)}  ${clean(h.by_role ?? "", 40)}${h.note ? `  · ${clean(h.note, 120)}` : ""}`, 400)}
+                </T>
+              )}
+            </For>
+          </box>
+        </Show>
+      </box>
+    )
+  }
+
+  const PlanScreen = () => {
+    const pal = P()
+    const lw = () => (inline() ? listWidth() : W() - 2)
+    const rw = () => W() - 3 - lw()
+    const pl = () => plan()
+    // counts by status: the server's labels (Pro sends ``statuses``; Community labels come with the actions)
+    const counts = () => {
+      const by = ((pl()?.summary as any)?.by_status ?? {}) as Record<string, number>
+      const labels = new Map<string, string>()
+      for (const st of pl()?.statuses ?? []) labels.set(st.value, st.label)
+      for (const a of pl()?.actions ?? []) if (a.status && !labels.has(a.status)) labels.set(a.status, treatmentLabel(a))
+      return Object.entries(by)
+        .filter(([, n]) => Number(n) > 0)
+        .map(([value, n]) => ({ value, label: labels.get(value) ?? value.replace(/_/g, " "), n: Number(n) }))
+    }
+    const showList = () => inline() || focus() === "list"
+    const showDetail = () => inline() || focus() === "detail"
+    const a = () => selectedAction()
+    return (
+      <box flexDirection="column" flexGrow={1} minHeight={0}>
+        <box flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} flexShrink={0}>
+          <box flexDirection="row" height={1}>
+            <T fg={pal.alice} bold>{clean(pl()?.label ?? "Prioritized Treatment Plan", 60)}</T>
+            <T fg={pal.off}>{fit(`  ·  ${num(pl()?.actions?.length)} actions  ·  ${clean(pl()?.basis_label ?? "", 60)}`, Math.max(0, W() - 34))}</T>
+          </box>
+          <T fg={pal.ink3}>{fit(clean(pl()?.definition ?? (busy() ? "Loading…" : ""), 400), W() - 4)}</T>
+          <T fg={pal.ink2}>{fit(counts().map((c) => `${c.n} ${clean(c.label, 40)}`).join("  ·  ") || " ", W() - 4)}</T>
+        </box>
+        <box flexDirection="row" flexGrow={1} minHeight={0} gap={1} paddingLeft={1} paddingRight={1} paddingTop={1}>
+          <Show when={showList()}>
+            <Pane title="ACTIONS" meta={`${num(pl()?.actions?.length)}`} focused={focus() === "list"} width={lw()}>
+              <ListBody width={lw() - 4} height={paneH() - 4} focused={focus() === "list"} />
+            </Pane>
+          </Show>
+          <Show when={showDetail()}>
+            <Pane title="ACTION" meta={a() ? `#${num(a()!.priority)}` : ""} focused={focus() === "detail"} width={inline() ? rw() : W() - 2} grow>
+              <Show when={a()} fallback={<T fg={pal.off}>Select an action.</T>}>
+                <scrollbox ref={(el: ScrollBoxRenderable) => (scroll = el)} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
+                  <Show when={a()} keyed>
+                    {(x) => <ActionDoc a={x} width={(inline() ? rw() : W() - 2) - 5} />}
+                  </Show>
+                </scrollbox>
+              </Show>
+            </Pane>
+          </Show>
+        </box>
+        <box paddingLeft={2} paddingRight={2} height={1} flexShrink={0}>
+          <T fg={pal.off}>{fit(`Applied = declared, not verified  ·  « Not reproduced at retest » only from a completed retest  ·  ${clean(pl()?.score_note ?? "statuses never change the rating", 120)}`, W() - 4)}</T>
+        </box>
+      </box>
+    )
+  }
+
+  // ---- framework technical assessment: frameworks (list) + controls of the selected one, by state
+  const FrameworksScreen = () => {
+    const pal = P()
+    const lw = () => (inline() ? listWidth() : W() - 2)
+    const rw = () => W() - 3 - lw()
+    const fa = () => assessment()
+    const fw = () => fa()?.frameworks?.find((f) => `w:${f.framework}` === selectedKey())
+    const stateLabel = (k: string) => clean(fa()?.states?.find((x) => x.value === k)?.label ?? k.replace(/_/g, " "), 60)
+    const showList = () => inline() || focus() === "list"
+    const showDetail = () => inline() || focus() === "detail"
+    return (
+      <box flexDirection="column" flexGrow={1} minHeight={0}>
+        <box flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} flexShrink={0}>
+          <box flexDirection="row" height={1}>
+            <T fg={pal.alice} bold>Technical assessment</T>
+            <T fg={pal.off}>{fit(`  ·  ${clean((fa()?.coverage as any)?.sentence ?? "", 200)}`, Math.max(0, W() - 26))}</T>
+          </box>
+          <T fg={pal.ink3}>{fit(clean(fa()?.reading ?? (busy() ? "Loading…" : ""), 600), W() - 4)}</T>
+        </box>
+        <box flexDirection="row" flexGrow={1} minHeight={0} gap={1} paddingLeft={1} paddingRight={1} paddingTop={1}>
+          <Show when={showList()}>
+            <Pane title="FRAMEWORKS" meta="controls per state" focused={focus() === "list"} width={lw()}>
+              <ListBody width={lw() - 4} height={paneH() - 3} focused={focus() === "list"} />
+              <box height={1} />
+              <T fg={pal.off} wrap>{`${G.node} applicable (declared)  ${G.nodeOpen} to confirm  – not applicable`}</T>
+              <T fg={pal.off} wrap>WEAK weakness observed · NONE none observed in the tested scope · N/T not tested · N/A not technically assessable</T>
+            </Pane>
+          </Show>
+          <Show when={showDetail()}>
+            <Pane title="CONTROLS" meta={fw() ? clean(fw()!.label ?? fw()!.framework, 40) : ""} focused={focus() === "detail"} width={inline() ? rw() : W() - 2} grow>
+              <Show when={fw()} fallback={<T fg={pal.off}>Select a framework.</T>}>
+                <scrollbox ref={(el: ScrollBoxRenderable) => (scroll = el)} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
+                  <Show when={fw()} keyed>
+                    {(f) => (
+                      <box flexDirection="column" gap={1}>
+                        <box flexDirection="column">
+                          <T fg={pal.ink} bold wrap>{clean(f.label ?? f.framework, 120)}</T>
+                          <T fg={pal.ink3} wrap>{applicabilityOf(f).label}</T>
+                          <T fg={pal.ink2} wrap>{frameworkLine(f)}</T>
+                        </box>
+                        <For each={[...FRAMEWORK_STATES]}>
+                          {(st) => {
+                            const cs = () => ((f as any).controls ?? []).filter((c: any) => c.state === st)
+                            return (
+                              <Show when={cs().length}>
+                                <box flexDirection="column">
+                                  <Label>{`${stateLabel(st).toUpperCase()} · ${cs().length}`}</Label>
+                                  <For each={cs()}>
+                                    {(c: any) => (
+                                      <box flexDirection="column">
+                                        <box flexDirection="row">
+                                          <box width={16} flexShrink={0}>
+                                            <T fg={pal.ink}>{clean(c.control_id, 15)}</T>
+                                          </box>
+                                          <T fg={pal.ink2} wrap grow>{clean(st === "not_technically_assessable" ? (c.why ?? c.text) : c.text, 300)}</T>
+                                        </box>
+                                        <Show when={(c.finding_ids ?? []).length || (c.action_ids ?? []).length}>
+                                          <T fg={pal.off}>{`${" ".repeat(16)}${plural((c.finding_ids ?? []).length, "finding")} · ${plural((c.action_ids ?? []).length, "action")}${c.to_confirm ? " · to confirm" : ""}`}</T>
+                                        </Show>
+                                      </box>
+                                    )}
+                                  </For>
+                                </box>
+                              </Show>
+                            )
+                          }}
+                        </For>
+                        <For each={((f as any).limitations ?? []).slice(0, 3)}>{(x: string) => <T fg={pal.off} wrap>{`· ${clean(x, 300)}`}</T>}</For>
+                      </box>
+                    )}
+                  </Show>
+                </scrollbox>
+              </Show>
+            </Pane>
+          </Show>
+        </box>
+        <box paddingLeft={2} paddingRight={2} height={1} flexShrink={0}>
+          <T fg={pal.off}>{fit("Technical findings relevant to these frameworks: not an audit, a certification or a legal opinion.", W() - 4)}</T>
+        </box>
+      </box>
+    )
+  }
+
+  // ---- application profile: fields by group with their provenance badge (shape + word)
+  const ProfileSummary = (p: { id: string; width: number }) => {
+    const pal = P()
+    const got = () => profiles()[p.id]
+    const f = () => got()?.doc?.profile?.fields ?? {}
+    const pc = () => (got()?.doc?.profile?.provenance_counts ?? {}) as Record<string, number>
+    const keys = ["criticality", "availability_requirement", "personal_data", "sector", "rto", "rpo"]
+    return (
+      <Show when={got()?.doc} fallback={<T fg={pal.off}>{got()?.error ? "Profile not available from this source." : "Loading the profile…"}</T>}>
+        <box flexDirection="column">
+          <T fg={pal.ink3}>{fit(`${num(pc().declared_by_customer)} declared · ${num(pc().verified)} verified · ${num(pc().detected)} detected · ${num(pc().unknown)} not provided`, p.width)}</T>
+          <For each={keys.filter((k) => f()[k])}>
+            {(k) => {
+              const x = () => f()[k]
+              const b = () => provenanceBadge(x().provenance, G.mark === "■")
+              return (
+                <box flexDirection="row" height={1}>
+                  <T fg={x().provenance === "unknown" ? pal.off : pal.ink2}>{`${b().mark} `}</T>
+                  <box width={18} flexShrink={0}>
+                    <T fg={pal.off}>{fit(fieldLabel(k), 17)}</T>
+                  </box>
+                  <T fg={x().value == null ? pal.off : pal.ink}>{fit(profileValue(x().value), Math.max(4, p.width - 34))}</T>
+                  <box flexGrow={1} />
+                  <T fg={pal.off}>{b().word}</T>
+                </box>
+              )
+            }}
+          </For>
+          <T fg={pal.jordy}>A  full application profile</T>
+        </box>
+      </Show>
+    )
+  }
+
+  const ProfileScreen = () => {
+    const pal = P()
+    const v = () => view() as Extract<View, { k: "profile" }>
+    const doc = () => profiles()[v().project.id]?.doc
+    const lw = () => (inline() ? listWidth() : W() - 2)
+    const rw = () => W() - 3 - lw()
+    const pc = () => (doc()?.profile?.provenance_counts ?? {}) as Record<string, number>
+    const sel = () => {
+      const k = selectedKey()
+      return k.startsWith("f-") ? ([k.slice(2), doc()?.profile?.fields?.[k.slice(2)]] as const) : undefined
+    }
+    const decl = () => doc()?.declarations as Record<string, any> | undefined
+    const showList = () => inline() || focus() === "list"
+    const showDetail = () => inline() || focus() === "detail"
+    return (
+      <box flexDirection="column" flexGrow={1} minHeight={0}>
+        <box flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} flexShrink={0}>
+          <box flexDirection="row" height={1}>
+            <T fg={pal.alice} bold>Application profile</T>
+            <T fg={pal.off}>{fit(`  ·  ${num(pc().declared_by_customer)} declared · ${num(pc().verified)} verified · ${num(pc().detected)} detected · ${num(pc().unknown)} not provided`, Math.max(0, W() - 25))}</T>
+          </box>
+          <T fg={pal.ink3}>
+            {fit(
+              decl()
+                ? `Declared by the owner in ${clean(decl()!.file, 80)} (${clean(decl()!.status, 12)}), edited by hand: never by an agent. Business facts are never guessed.`
+                : "Declared by the organisation on the dashboard. Business facts are never guessed; detected values are not confirmed.",
+              W() - 4,
+            )}
+          </T>
+        </box>
+        <box flexDirection="row" flexGrow={1} minHeight={0} gap={1} paddingLeft={1} paddingRight={1} paddingTop={1}>
+          <Show when={showList()}>
+            <Pane title="PROFILE" meta={`${G.node} declared  ${G.mark === "■" ? "◉" : "@"} verified  ${G.mark === "■" ? "◌" : ":"} detected`} focused={focus() === "list"} width={lw()}>
+              <ListBody width={lw() - 4} height={paneH() - 3} focused={focus() === "list"} />
+            </Pane>
+          </Show>
+          <Show when={showDetail()}>
+            <Pane title="FIELD" focused={focus() === "detail"} width={inline() ? rw() : W() - 2} grow>
+              <Show when={sel()?.[1]} fallback={<T fg={pal.off}>Select a field.</T>}>
+                {(() => {
+                  const [name, f] = sel()!
+                  const b = provenanceBadge(f!.provenance, G.mark === "■")
+                  return (
+                    <box flexDirection="column" gap={1}>
+                      <box flexDirection="column">
+                        <T fg={pal.ink} bold>{fieldLabel(name)}</T>
+                        <T fg={f!.value == null ? pal.off : pal.ink2} wrap>{profileValue(f!.value)}</T>
+                      </box>
+                      <box flexDirection="column">
+                        <T fg={pal.ink2}>{`${b.mark} ${clean(f!.provenance_label ?? b.word, 80)}`}</T>
+                        <Show when={f!.at}><Kv k="When" v={shortDate(String(f!.at))} /></Show>
+                        <Show when={f!.by_role}><Kv k="By" v={clean(f!.by_role, 80)} /></Show>
+                        <Show when={f!.campaign_id}><Kv k="Campaign" v={clean(f!.campaign_id, 60)} /></Show>
+                      </box>
+                      <Show when={f!.note}><T fg={pal.off} wrap>{clean(f!.note, 300)}</T></Show>
+                      <Show when={["rto", "rpo", "availability_requirement", "criticality"].includes(name)}>
+                        <T fg={pal.off} wrap>Declared by the organisation, not assessed by Darkmoon.</T>
+                      </Show>
+                    </box>
+                  )
+                })()}
+              </Show>
+            </Pane>
+          </Show>
+        </box>
+      </box>
+    )
+  }
+
   // projects, campaigns, campaign menu: list + preview
   const ListScreen = () => {
     const lw = () => (inline() ? listWidth() : W() - 2)
@@ -1677,25 +2381,44 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
       if (k === "campaign") return <CampaignBoard c={campaign() ?? (v() as any).campaign} width={rw() - 5} noLatest />
       if (k === "campaigns") {
         const c = campaigns().find((x) => `c:${x.id}` === selectedKey())
-        return c ? <CampaignBoard c={c} width={rw() - 5} /> : null
+        if (!c) return null
+        if ((v() as any).purpose === "plan")
+          return (
+            <box flexDirection="column" gap={1}>
+              <T fg={P().ink3}>{[campaignTarget(c), shortDate(c.date), c.status].filter(Boolean).join("  ·  ")}</T>
+              <Show when={`c:${c.id}`} keyed>{(k) => <ExecBlock k={k} width={rw() - 5} />}</Show>
+              <T fg={P().jordy}>enter  open the Prioritized Treatment Plan</T>
+            </box>
+          )
+        return <CampaignBoard c={c} width={rw() - 5} />
       }
       const pr = projects().find((x) => `p:${x.id}` === selectedKey())
       const last = pr ? campaigns().find((c) => c.project_id === pr.id) : undefined
       if (!pr) return null
       return (
         <box flexDirection="column" gap={1}>
-          <box flexDirection="column">
+          <box flexDirection="column" flexShrink={0}>
             <T fg={P().ink} bold>{clean(pr.name, 120)}</T>
             <T fg={P().ink3}>{targetLabel(pr) || "—"}</T>
           </box>
-          <box flexDirection="column">
+          <box flexDirection="column" flexShrink={0}>
             <Kv k="Campaigns" v={num(pr.campaigns_count)} />
             <Kv k="Findings" v={num(pr.vulnerabilities_count)} />
             <Kv k="Risk" v={pr.latest_risk ?? "—"} fg={pr.latest_risk ? sevHex(pr.latest_risk) : P().off} />
           </box>
+          <box flexDirection="column" flexShrink={0}>
+            <Label>CYBER SCORE · reference campaign</Label>
+            <Show when={`p:${pr.id}`} keyed>{(k) => <ExecBlock k={k} width={rw() - 5} dense />}</Show>
+          </box>
+          <box flexDirection="column" flexShrink={0}>
+            <Label>APPLICATION PROFILE</Label>
+            <Show when={pr.id} keyed>{(id) => <ProfileSummary id={id} width={rw() - 5} />}</Show>
+          </box>
           <Show when={last}>
-            <Label>LAST CAMPAIGN</Label>
-            <CampaignBoard c={last!} width={rw() - 5} compact />
+            <box flexDirection="column" flexShrink={0}>
+              <Label>LAST CAMPAIGN</Label>
+              <CampaignBoard c={last!} width={rw() - 5} compact />
+            </box>
           </Show>
         </box>
       )
@@ -1767,6 +2490,9 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
     if (k === "report") return <ReportScreen />
     if (k === "paths") return <PathsScreen />
     if (k === "path") return <PathScreen />
+    if (k === "plan") return <PlanScreen />
+    if (k === "frameworks") return <FrameworksScreen />
+    if (k === "profile") return <ProfileScreen />
     return <ListScreen />
   }
 
@@ -1796,6 +2522,25 @@ function shortCampaign(id: string) {
   return clean(m ? m[1] : id, 60)
 }
 
+const FIELD_LABEL: Record<string, string> = {
+  rto: "RTO", rpo: "RPO", sla: "SLA", iso27001_isms_scope: "ISO 27001 ISMS scope", nis2_entity_type: "NIS2 entity type",
+  ai_system_declared: "AI system declared", ai_act_role: "AI Act role", personal_data: "Personal data", ai_risk_class: "AI risk class",
+}
+function fieldLabel(name: string) {
+  const n = String(name ?? "")
+  if (FIELD_LABEL[n]) return FIELD_LABEL[n]
+  const w = n.replace(/_/g, " ")
+  return w.charAt(0).toUpperCase() + w.slice(1)
+}
+
+function plural(n: number, w: string) {
+  return `${n} ${w}${n === 1 ? "" : "s"}`
+}
+/** The first pane-title meta that fits (a title that does not fit is not drawn at all by the host). */
+function fitMeta(w: number, options: string[]) {
+  return options.find((o) => o.length <= w) ?? ""
+}
+
 function fitTail(s: string, w: number) {
   return w <= 1 ? "" : s.length <= w ? s : "…" + s.slice(s.length - w + 1)
 }
@@ -1803,6 +2548,7 @@ function fitTail(s: string, w: number) {
 function emptyText(v: View, filtered: boolean) {
   if (filtered) return "Nothing matches. Press c to clear the filters."
   if (v.k === "campaigns" && v.purpose === "reports") return "No campaign has a report yet."
+  if (v.k === "plan") return "No action to plan: no open finding, or the plan is not available from this source."
   return (
     ({
       workspace: "No project yet. Launch a campaign from the console to start.",
@@ -1810,6 +2556,8 @@ function emptyText(v: View, filtered: boolean) {
       campaigns: "No campaign yet.",
       findings: "No findings.",
       paths: "No attack path for this campaign.",
+      frameworks: "No framework assessment for this campaign.",
+      profile: "No profile field.",
       report: "This report has no chapters.",
     }) as Record<string, string>
   )[v.k] ?? ""

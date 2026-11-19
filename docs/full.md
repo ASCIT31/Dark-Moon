@@ -15,6 +15,7 @@ A platform that allows you to conduct a complete penetration testing campaign
 # Summary
 
 - [I. Preview](#i-preview)
+  - [I.b Terminal Explorer](#ib-terminal-explorer--executive-views-in-the-console)
 - [II. Installation](#ii-installation)
   - [II.1. Prerequisites](#ii1-prerequisites)
   - [II.2. General project structure](#ii2-general-project-structure)
@@ -222,6 +223,33 @@ receives it verbatim. Pre-model tokenization of the prompt, sharing one session
 vault between the prompt layer and the MCP, is a planned trust-boundary change
 and is not shipped. Until it is, do not treat a secret passed in the launch
 prompt as masked from a cloud model provider.
+
+## I.b Terminal Explorer — executive views in the console
+
+Type `/explore` in the Darkmoon console (or press `<leader>d`). The explorer is read-only and makes no model call; it
+reads the local store (`~/.local/share/opencode`) through `conf/plugins/darkmoon-explorer/darkmoon_explore.py`, and
+evidence is masked before it reaches the screen.
+
+| Key | View |
+|---|---|
+| `1`–`7` | Workspace (executive block: grade or « Not rated », one coverage sentence, the first three actions, one frameworks line), Projects, Campaigns, Findings, **Plan** (Prioritized Treatment Plan), Attack paths, Reports |
+| `T` `X` `A` | Prioritized Treatment Plan, framework technical assessment, application profile of the campaign / project in context |
+| `L` | Legend: Evidence-Backed vs Possible Attack Path, evidence status (not severity), treatment statuses, score statuses |
+| `F` `R` `P` | Findings, report, attack paths of the campaign in context |
+| `?` | All keys |
+
+The same data from a shell: `python3 conf/plugins/darkmoon-explorer/darkmoon_explore.py --help` lists the commands
+(`projects`, `campaigns`, `campaign`, `finding`, `vulnerabilities`, `report`, `paths`, `plan`, `frameworks`,
+`profile`, `executive`, `executive --project`, `legend`), each printing JSON.
+
+Declarations are made **by you, by editing two local files by hand**; no agent and no MCP tool can write them:
+
+- `~/.local/share/opencode/profiles/<project_id>.json`: the application profile (`darkmoon-application-profile-declarations/1`);
+- `~/.local/share/opencode/treatments/<campaign_id>.json`: treatment statuses (`darkmoon-treatment-declarations/1`).
+
+Both are validated on every read; an invalid entry is listed and ignored. « Applied » always reads « not verified »:
+the Community edition runs no retest, so no status is ever verified, and a declaration never changes the findings,
+the counts or the Cyber Score.
 
 [Back to Summary](#summary)
 

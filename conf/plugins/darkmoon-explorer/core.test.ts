@@ -71,17 +71,23 @@ describe("attack paths keep the proof contract", () => {
     { n: 1, node_label: "Web", finding_id: null },
     { n: 2, node_label: "DB", finding_id: "vuln_9" },
   ]
+  const checked = { status: "corroborated", unverified: [], checked: true }
   test("inferred and declared are never proven", () => {
     expect(pathProof({ id: "p", title: "", provenance: "inferred", hypothesis: true })).toEqual({
-      label: "INFERRED · hypothesis",
+      label: "Possible Attack Path",
+      short: "POSSIBLE",
       proven: false,
+      why: "inferred by the server, a hypothesis",
     })
     expect(pathProof({ id: "p", title: "", provenance: "agent-declared", hypothesis: true }).proven).toBe(false)
-    expect(pathProof({ id: "p", title: "", provenance: "derived", hypothesis: false }).proven).toBe(true)
+    // a derived path is evidence-backed only when the engine checked its claims (exec_core legend.path_kind_of)
+    expect(pathProof({ id: "p", title: "", provenance: "derived", hypothesis: false, corroboration: checked }).proven).toBe(true)
+    expect(pathProof({ id: "p", title: "", provenance: "derived", hypothesis: false }).proven).toBe(false)
+    expect(pathProof({ id: "p", title: "", provenance: "derived", hypothesis: false, corroboration: { ...checked, checked: false } }).proven).toBe(false)
   })
   test("dashed arrows for hypotheses, solid for proven", () => {
     expect(pathChain({ id: "p", title: "", hypothesis: true, steps })[1]).toContain("╌▶ DB  [vuln_9]")
-    expect(pathChain({ id: "p", title: "", hypothesis: false, steps })[1]).toContain("─▶ DB")
+    expect(pathChain({ id: "p", title: "", provenance: "observed", hypothesis: false, steps })[1]).toContain("─▶ DB")
     expect(pathFindingIds({ id: "p", title: "", finding_ids: ["vuln_1"], steps })).toEqual(["vuln_1", "vuln_9"])
     const objSteps = [{ n: 1, node_label: "X", findings: [{ id: "vuln_7", title: "t" }] }]
     expect(pathFindingIds({ id: "p", title: "", steps: objSteps })).toEqual(["vuln_7"])
@@ -232,13 +238,16 @@ describe("v2: data sources, cache and helpers", () => {
     expect([palette("dark").code, palette("light").code]).toEqual(["#add7f6", "#2f6fb8"])
   })
 
-  test("proof labels are the contract", () => {
+  test("proof labels are the legend vocabulary (exec_core.legend)", () => {
     const { pathProof } = require("./core")
-    expect(pathProof({ id: "p", title: "", hypothesis: false }).label).toBe("PROVEN · corroborated")
-    expect(pathProof({ id: "p", title: "", provenance: "agent-declared", hypothesis: true }).label).toBe("DECLARED · not verified")
-    expect(pathProof({ id: "p", title: "", provenance: "inferred", hypothesis: true }).label).toBe("INFERRED · hypothesis")
-    // a declared path that a client marks hypothesis:false is still only proven if the server said so: no promotion here
+    expect(pathProof({ id: "p", title: "", provenance: "observed", hypothesis: false }).label).toBe("Evidence-Backed Attack Path")
+    expect(pathProof({ id: "p", title: "", provenance: "agent-declared", hypothesis: true }).label).toBe("Possible Attack Path")
+    expect(pathProof({ id: "p", title: "", provenance: "agent-declared", hypothesis: true }).why).toBe("declared by the agent, not verified")
+    expect(pathProof({ id: "p", title: "", provenance: "inferred", hypothesis: true }).why).toBe("inferred by the server, a hypothesis")
+    // a declared path that a client marks hypothesis:false is never promoted: only the server's evidence makes a path proven
     expect(pathProof({ id: "p", title: "", provenance: "agent-declared" }).proven).toBe(false)
+    expect(pathProof({ id: "p", title: "", provenance: "declared", hypothesis: false }).proven).toBe(false)
+    expect(pathProof({ id: "p", title: "", hypothesis: false }).proven).toBe(false)
   })
 })
 
@@ -286,5 +295,120 @@ describe("splitSections: server section ids", () => {
   })
   test("old reports without markers split as before", () => {
     expect(splitSections("## FIX FIRST\nx\n").map((x) => [x.title, x.key])).toEqual([["FIX FIRST", undefined]])
+  })
+})
+
+describe("executive views: display only, the words of exec_core", () => {
+  const core = require("./core")
+
+  test("path kinds: the same cases as exec_core legend.path_kind_of", () => {
+    const P = (provenance: string, hypothesis: boolean, corroboration?: any) => ({ id: "p", title: "", provenance, hypothesis, corroboration })
+    const ok = { status: "corroborated", unverified: [], checked: true }
+    const cases: [any, string][] = [
+      [P("observed", false), "evidence_backed"],
+      [P("observed", true), "possible"],
+      [P("derived", false, ok), "evidence_backed"],
+      [P("derived", false, { ...ok, checked: false }), "possible"],
+      [P("derived", false, { status: "corroborated", unverified: [] }), "possible"],
+      [P("derived", true, { status: "claimed", unverified: ["x"], checked: true }), "possible"],
+      [P("derived", false, { ...ok, unverified: ["x"] }), "possible"],
+      [P("derived", false), "possible"],
+      [P("declared", false), "possible"],
+      [P("agent-declared", false), "possible"],
+      [P("inferred", false), "possible"],
+      [P("whatever", false), "possible"],
+      [null, "possible"],
+    ]
+    for (const [p, k] of cases) expect(core.pathKind(p)).toBe(k)
+    expect(core.pathKindCounts({ paths: cases.map((c) => c[0]).filter(Boolean) })).toEqual({ total: 12, evidence_backed: 2, possible: 10 })
+  })
+
+  test("score headline: a number only when rated or limited, never for « Not rated »", () => {
+    expect(core.scoreHeadline({ score_status: "rated", score: 0, grade: "E", status_label: "Rated" })).toEqual({ big: "E  0/100", status: "Rated", rated: true, limited: false })
+    expect(core.scoreHeadline({ score_status: "limited", score: 41, grade: "D", status_label: "Limited test" }).limited).toBe(true)
+    const nr = core.scoreHeadline({ score_status: "not_rated", score: 55, grade: "C", status_label: "Not rated" })
+    expect(nr.big).toBe("Not rated")
+    expect(nr.big).not.toContain("55")
+    expect(core.scoreHeadline(undefined).big).toBe("Not rated")
+    expect(core.scoreWhy({ status_reasons: [{ code: "x", text: "Retest campaign" }] })).toBe("Retest campaign")
+    expect(core.scoreWhy({ status_meaning: "No rating" })).toBe("No rating")
+  })
+
+  test("treatment: applied always reads not verified; a retest wording needs its completed retest", () => {
+    expect(core.treatmentLabel({ action_id: "a", status: "applied", status_label: "Applied" })).toBe("Applied — not verified")
+    expect(core.treatmentLabel({ action_id: "a", status: "applied", status_label: "Applied — not verified" })).toBe("Applied — not verified")
+    expect(core.treatmentLabel({ action_id: "a", status: "verified_resolved", status_label: "Not reproduced at retest", last_retest: { retest_id: "r1" } })).toBe("Not reproduced at retest")
+    expect(core.treatmentLabel({ action_id: "a", status: "verified_resolved", status_label: "Not reproduced at retest" })).toBe("Retest result not on file — not verified")
+    expect(core.treatmentLabel({ action_id: "a", status: "proposed", status_label: "Proposed" })).toBe("Proposed")
+    expect(core.treatmentLabel(undefined)).toBe("proposed")
+    for (const s of ["proposed", "in_progress", "applied", "verified_resolved", "failed_verification", "risk_accepted", "deferred"]) {
+      expect(core.treatmentMark(s, true).length).toBe(1)
+      expect(core.treatmentMark(s, false)).toMatch(/^[ -~]$/)
+    }
+    expect(core.treatmentLabel({ action_id: "a", status: "applied", status_label: "Applied\x1b[2J" })).not.toContain("\x1b")
+  })
+
+  test("frameworks: four states in words, never a percentage, a grade or « compliant »", () => {
+    const f = { framework: "gdpr", label: "GDPR", applicability: { status: "to_confirm", label: "To confirm" }, counts: { weakness_observed: 3, none_observed_in_tested_scope: 1, not_tested: 2, not_technically_assessable: 4 } }
+    const line = core.frameworkLine(f)
+    expect(line).toBe("3 weakness observed · 1 none observed in tested scope · 2 not tested · 4 not technically assessable")
+    expect(line + core.frameworkLine(f, true)).not.toMatch(/%|compliant|grade/i)
+    expect(core.applicabilityOf(f)).toEqual({ status: "to_confirm", label: "To confirm" })
+    expect(core.applicabilityOf({ framework: "x", applicability: "declared_by_customer", applicability_label: "Applicable" })).toEqual({ status: "declared_by_customer", label: "Applicable" })
+  })
+
+  test("profile: provenance is a shape and a word; unknown values are never invented", () => {
+    expect(core.provenanceBadge("verified").word).toBe("Verified")
+    expect(core.provenanceBadge("declared_by_customer").word).toBe("Declared")
+    expect(core.provenanceBadge("detected").word).toBe("Detected")
+    expect(core.provenanceBadge("unknown").word).toBe("Not provided")
+    expect(new Set(["verified", "declared_by_customer", "detected", "unknown"].map((p) => core.provenanceBadge(p).mark)).size).toBe(4)
+    expect(core.provenanceBadge("verified", false).mark).toMatch(/^[ -~]$/)
+    expect(core.profileValue(null)).toBe("—")
+    expect(core.profileValue(["a", "b"])).toBe("a, b")
+    expect(core.profileValue(true)).toBe("yes")
+  })
+
+  test("legend: shared words, evidence status kept apart from severity", () => {
+    const l = {
+      path_kind: { evidence_backed: { label: "Evidence-Backed Attack Path", meaning: "m1" }, possible: { label: "Possible Attack Path", meaning: "m2" } },
+      evidence_status: { exploited: { label: "Exploited", meaning: "e" }, confirmed: { label: "Confirmed", meaning: "c" }, unconfirmed: { label: "To confirm", meaning: "u" } },
+      treatment: { in_progress: { label: "Treatment in Progress", meaning: "t" }, not_reproduced: { label: "Not reproduced at retest", meaning: "n" }, risk_accepted: { label: "Risk accepted", meaning: "r" } },
+      score_status: { rated: { label: "Rated", meaning: "a" }, limited: { label: "Limited test", meaning: "b" }, not_rated: { label: "Not rated", meaning: "c" } },
+    }
+    const text = core.legendLines(l).join("\n")
+    for (const w of ["Evidence-Backed Attack Path", "Possible Attack Path", "To confirm", "Treatment in Progress", "Not reproduced at retest", "Not rated", "not severity"]) expect(text).toContain(w)
+    expect(core.legendLines(l, false).join("\n")).toMatch(/^[\x20-\x7e\n—«»…·]*$/)
+    expect(core.legendLines(undefined).join("\n")).toContain("Possible Attack Path")
+    const compact = core.legendLines(l, true, true)
+    expect(compact.length).toBeLessThanOrEqual(13)
+    for (const w of ["Evidence-Backed Attack Path", "Possible Attack Path", "To confirm", "Not reproduced at retest", "Not rated"]) expect(compact.join("\n")).toContain(w)
+  })
+
+  test("wrapLines: bounded lines, cut text says so", () => {
+    expect(core.wrapLines("aaa bbb ccc ddd", 7, 3)).toEqual(["aaa bbb", "ccc ddd"])
+    expect(core.wrapLines("aaa bbb ccc ddd eee", 7, 2)).toEqual(["aaa bbb", "ccc dd…"])
+    expect(core.wrapLines("x".repeat(20), 8, 2)).toEqual(["xxxxxxx…"])
+    expect(core.wrapLines("", 8, 2)).toEqual([])
+  })
+
+  test("sources: the executive documents come from the server routes / the adapter commands", async () => {
+    const urls: string[] = []
+    const api = new core.ExplorerApi("http://x/api/v1", (async (u: string) => {
+      urls.push(u)
+      return new Response("{}", { status: 200 })
+    }) as any)
+    api.useToken("t")
+    await api.executive("c1"); await api.projectExecutive("p1"); await api.plan("c1"); await api.frameworks("c1"); await api.profile("p1"); await api.legend()
+    expect(urls.map((u) => u.replace("http://x/api/v1", ""))).toEqual([
+      "/campaigns/c1/executive", "/projects/p1/executive", "/campaigns/c1/treatment-plan", "/campaigns/c1/framework-assessment", "/projects/p1/profile", "/executive/legend",
+    ])
+    const seen: string[][] = []
+    const fs = new core.FileSource(async (a: string[]) => (seen.push(a), { code: 0, stdout: "{}", stderr: "" }))
+    await fs.executive("c1"); await fs.projectExecutive("p1"); await fs.plan("c1"); await fs.frameworks("c1"); await fs.profile("p1"); await fs.legend()
+    expect(seen).toEqual([["executive", "c1"], ["executive", "--project", "p1"], ["plan", "c1"], ["frameworks", "c1"], ["profile", "p1"], ["legend"]])
+    const c = new core.CachedSource(fs)
+    await c.plan("c1"); await c.plan("c1"); await c.projectExecutive("p1"); await c.executive("p1")
+    expect(seen.length).toBe(6 + 3) // cached per key; a project block and a campaign block never share a key
   })
 })
