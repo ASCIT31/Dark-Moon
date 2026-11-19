@@ -79,6 +79,18 @@ msg "Installation de NetExec..."
   "$PIP_BIN" install --no-cache-dir netexec
 }
 
+# NetExec v1.4.0 imports dploot.lib.smb, absent from dploot 4.x:
+# with the latest dploot every SMB run dies on ModuleNotFoundError. Pin the version of
+# NetExec's own v1.4.0 lockfile (pyproject only says dploot>=3.1.0).
+# Conditional: if the « latest stable » fallback above was used instead, keep its dploot.
+NXC_DPAPI="$("$PY_BIN" -c 'import nxc, os; print(os.path.join(os.path.dirname(nxc.__file__), "protocols", "smb", "dpapi.py"))')"
+if grep -q "dploot.lib.smb" "$NXC_DPAPI" 2>/dev/null; then
+  msg "Pinning dploot==3.1.2 (NetExec v1.4.0 lockfile)..."
+  "$PIP_BIN" install --no-cache-dir "dploot==3.1.2"
+  "$PY_BIN" -c "import dploot.lib.smb"
+  ok "dploot pinned for NetExec SMB"
+fi
+
 # Wrappers pour NetExec et BloodHound
 cat >"$BIN_OUT/netexec" <<'EOF'
 #!/bin/sh

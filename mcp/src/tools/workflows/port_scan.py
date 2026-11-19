@@ -5,7 +5,8 @@ Fast port scanning with service detection.
 Uses naabu for port scanning and httpx for HTTP service verification.
 """
 
-from typing import Dict, Any, Union, List
+import re
+from typing import Dict, Any, List, Optional, Union
 from src.tools.workflows.base import BaseWorkflow
 
 
@@ -24,6 +25,7 @@ class PortScanWorkflow(BaseWorkflow):
         target: Union[str, List[str]],
         top_ports: int = 100,
         timeout: int = 300,
+        ports: Optional[Union[str, List[Union[int, str]]]] = None,
     ) -> Dict[str, Any]:
         """
         Fast port scanning with naabu.
@@ -36,6 +38,7 @@ class PortScanWorkflow(BaseWorkflow):
             target: Single host or list of hosts
             top_ports: 100 (fast), 1000 (thorough), or 0 for full scan
             timeout: Total timeout in seconds (default: 300s)
+            ports: Explicit ports / ranges instead of top_ports, e.g. "22,445,1883,5432-5433" or [22, 445]
 
         Returns:
             Port scan results with discovered services
@@ -83,11 +86,17 @@ class PortScanWorkflow(BaseWorkflow):
         # STEP 1: Naabu port scan
         # ========================================
         naabu_output = f"{workspace_dir}/naabu_output.json"
-        top_ports_arg = self.normalize_top_ports(top_ports)
+        port_spec = None
+        if ports:
+            port_spec = ",".join(str(p).strip() for p in ports) if isinstance(ports, (list, tuple)) else str(ports).strip()
+            if not re.fullmatch(r"\d{1,5}(-\d{1,5})?(,\d{1,5}(-\d{1,5})?)*", port_spec):
+                return {"success": False, "error": f"invalid ports {port_spec!r}: use e.g. '22,445,1883' or '1-1024'",
+                        "complete": False}
+        port_arg = f"-p {port_spec}" if port_spec else f"-top-ports {self.normalize_top_ports(top_ports)}"
 
         success, findings, output = self.execute_step(
-            step_name=f"Port scanning ({len(targets)} targets, top {top_ports} ports)",
-            command=f"naabu -list {targets_file} -top-ports {top_ports_arg} -json -silent -o {naabu_output} && cat {naabu_output}",
+            step_name=f"Port scanning ({len(targets)} targets, {'ports ' + port_spec if port_spec else f'top {top_ports} ports'})",
+            command=f"naabu -list {targets_file} {port_arg} -json -silent -o {naabu_output} && cat {naabu_output}",
             timeout=naabu_timeout,
             parse_json=True,
         )
@@ -108,6 +117,11 @@ class PortScanWorkflow(BaseWorkflow):
 
         steps["port_scan"] = {
             "success": success,
+            # a failed scan proves nothing: never read « 0 ports » as « no service » (live run 18/11)
+            "complete": bool(success),
+            **({} if success else {"note": "port scan did NOT complete (see output): the absence of open ports is "
+                                           "NOT established; fix the error or scan by IP / explicit ports"}),
+            "error_output": None if success else (output or "")[-600:],
             "ports_found": len(findings),
             "unique_ports": len(set(all_ports)),
             "ports": sorted(set(all_ports)),
@@ -160,7 +174,7 @@ class PortScanWorkflow(BaseWorkflow):
         # SUMMARY
         # ========================================
         summary = {
-            "total_ports": len(findings),
+            "total_ports": steps["port_scan"]["ports_found"],  # not the httpx step's findings
             "unique_ports": len(set(all_ports)),
             "hosts_scanned": len(targets),
             "hosts_with_ports": len(ports_by_host),

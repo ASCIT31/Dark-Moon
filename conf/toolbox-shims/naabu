@@ -1,0 +1,8 @@
+#!/bin/sh
+# naabu resolves host names with its own public resolvers and ignores /etc/resolv.conf, so names only the local
+# resolver knows (Docker DNS, LAN / split-horizon DNS) fail with « no valid ipv4 or ipv6 targets » (live run 18/11).
+# When the caller passes no resolver, use the container's own nameservers. Target- and protocol-agnostic.
+for a in "$@"; do case "$a" in -r|-resolvers|--resolvers|-r=*|-resolvers=*|--resolvers=*) exec /usr/local/bin/naabu "$@";; esac; done
+NS=$(awk '/^nameserver/{print $2}' /etc/resolv.conf 2>/dev/null | paste -sd, -)
+[ -n "$NS" ] && exec /usr/local/bin/naabu -r "$NS" "$@"
+exec /usr/local/bin/naabu "$@"

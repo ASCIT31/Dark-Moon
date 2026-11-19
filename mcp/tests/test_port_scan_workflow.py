@@ -125,3 +125,41 @@ def test_httpx_checks_every_web_port_that_was_found():
         "https://a.example:443", "http://a.example:8080",
     ]
     assert result["summary"]["http_services"] == 2
+
+
+# ── live run 18/11/2026: the agent passed `ports`, and a failed scan was read as « no service » ─────────────────
+
+class FailingNaabuClient(RecordingDockerClient):
+    def execute_command(self, command, timeout=None, **kwargs):
+        if command.startswith("naabu "):
+            self.commands.append(command)
+            return ExecutionResult(status=ExecutionStatus.FAILED, stdout="",
+                                   stderr="[FTL] Could not run enumeration: no valid ipv4 or ipv6 targets were found")
+        return super().execute_command(command, timeout, **kwargs)
+
+
+def test_explicit_ports_replace_top_ports():
+    client, result = run_scan("svc.lab", naabu_findings=[{"host": "svc.lab", "port": 1883}], ports="22,445,1883,5432-5433")
+    cmd = client.commands_starting("naabu ")[0]
+    assert "-p 22,445,1883,5432-5433" in cmd and "-top-ports" not in cmd
+    assert result["steps"]["port_scan"]["ports"] == [1883] if "steps" in result else True
+
+
+def test_ports_as_list_and_invalid_ports_refused():
+    client, _ = run_scan("10.0.0.5", ports=[22, "445"])
+    assert "-p 22,445" in client.commands_starting("naabu ")[0]
+    client, result = run_scan("10.0.0.5", ports="22; rm -rf /")
+    assert result["success"] is False and not client.commands_starting("naabu ")
+
+
+def test_failed_scan_is_marked_incomplete_never_empty():
+    client = FailingNaabuClient()
+    result = PortScanWorkflow(client).scan_ports("svc.lab", ports="22")
+    ps = result["steps"]["port_scan"] if "steps" in result else result["port_scan"]
+    assert ps["complete"] is False and "NOT established" in ps["note"]
+
+
+def test_total_ports_counts_open_ports_not_http_services():
+    found = [{"host": "svc.lab", "port": p} for p in (22, 80, 443, 5432)]
+    _, result = run_scan("svc.lab", naabu_findings=found)
+    assert result["summary"]["total_ports"] == 4
