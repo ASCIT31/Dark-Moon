@@ -1355,6 +1355,21 @@ def _measured_duration(campaign: Dict[str, Any], declared: Any) -> int:
         return 0
 
 
+def _model_report(campaign_id: str, campaign: Dict[str, Any], executive_summary: str = "") -> str:
+    """The report file body: the model rendering (``report_model_local``), else the previous generator (the record
+    then carries no ``report_model_version``)."""
+    try:
+        from api import report_model_local
+        save_campaign(campaign)
+        return report_model_local.report_markdown_for_file(campaign_id, campaign)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning("report model failed, legacy report written", exc_info=True)
+        campaign.pop("report_model_version", None)
+        campaign.pop("report_generated_at", None)
+        return _generate_report_from_db(campaign_id, campaign, executive_summary)
+
+
 def _finalize_campaign_unlocked(
     campaign_id: str,
     duration_seconds: int = 0,
@@ -1421,8 +1436,11 @@ def _finalize_campaign_unlocked(
     _is_reference = True  # always regenerate from DB, ignore any LLM-provided body
 
     if _is_reference:
-        # Auto-generate the report from the DB findings
-        report_markdown = _generate_report_from_db(campaign_id, campaign, executive_summary)
+        # Auto-generate the report from the DB findings: the Markdown rendering of the report model
+        # (darkmoon-report/v2, lot L6, same renderer as Pro). The record is saved first so every reader of the model
+        # (plan, framework assessment, score) sees the final status and coverage. Any failure falls back to the
+        # previous generator: a finalisation never fails over its report.
+        report_markdown = _model_report(campaign_id, campaign, executive_summary)
 
     # Restore real values before the local, CONFIDENTIAL report is written. Findings
     # are stored with placeholders (the model only ever sees those), so a

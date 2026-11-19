@@ -203,5 +203,10 @@ def test_finalize_writes_the_annex_into_the_report_file(store):
     res = live_push.finalize_campaign(CID, executive_summary="Done.")
     assert "error" not in res, res
     body = (store["REPORTS_DIR"] / Path(json_storage.load_campaign(CID)["report_path"]).name).read_text(encoding="utf-8")
-    assert "## FRAMEWORK MAPPING" in body and "### Links declared by the agents" in body
-    assert "## 1. EXECUTIVE SUMMARY\n\n> Done." in body
+    # report model (L6): the annex content is part of the model sections (technique mappings under the framework
+    # assessment, the declared links under the attack paths); the agent's summary is quoted and labelled
+    assert "### Technique and reference mappings" in body and "### Links declared by the agents" in body
+    assert body.index("<!-- dm-section: framework-assessment -->") < body.index("### Technique and reference mappings")
+    assert body.index("<!-- dm-section: attack-paths -->") < body.index("### Links declared by the agents")
+    es = body.split("<!-- dm-section: executive-summary -->")[1].split("<!-- dm-section:")[0]
+    assert "*Written by the testing agent (quoted as written, not verified by the server).*\n\n> Done." in es
