@@ -28,7 +28,7 @@ def main():
     srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     srv.bind(STREAM_SOCK)
     srv.listen(50)
-    os.chmod(STREAM_SOCK, 0o666)
+    os.chmod(STREAM_SOCK, 0o660)
 
     sel = selectors.DefaultSelector()
     sel.register(srv, selectors.EVENT_READ)
