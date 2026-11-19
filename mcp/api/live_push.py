@@ -600,7 +600,9 @@ def _init_live_campaign_unlocked(
     if _prior and isinstance(_prior.get("coverage_signals"), dict):
         campaign["coverage_signals"] = _prior["coverage_signals"]
         campaign["date"] = _prior.get("date") or campaign["date"]
-    coverage_signals.on_init(campaign, campaign_kind)
+    # a record that predates coverage signals never gets any; Community = single-user TUI: the run's root session
+    # is the latest one when the campaign key is not a session prefix
+    coverage_signals.on_init(campaign, campaign_kind, create=_prior is None, latest_root_fallback=True)
     save_campaign(campaign)
 
     # Only init empty vulns if file doesn't exist yet

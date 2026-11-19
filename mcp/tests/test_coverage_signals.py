@@ -134,3 +134,51 @@ def test_mcp_toolbox_calls_are_counted_for_the_calling_run(store, monkeypatch):
         assert cs.read_counters(FRAG) == {"commands_executed": 1, "workflows_executed": 1}
     finally:
         sys.modules.pop("src.server", None)
+
+
+def test_released_db_name_and_latest_root_fallback(store, monkeypatch, tmp_path):
+    """The released OpenCode writes opencode.db (not opencode-dev.db): the recorder finds it next to the configured
+    file, and in the single-user TUI the run's root is the latest root session when the key is not its prefix."""
+    real = _db(tmp_path, root_id="ses_zzzzzzzzrootXYZ")
+    real.rename(tmp_path / "opencode.db")
+    monkeypatch.setattr(lp, "_OPENCODE_DB", tmp_path / "opencode-dev.db")   # absent, as in the release
+    monkeypatch.setattr(lp, "_run_campaign_frag", lambda fallback: fallback)
+    r = _init()
+    lp.finalize_campaign(campaign_id=r["campaign_id"])
+    s = _sig(r["campaign_id"])
+    assert s["root_session_id"] == "ses_zzzzzzzzrootXYZ"
+    assert s["agents_source"] == "opencode_sessions"
+    assert [a["agent"] for a in s["agents_dispatched"]] == ["graphql", "php", "python-flask"]
+
+
+def test_a_new_campaign_of_the_same_tui_session_inherits_nothing(store, monkeypatch, tmp_path):
+    db = _db(tmp_path)
+    monkeypatch.setattr(lp, "_OPENCODE_DB", db)
+    earlier = {"id": "camp_20261101_" + FRAG, "session_id": FRAG, "target_id": "t", "status": "completed",
+               "date": "2026-11-01T00:00:00Z", "is_subagent": False,
+               "coverage_signals": dict(cs.blank({"date": "2026-11-01T00:00:00Z"}),
+                                        counter_totals={"commands_executed": 40, "workflows_executed": 2})}
+    js.save_campaign(earlier)
+    c = sqlite3.connect(str(db))
+    old = int(time.time() * 1000) - 6 * 3600 * 1000
+    c.execute("INSERT INTO session VALUES (?,?,?,?,?,?)",
+              ("ses_old", "ses_" + FRAG + "rootXYZ", "yesterday", "wordpress", old, old + 1000))
+    c.commit()
+    c.close()
+    for _ in range(43):
+        cs.count_call(FRAG, "command")
+    r = _init()
+    assert r["campaign_id"] != earlier["id"]
+    lp.finalize_campaign(campaign_id=r["campaign_id"])
+    s = _sig(r["campaign_id"])
+    assert (s["commands_executed"], s["workflows_executed"]) == (3, 0)
+    assert "wordpress" not in [a["agent"] for a in s["agents_dispatched"]]
+
+
+def test_legacy_campaign_reinitialised_gets_no_signals(store):
+    r = _init()
+    c = js.load_campaign(r["campaign_id"])
+    c.pop("coverage_signals")
+    js.save_campaign(c)
+    _init()
+    assert "coverage_signals" not in js.load_campaign(r["campaign_id"])
