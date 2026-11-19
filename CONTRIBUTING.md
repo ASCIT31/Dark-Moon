@@ -79,12 +79,18 @@ Rules:
 - transparency
 - security before ego
 
-## 8. Licensing of Contributions
+## 8. Licensing of Contributions and CLA
 
 Darkmoon Community is distributed under the GNU Affero General Public License v3.0 (AGPL-3.0-only).
-By opening a pull request you agree that your contribution is licensed under the same terms.
-A Contributor License Agreement (individual and corporate) is being prepared; once published, it will be
-required for new pull requests. See [LICENSING.md](LICENSING.md).
+Every pull request requires the [Darkmoon Contributor License Agreement](CLA.md): the CLA bot asks you to sign it
+once, by commenting on your pull request
+
+> I have read the Darkmoon CLA Document and I hereby sign the CLA
+
+If you contribute for your employer or another organisation, it signs the [Corporate CLA](CLA-CORPORATE.md) too.
+You keep the copyright of your work; the CLA is a license that also lets ASC (ASC-IT) offer Darkmoon under commercial
+terms, and ASC commits that what it includes in the open-source edition stays open source. Contributions made before
+the switch to the AGPL-3.0 stay under the GPL-3.0: see [LICENSING.md](LICENSING.md).
 
 ---
 
