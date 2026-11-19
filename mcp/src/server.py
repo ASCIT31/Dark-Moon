@@ -210,12 +210,15 @@ from fastmcp.server.middleware import Middleware  # noqa: E402
 from fastmcp.exceptions import ToolError  # noqa: E402
 
 
+_PRIVACY_WITHHELD = "[privacy filter error: output withheld]"
+
+
 def _sanitize_for_model(value: Any, session_id: Optional[str]) -> Any:
     """Re-tokenize any real value in a tool result/error via the session vault.
 
     Idempotent: values already turned into placeholders do not match any category
     pattern, so re-running it over already-sanitized execute_command output is a
-    no-op. Never raises — sanitization must not turn a working tool into an error.
+    no-op. Never raises; on an internal error the value is withheld (fail closed), never returned raw.
     """
     if not PRIVACY_ENABLED:
         return value
@@ -227,8 +230,8 @@ def _sanitize_for_model(value: Any, session_id: Optional[str]) -> Any:
             ):
                 return value
             return _command_gateway.sanitize_result(value, vault)
-    except Exception:  # noqa: BLE001 — sanitization must be fail-safe
-        return value
+    except Exception:  # noqa: BLE001 — fail CLOSED: a sanitizer crash must never hand the raw value to the
+        return _PRIVACY_WITHHELD  # model; the tool call still succeeds, its output is withheld
 
 
 class _PrivacySanitizerMiddleware(Middleware):
@@ -256,8 +259,15 @@ class _PrivacySanitizerMiddleware(Middleware):
             sc = getattr(result, "structured_content", None)
             if sc is not None:
                 result.structured_content = _sanitize_for_model(sc, session_id)
-        except Exception:  # noqa: BLE001 — never break a successful call
-            pass
+        except Exception:  # noqa: BLE001 — never break a successful call, never leak an unfiltered block either
+            try:
+                for block in getattr(result, "content", None) or []:
+                    if getattr(block, "type", None) == "text":
+                        block.text = _PRIVACY_WITHHELD
+                if getattr(result, "structured_content", None) is not None:
+                    result.structured_content = {"result": _PRIVACY_WITHHELD}
+            except Exception:  # noqa: BLE001
+                raise ToolError(_PRIVACY_WITHHELD) from None
         return result
 
 

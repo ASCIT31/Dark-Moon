@@ -46,7 +46,8 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 from urllib.parse import urlsplit
 
-from .vault import PrivacyVault, PLACEHOLDER_RE, PLACEHOLDER_ANY_RE
+from .keyblocks import mask_known_key_fragments
+from .vault import COMMON_CREDENTIAL_WORDS, PrivacyVault, PLACEHOLDER_RE, PLACEHOLDER_ANY_RE
 
 # Commands that print a value straight back into stdout. Not an exfiltration
 # vector on their own: stdout is re-tokenized by sanitize_output() before the
@@ -314,6 +315,152 @@ def _host_part_is_placeholder(destination: str) -> bool:
     return bool(PLACEHOLDER_RE.fullmatch(_host_part(destination)))
 
 
+# ── HTTP clients (curl / wget) ─────────────────────────────────────────────────
+# The generic _VALUE_FLAGS table is ssh/nc-shaped: for curl it reads `-s` (silent)
+# as taking a value, so `curl -s URL_001/x -H "Authorization: Bearer CRED_001"`
+# found « URL_001/x » consumed and a literal destination instead, and refused the
+# credential (seen on every authenticated request of a real run). These tables
+# list ONLY options that certainly take a value: a flag wrongly listed here would
+# swallow the next argument, i.e. a destination would go unchecked. An unknown
+# value option, read as a flag, only adds its value to the destinations checked
+# (a false refusal, never a leak).
+_HTTP_CLIENTS = {"curl", "wget"}
+_CURL_VALUE_SHORT = set("AbcCdDeEFHKmoQrtTuUwxXyYz")
+_CURL_VALUE_LONG = {
+    "--header", "--data", "--data-raw", "--data-binary", "--data-ascii", "--data-urlencode", "--json",
+    "--request", "--output", "--max-time", "--connect-timeout", "--user-agent", "--referer", "--cookie",
+    "--cookie-jar", "--user", "--form", "--form-string", "--upload-file", "--write-out", "--retry",
+    "--retry-delay", "--retry-max-time", "--limit-rate", "--cacert", "--capath", "--cert", "--key",
+    "--cert-type", "--key-type", "--range", "--max-filesize", "--max-redirs", "--proto", "--proto-redir",
+    "--interface", "--local-port", "--dump-header", "--trace", "--trace-ascii", "--stderr", "--oauth2-bearer",
+    "--aws-sigv4", "--url-query", "--variable", "--expect100-timeout", "--keepalive-time", "--speed-limit",
+    "--speed-time", "--ciphers", "--tls-max", "--hostpubmd5", "--pinnedpubkey", "--login-options",
+    "--output-dir", "--create-file-mode", "--happy-eyeballs-timeout-ms", "--unix-socket",
+    "--abstract-unix-socket", "--dns-servers", "--dns-interface", "--dns-ipv4-addr", "--dns-ipv6-addr",
+    "--sasl-authzid", "--service-name", "--mail-from", "--mail-rcpt", "--mail-auth", "--ftp-port",
+    "--quote", "--telnet-option", "--delegation", "--krb", "--egd-file", "--random-file", "--netrc-file",
+    "--alt-svc", "--hsts", "--etag-save", "--etag-compare", "--time-cond", "--continue-at",
+}
+# options that hand the request (URL, headers, body) to a host other than the URL operands
+_CURL_REROUTE = {"-x", "--proxy", "--preproxy", "--socks4", "--socks4a", "--socks5", "--socks5-hostname",
+                 "--proxy1.0", "--resolve", "--connect-to", "--doh-url", "-K", "--config", "-:", "--next",
+                 "--location-trusted", "--post301", "--post302", "--post303", "--url"}
+_WGET_VALUE_SHORT = set("oaOPUtTwQlADIXR")
+_WGET_VALUE_LONG = {
+    "--output-file", "--append-output", "--output-document", "--directory-prefix", "--user-agent",
+    "--tries", "--timeout", "--wait", "--header", "--post-data", "--post-file", "--body-data", "--body-file",
+    "--method", "--user", "--password", "--http-user", "--http-password", "--load-cookies", "--save-cookies",
+    "--level", "--accept", "--reject", "--domains", "--exclude-domains", "--include-directories",
+    "--exclude-directories", "--quota", "--limit-rate", "--referer", "--ca-certificate", "--certificate",
+    "--private-key", "--dns-timeout", "--connect-timeout", "--read-timeout", "--waitretry", "--bind-address",
+    "--restrict-file-names", "--default-page", "--cut-dirs", "--accept-regex", "--reject-regex",
+}
+_WGET_REROUTE = {"-e", "--execute", "-i", "--input-file", "-B", "--base", "--config", "--use-askpass"}
+# request bodies of both clients (curl --json and wget --post-data used to be missing)
+_HTTP_BODY_FLAGS = {"-d", "--data", "--data-raw", "--data-binary", "--data-ascii", "--data-urlencode",
+                    "--json", "-F", "--form", "--form-string", "-T", "--upload-file",
+                    "--post-data", "--post-file", "--body-data", "--body-file"}
+
+
+_SHELL_REDIR_RE = re.compile(r"^(\d*|&)(>>|>|<)(&\d+|&-)?")
+
+
+def _http_client_view(tool: str, argv: Sequence[str]) -> Tuple[List[str], bool]:
+    """(URL operands, rerouted) of a curl/wget command line."""
+    curl = tool == "curl"
+    vshort = _CURL_VALUE_SHORT if curl else _WGET_VALUE_SHORT
+    vlong = _CURL_VALUE_LONG if curl else _WGET_VALUE_LONG
+    reroute = _CURL_REROUTE if curl else _WGET_REROUTE
+    dests: List[str] = []
+    rerouted = False
+    i = 1
+    while i < len(argv):
+        arg = argv[i]
+        redir = _SHELL_REDIR_RE.match(arg)
+        if redir:
+            # `2>/dev/null`, `>out`, `2>&1`, `> out`: a shell redirection, not a URL operand
+            i += 1 if redir.end() < len(arg) or redir.group(3) else 2
+            continue
+        if arg == "--":
+            dests.extend(argv[i + 1:])
+            break
+        if arg.startswith("--"):
+            name = arg.split("=", 1)[0]
+            if name in reroute:
+                rerouted = True  # the command is not target-bound whatever follows
+            i += 2 if ("=" not in arg and name in vlong) else 1
+            continue
+        if arg.startswith("-") and len(arg) > 1:
+            # bundled short options: -sSk, -XPOST, -m5, -o/dev/null, -sx host
+            j = 1
+            step = 1
+            while j < len(arg):
+                ch = arg[j]
+                if f"-{ch}" in reroute:
+                    rerouted = True
+                if ch in vshort:
+                    if j == len(arg) - 1:
+                        step = 2  # value is the next argument
+                    break  # the rest of this token is the value
+                j += 1
+            i += step
+            continue
+        dests.append(arg)
+        i += 1
+    return dests, rerouted
+
+
+def _http_target_bound(tool: str, argv: Sequence[str], segment: str) -> bool:
+    """True when a curl/wget command can only reach the protected target: every URL
+    operand names a placeholder host, no option reroutes the request, and no
+    literal http(s) URL appears anywhere in the command."""
+    if tool not in _HTTP_CLIENTS:
+        return False
+    dests, rerouted = _http_client_view(tool, argv)
+    if rerouted or not dests or not all(_host_part_is_placeholder(d) for d in dests):
+        return False
+    for match in _HTTP_URL_RE.finditer(segment):
+        if not PLACEHOLDER_RE.fullmatch((urlsplit(match.group(0)).hostname or "").upper()):
+            return False
+    return True
+
+
+_KEY_WRITERS = {"printf", "echo"}
+
+
+def _writes_key_file(tool: str, argv: Sequence[str], segment: str, creds: Sequence[str], vault: PrivacyVault) -> bool:
+    """``printf '%s\\n' CRED_n > /tmp/id_key`` (or ``echo CRED_n >> f``): every secret of the segment is a private
+    key, the command only writes, and its stdout goes to one plain local file named without a placeholder."""
+    if tool not in _KEY_WRITERS or not all(vault.is_private_key(p) for p in creds):
+        return False
+    if _NET_REDIRECT_RE.search(segment) or _CMD_SUBST_RE.search(segment):
+        return False
+    targets: List[str] = []
+    i = 1
+    while i < len(argv):
+        tok = argv[i]
+        m = re.match(r"^(1?)(>>|>\|?)(.*)$", tok)
+        if m and not tok.startswith(("2>", "&>")):
+            tgt = m.group(3)
+            if not tgt:
+                if i + 1 >= len(argv):
+                    return False
+                tgt = argv[i + 1]
+                i += 1
+            targets.append(tgt)
+        elif tok.startswith(("2>", "&>", "<")):
+            pass
+        i += 1
+    if len(targets) != 1:
+        return False
+    tgt = targets[0]
+    if (not tgt or tgt.startswith("&") or PLACEHOLDER_ANY_RE.search(tgt)
+            or (tgt.startswith(("/dev/", "/proc/", "/sys/")) and not tgt.startswith("/dev/shm/"))):
+        return False
+    # the key may only appear as a printed argument, never as the redirect target or a format string with a %
+    return not any(PLACEHOLDER_ANY_RE.search(a) and "%" in a for a in argv[1:])
+
+
 class CommandGateway:
     """Stateless policy engine; all secret state lives in the per-session vault."""
 
@@ -542,8 +689,22 @@ class CommandGateway:
                     if refused is not None:
                         return refused
 
-            # 2d) Outbound request bodies (curl/wget POST/upload).
+            # 2d) HTTP clients. A request that can only reach the protected target
+            #     may carry its placeholders anywhere (login bodies, headers); one
+            #     with a literal destination or a reroute option (proxy, resolve,
+            #     config file...) carries none of them: body, headers, cookies and
+            #     user all travel to that third party.
+            if tool in _HTTP_CLIENTS:
+                if _http_target_bound(tool, argv, segment):
+                    pass
+                else:
+                    refused = hold(seg_phs, "HTTP request not bound to the protected target (literal destination or reroute option)")
+                    if refused is not None:
+                        return refused
+            # 2d') Outbound request bodies of other tools sharing curl's flags.
             for i, tok in enumerate(argv):
+                if tool in _HTTP_CLIENTS:
+                    break
                 if tok in _OUTBOUND_DATA_FLAGS:
                     in_body = PLACEHOLDER_ANY_RE.findall(argv[i + 1] if i + 1 < len(argv) else "")
                 elif "=" in tok and tok.split("=", 1)[0] in _OUTBOUND_DATA_FLAGS:
@@ -575,6 +736,11 @@ class CommandGateway:
         #    testing works without the model ever holding the secret (issue #40,
         #    "restricted local credential injection path").
         creds = [p for p in seg_phs if vault.category_of(p) in vault.SECRET_CATEGORIES]
+        if creds and cred_injection_enabled() and _writes_key_file(tool, argv, segment, creds, vault):
+            # cycle 3: a private key is USED through a file (``ssh -i``). ``printf '%s\n' CRED_007 > /tmp/k`` writes
+            # the exact key bytes to a sandbox file and prints nothing; reading the file back is re-tokenized to the
+            # same placeholder. Only a key, only echo/printf, only stdout redirected to a plain file.
+            creds = []
         if creds:
             reason = self._cred_refusal_reason(tool, argv, segment, seg_phs)
             if reason is not None:
@@ -594,11 +760,14 @@ class CommandGateway:
         # The credential may only travel to the protected target, so the segment
         # has to name that target through a placeholder and must not carry a
         # literal external destination alongside it.
+        if tool in _HTTP_CLIENTS:
+            if not _http_target_bound(tool, argv, segment):
+                return "secret in an HTTP request not bound to the protected target"
         for match in _HTTP_URL_RE.finditer(segment):
             host = (urlsplit(match.group(0)).hostname or "").upper()
             if not PLACEHOLDER_RE.fullmatch(host):
                 return "secret alongside a literal (non-target) destination"
-        if tool in _NET_SINKS:
+        if tool in _NET_SINKS and tool not in _HTTP_CLIENTS:
             dest = _destination_arg(argv)
             if dest is not None and not _host_part_is_placeholder(dest):
                 return "secret alongside a literal (non-target) destination"
@@ -814,6 +983,17 @@ class CommandGateway:
             if cat in regex_cats:
                 continue  # already handled deterministically by tokenize()
             real = vault.rehydrate(ph, allow_secret=True)  # local masking may touch secrets to hide them
-            if real and real in out:
-                out = out.replace(real, ph)
+            if not real or real not in out:
+                continue
+            if real.lower() in COMMON_CREDENTIAL_WORDS:
+                continue  # « root », « postgres »: masked where a pattern found them, never hunted inside other words
+            # ALWAYS a whole token, never a substring (round5-critique): « dev » never turns « developer » into
+            # « CRED_001eloper », « 1000 » never turns port 10000 into « CRED_0010 » — placeholders glued to other
+            # characters can never be rehydrated
+            out = re.sub(r"(?<![\w])" + re.escape(real) + r"(?![\w])", ph, out)
+        # v3 privacy audit: the rows of an already-tokenized private key re-printed WITHOUT its markers (``sed -n 5,9p``,
+        # the middle of a key split over several commands) carry no BEGIN/END: hunt their base64 windows
+        windows = vault.known_key_windows()
+        if windows:
+            out = mask_known_key_fragments(out, windows)
         return out

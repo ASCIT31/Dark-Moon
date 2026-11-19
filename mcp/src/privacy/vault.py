@@ -24,12 +24,17 @@ import hashlib
 import hmac
 import ipaddress
 import os
+import base64
 import re
 import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
+
+from .keyblocks import (find_delimited_secrets, find_encoded_private_keys, find_bare_key_rows, find_headerless_openssh, find_key_tails, find_private_keys,
+                        find_table_secrets, find_wrapped_private_keys, is_private_key_value, is_secret_name,
+                        key_body_windows)
 
 try:  # Preferred: authenticated encryption for the at-rest map.
     from cryptography.fernet import Fernet  # type: ignore
@@ -171,23 +176,161 @@ def _looks_like_filename(value: str) -> bool:
 # production registered one, so a password echoed by a tool went straight into
 # the model context. These patterns register the *secret group only*, leaving the
 # surrounding flag/key intact so the command stays readable and re-runnable.
+# what follows ``x/y@`` or ``x:y@`` when it is a version / ref / digest, not a host (``actions/checkout@v4``,
+# ``pkg/name@1.2.3``, ``img/nginx@sha256:…``, ``org/repo@main``): never a credential
+_NOT_A_HOST = (r"(?:sha\d{3}:|v\d|\d+(?:\.\d+){0,2}(?![\d.])"
+               r"|(?:main|master|latest|head|HEAD|stable|dev|develop|canary|beta|alpha|next|nightly|edge|snapshot|rc\d*)\b)")
+# a HOST after a scheme-less ``user:password@`` (round3-critique M2): an IP, a bracketed IPv6, host:port, or a single-label
+# service name (``rabbitmq``, ``mysql``) — never a dotted mail domain (``alice:wonder@mail.example.com`` is an address)
+_BARE_HOST = r"(?=(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9A-Fa-f:]+\]|[A-Za-z0-9.\-]+:\d{1,5}\b|[A-Za-z0-9][A-Za-z0-9\-]*(?![\w.\-])))"
+
 _CRED_PATTERNS = (
     # -pS3cret / --password=S3cret / password: S3cret / "pass": "S3cret"
     re.compile(r"(?<![\w-])(-p|--password[=\s]|--pass[=\s]|-w\s)(?P<secret>[^\s\"',;|&]{4,})"),
-    re.compile(r"(?i)[A-Za-z0-9_$.\-]{0,32}(?:passwords?|passwd|passphrase|pass|pwd|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|token|credentials?)\s*[:=]>?\s*[\"']?(?P<secret>[^\s\"',;|&<>]{4,})"),
+    # P4 review-2 E2/E3: ``key=``/``SECRET_KEY =``/``aws_secret_access_key =``/
+    # ``private_key=`` (any ``*key`` after a non-alphanumeric) and a scheme word
+    # after the key (``token: Bearer X``: X is the secret, not "Bearer").
+    re.compile(r"(?i)[A-Za-z0-9_$.\-]{0,32}(?:passwords?|passwd|passphrase|pass|pwd|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|token|credentials?|(?<![A-Za-z0-9])key)\s*[:=]>?\s*[\"']?(?:(?:bearer|basic|token)\s+)?(?P<secret>[^\s\"',;|&<>]{4,})"),
+    # a SHORT (2-3 chars) value in an explicit PASSWORD slot (closure 53, decision 2): a cracked « password: a7 »
+    # (hydra), « DB_PASSWORD=x9 » reached the model in clear (the line above needs 4+ chars). Password labels only
+    # (never token / key: « key: id » is not a secret), never a yes/no word; pure masks are dropped by the caller.
+    re.compile(r"(?i)[A-Za-z0-9_$.\-]{0,32}(?:passwords?|passwd|passphrase|pass|pwd)\s*[:=]>?\s*[\"']?"
+               r"(?!(?:no|yes|on|off|ok|nil|n/a|set)(?![^\s\"',;|&<>]))(?P<secret>[^\s\"',;|&<>]{2,3})(?![^\s\"',;|&<>])"),
     # Authorization: Bearer <token> / Basic <b64>
     re.compile(r"(?i)\bauthorization\s*:\s*(?:bearer|basic|token)\s+(?P<secret>[A-Za-z0-9._~+/=\-]{8,})"),
-    # user:password@host inside a URI
-    re.compile(r"(?<=://)[A-Za-z0-9._%\-]+:(?P<secret>[^\s@/:]{4,})(?=@)"),
+    # user:password@host inside a URI, any scheme (postgres, mysql, mongodb(+srv), redis, amqp, ldap, smb, ftp...).
+    # The user may be EMPTY (``redis://:pass@host``) — round2-critique « hors sujet »: such DSNs reached a sub-agent in clear.
+    # Never a bare port (``http://127.0.0.1:8080@evil`` is an SSRF payload, not a password).
+    re.compile(r"(?<=://)[A-Za-z0-9._%\-]*:(?P<secret>(?!\d{1,5}@)[^\s@/:]{2,})(?=@)"),   # 2+ (closure 53: « :a7@ »)
+    # the same, JSON-escaped (``postgres:\/\/u:p@h``) or cut after the user on two quoted lines
+    re.compile(r"(?<=:\\/\\/)[A-Za-z0-9._%\-]*:(?P<secret>(?!\d{1,5}@)[^\s@/:\\]{3,})(?=@)"),
+    re.compile(r"(?<=://)[A-Za-z0-9._%\-]*:[\"']?[ \t]*\r?\n[ \t]*[\"']?(?P<secret>[^\s@/:\"']{3,})(?=@)"),
+    # the same, URL-encoded (``postgres%3A%2F%2Fadmin%3AS3cret%40db``)
+    re.compile(r"(?i)%3A%2F%2F[A-Za-z0-9._\-]*%3A(?P<secret>(?:(?!%40)[^\s/@&\"'])+?)(?=%40)"),
+    # user/password@host (Oracle / psql / mysql CLI-style DSN: ``postgres/postgres@db:5432/crm``, ``root/root@mysql``);
+    # never an image digest (``library/nginx@sha256:…``), a tag / ref / version, nor a scoped package (``@scope/pkg``)
+    re.compile(r"(?<![\w/.:@%+\-])[A-Za-z0-9._%\-]{1,64}/(?P<secret>[^\s@/:'\"`]{3,})@(?!" + _NOT_A_HOST + r")(?=[A-Za-z0-9\[])"),
+    # user:password@host WITHOUT a scheme (``admin:S3cret@10.0.0.5``, ``guest:guest@rabbitmq``); not a URI scheme word,
+    # not a port, not a mail address
+    re.compile(r"(?<![\w/.:@%+\-])(?!(?:mailto|https?|ftp|sftp|ssh|git|smb|ldaps?|file):)[A-Za-z0-9._%\-]{1,64}"
+               r":(?P<secret>(?!\d{1,5}@)[^\s@/:'\"`]{3,})@(?!" + _NOT_A_HOST + r")" + _BARE_HOST),
+    # HTTP clients only (round5-critique: ``docker run -u 1000:1000``, ``sudo -u www-data`` are not credentials):
+    # curl / curlie / wget / httpie / xh user:password (``-u admin:S3cret``, ``--user=admin:S3cret``); never a numeric
+    # uid:gid, never a value without a colon
+    re.compile(r"(?<![\w./-])(?:curl|curlie|wget2?|https?|httpie|xh|xhs)(?![\w.-])[^\n|;&]*?\s"
+               r"(?:-u|--user|--proxy-user|--http-user)(?:=|\s+)['\"]?(?!\d+:\d+(?![^\s'\"]))"
+               r"[^\s:'\"]{1,64}:(?P<secret>[^\s'\"]{3,})"),
+    # an UNLABELLED AWS secret access key (40 chars, mixed case + digit) within ~400 characters after an access key id
+    re.compile(r"(?:AKIA|ASIA)[A-Z0-9]{16}[\s\S]{0,400}?(?<![A-Za-z0-9/+=])"
+               r"(?P<secret>(?=[A-Za-z0-9/+]{0,39}[a-z])(?=[A-Za-z0-9/+]{0,39}[A-Z])(?=[A-Za-z0-9/+]{0,39}\d)[A-Za-z0-9/+]{40})(?![A-Za-z0-9/+=])"),
+    # cloud / vendor access keys recognisable by their prefix, wherever they appear (no ``key=`` label needed):
+    # AWS access key ids (AKIA long-term, ASIA STS, and the other IAM unique-id prefixes), GitHub, GitLab, Slack,
+    # Google API keys, Stripe, HashiCorp Vault tokens (hvs./hvb./hvr. and the legacy s.<24>)
+    re.compile(r"(?<![A-Za-z0-9])(?P<secret>(?:AKIA|ASIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ABIA|ACCA|A3T[A-Z0-9])[A-Z0-9]{16})(?![A-Za-z0-9])"),
+    re.compile(r"(?<![A-Za-z0-9_])(?P<secret>(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{40,}|glpat-[A-Za-z0-9_\-]{20,}"
+               r"|xox[abposr]-[A-Za-z0-9\-]{10,}|AIza[0-9A-Za-z_\-]{35}|(?:sk|rk)_(?:live|test)_[0-9A-Za-z]{16,}"
+               r"|hv[sbr]\.[A-Za-z0-9_\-]{20,}))"),
+    re.compile(r"(?<![\w.])(?P<secret>s\.[A-Za-z0-9]{24})(?![\w.])"),
     # NTLM / NT hash and long hex digests worth protecting
     re.compile(r"(?<![A-Fa-f0-9])(?P<secret>[A-Fa-f0-9]{32}:[A-Fa-f0-9]{32})(?![A-Fa-f0-9])"),
 )
 
+# Quoted-key slots (cycle 1, 18/11), applied by ``register_credentials`` after ``_CRED_PATTERNS``. Kept in their own
+# tuple: ``api.tool_provenance._gateway_secrets`` reads ``_CRED_PATTERNS`` to decide what a tool PRODUCED, and a token
+# an endpoint issues (« {"token": "<jwt>"} ») is a delivery there, never a proven exposure — the provenance semantics
+# (and the architecture-D harness) stay exactly as they were.
+_QUOTED_KEY_CRED_PATTERNS = (
+    # a QUOTED key (cycle 1, 18/11): JSON / Python dict / quoted YAML « "password": "S3cretXyz" », « 'api_key' : 'k' »,
+    # « {\"token\":\"…\"} » (JSON inside a JSON string). The closing quote of the key broke the « key[:=] » rule
+    # above, so such a value reached the model in clear at ANY length (closure 53, strict xfail). Only a QUOTED value
+    # (a string), any length, never one of the yes/no words, a null/boolean word or a mask; the bare « key » and the
+    # « pwd » label (the working directory in most JSON) are not slots here (« pwd » has its own rule below).
+    re.compile(r"(?P<q1>\\?[\"'])(?:[A-Za-z0-9_$.\-]{0,32}(?:[_.\-]|(?<=[a-z0-9])(?=[A-Z])))?"
+               r"(?i:passwords?|passwd|passphrase|pass|secret|client[_-]?secret|api[_-]?key|apikey|access[_-]?token"
+               r"|auth[_-]?token|refresh[_-]?token|id[_-]?token|token|credentials?|private[_-]?key|secret[_-]?key"
+               r"|access[_-]?key)(?P=q1)[ \t]*[:=]>?[ \t]*(?P<q2>\\?[\"'])"
+               r"(?!(?i:no|yes|on|off|ok|nil|n/a|set|true|false|null|none|undefined)(?P=q2))"
+               r"(?P<secret>(?:(?!(?P=q2))(?:\\.|[^\n\\])){1,512}?)(?P=q2)"),
+    # « "pwd": "…" » is a password only when the value is not a path (« "pwd": "/home/app" » is the working directory)
+    re.compile(r"(?P<q1>\\?[\"'])(?:[A-Za-z0-9_$.\-]{0,32}(?:[_.\-]|(?<=[a-z0-9])(?=[A-Z])))?(?i:pwd)(?P=q1)"
+               r"[ \t]*[:=]>?[ \t]*(?P<q2>\\?[\"'])(?![/~.\\]|[A-Za-z]:[\\/])"
+               r"(?!(?i:no|yes|on|off|ok|nil|n/a|set|true|false|null|none|undefined)(?P=q2))"
+               r"(?P<secret>(?:(?!(?P=q2))(?:\\.|[^\n\\])){1,512}?)(?P=q2)"),
+    # a quoted PASSWORD key with an unquoted NUMBER (« "password": 123456 », « "pin": 4821 »): 4+ digits only (a count
+    # or a flag is never under such a key, and « "pass": 1 » is a test result)
+    re.compile(r"(?P<q1>\\?[\"'])(?:[A-Za-z0-9_$.\-]{0,32}(?:[_.\-]|(?<=[a-z0-9])(?=[A-Z])))?"
+               r"(?i:passwords?|passwd|passphrase|pass|pin|passcode)(?P=q1)[ \t]*[:=][ \t]*(?P<secret>\d{4,64})(?![\d.])"),
+)
+
+# Tool- and format-specific password slots (v3 privacy audit, 18/11/2026): each one reached the model in clear. Own
+# tuple, applied by ``register_credentials`` only (provenance and storage keep reading ``_CRED_PATTERNS``). A ``name``
+# group, when present, must itself name a secret (``keyblocks.is_secret_name``): « <password>x</password> » yes,
+# « <name>x</name> » no.
+_SLOT_VAL = r"['\"]?(?P<secret>[^\s'\"]{2,256})"
+_TOOL_CRED_PATTERNS = (
+    # XML element « <password>x</password> », « <db.password>x</db.password> »
+    re.compile(r"<(?P<name>[A-Za-z_][\w.\-]{0,63})>(?P<secret>[^<>\s]{2,256})</(?P=name)>"),
+    # key/value attributes « <add key="DbPassword" value="x"/> » (web.config), « <param name="password" value="x"> »
+    re.compile(r"\b(?:key|name)\s*=\s*(?P<q1>[\"'])(?P<name>[\w.\-:]{1,64})(?P=q1)\s+value\s*=\s*(?P<q2>[\"'])"
+               r"(?P<secret>[^\"'\n]{1,512})(?P=q2)"),
+    # PHP « define('DB_PASSWORD', 'x') » (wp-config.php)
+    re.compile(r"\bdefine\s*\(\s*(?P<q1>[\"'])(?P<name>\w{1,64})(?P=q1)\s*,\s*(?P<q2>[\"'])"
+               r"(?P<secret>(?:\\.|(?!(?P=q2))[^\\\n]){1,512})(?P=q2)"),
+    # SQL « IDENTIFIED BY 'x' », « IDENTIFIED WITH mysql_native_password BY 'x' », « WITH PASSWORD 'x' »
+    re.compile(r"(?i)\bIDENTIFIED\s+(?:WITH\s+\w+\s+)?(?:BY|AS)\s+(?:PASSWORD\s*)?(?P<q>['\"])"
+               r"(?P<secret>(?:''|\\.|(?!(?P=q))[^\\\n]){1,256})(?P=q)"),
+    re.compile(r"(?i)\bPASSWORD\s+(?P<q>['\"])(?P<secret>(?:''|\\.|(?!(?P=q))[^\\\n]){1,256})(?P=q)"),
+    # a QUOTED value glued to -p (« mysql -p'x' », « sshpass -p"x" »), sshpass « -p x », redis-cli « -a x »
+    re.compile(r"(?<![\w-])-p(?P<q>['\"])(?!\d{1,5}(?P=q))(?P<secret>[^'\"\n]{2,256})(?P=q)"),   # never a quoted port
+    re.compile(r"\bsshpass\b[^\n|;&]*?\s-p\s+" + _SLOT_VAL),
+    re.compile(r"\bredis-cli\b[^\n|;&]*?\s(?:-a|--pass)\s+" + _SLOT_VAL),
+    # redis.conf « requirepass x » / « masterauth x »; .netrc « login u password x »
+    re.compile(r"(?im)^[ \t]*(?:requirepass|masterauth)[ \t]+" + _SLOT_VAL),
+    re.compile(r"(?i)\blogin\s+\S+\s+password\s+" + _SLOT_VAL),
+    # samba « -U user%x » / « --user=user%x »; impacket « domain/user:x@target »
+    re.compile(r"(?<![\w-])(?:-U|--user(?:name)?)(?:=|\s+)['\"]?[^\s%'\"]{1,64}%(?P<secret>[^\s'\"]{2,256})"),
+    re.compile(r"(?<![\w/.:@%+\-])[A-Za-z0-9.\-]{1,64}/[A-Za-z0-9._\-$]{1,64}:(?P<secret>[^\s@'\"]{2,256})@(?!"
+               + _NOT_A_HOST + r")(?=[A-Za-z0-9\[])"),
+    # ~/.pgpass « host:port:db:user:x » (5 fields, a PostgreSQL port or *: « 10.0.0.5:22:open:ssh:OpenSSH_9 » is not one)
+    re.compile(r"(?m)^[^:\s#][^:\s]*:(?:543\d|6432|\*):[^:\s]+:[^:\s]+:(?P<secret>[^\s]{2,256})(?=\r?$)"),
+)
+
+# Default / dictionary credentials (round3-critique M2): still tokenized WHERE a pattern finds them (``root/root@db``),
+# but never hunted for elsewhere in later outputs — « root », « postgres » are also user names, paths and products.
+COMMON_CREDENTIAL_WORDS = frozenset({
+    "root", "admin", "administrator", "guest", "postgres", "postgresql", "mysql", "mariadb", "oracle", "tiger", "scott",
+    "test", "tester", "user", "users", "dev", "demo", "default", "public", "private", "secret", "password", "changeme",
+    "letmein", "welcome", "sa", "system", "manager", "redis", "mongo", "mongodb", "rabbitmq", "elastic", "kibana",
+    "jenkins", "vagrant", "ubuntu", "debian", "pi", "raspberry", "toor", "pass", "passw0rd", "qwerty", "service",
+})
+
+_B64_USERPASS = re.compile(r"(?<![A-Za-z0-9+/=_-])[A-Za-z0-9+/]{12,200}={0,2}(?![A-Za-z0-9+/=_-])")
+_USERPASS_DECODED = re.compile(r"[A-Za-z0-9._@\\-]{2,64}:[\x21-\x7e]{4,128}")
+
 # Values that match a credential pattern but carry no secret.
 _CRED_FALSE_POSITIVES = frozenset({
+    "bearer", "basic", "digest", "negotiate", "ntlm",
     "none", "null", "true", "false", "changeme", "password", "redacted",
     "xxxx", "****", "<password>", "$password", "password}",
 })
+
+# Pure mask strings: what a tool, an agent or a redactor writes IN PLACE of a secret (« *** », « xxxx », « •••• »,
+# « <redacted> », « [REDACTED] », « «redacted:password» »). They carry no secret and are shared by every finding that
+# masks a value: never minted as a credential (provenance study 17/11: « password: *** » was minted CRED_012).
+_PURE_MASK = re.compile(
+    r"(?i)^(?:[*•●·]+|x{3,}|\.{3,}|#{3,}|[*x•●]{3,}"
+    r"|[<\[({]\s*(?:redacted|hidden|masked|removed|censored|filtered|snipped|snip|omitted|password|secret)\s*[>\])}]"
+    r"|«redacted:[a-z0-9-]+»|redacted|\*{0,4}redacted\*{0,4})$")
+
+
+def is_mask_string(value: Optional[str]) -> bool:
+    """A value that only MASKS a secret (« *** », « [REDACTED] »…), never a secret itself."""
+    return bool(value) and bool(_PURE_MASK.match(str(value).strip().strip("\"'")))
+
+
+def is_cred_false_positive(value: Optional[str]) -> bool:
+    """A credential-pattern hit that carries no secret: a known word (« bearer », « none »…) or a pure mask."""
+    return not value or value.lower() in _CRED_FALSE_POSITIVES or is_mask_string(value)
 
 # Launch-prompt credential pairs, e.g. `CREDS=j.doe:Password1!`,
 # `CREDS=EVILCORP\\admin:pw`, `LOGIN=user/pass`. The launch prompt reaches the
@@ -203,6 +346,77 @@ _PROMPT_CRED_PAIR_RE = re.compile(
     # FIRST ':' or '/' separator, so an '@' in the user must not leak the secret.
     r"(?P<user>[^\s:/\"',;|&]+)[:/](?P<secret>[^\s\"',;|&]{1,})"
 )
+
+
+_PROMPT_AUTH_PAIR_RE = re.compile(
+    # P4 v2 review-2 E1: the secret ends at whitespace only (``&;|'`` are legal
+    # password characters; a shorter class sent the tail of the password in clear).
+    r"(?i)(?<![\w-])auth\s*[:=]\s*(?P<user>[^\s:/\"',;|&]+)[:/](?P<secret>\S+)"
+)
+# Launch-prompt keys whose WHOLE value is credentials (P1/P2), handled item by item
+# before the generic pair pattern. Two value shapes (P4 review-2, E1/E2):
+#   * quoted  ``CREDS="role:user:p a;s|s\"w,0rd"`` -- what build_cli_prompt emits
+#     whenever an item holds whitespace, a quote, a backslash or a comma. Inside the
+#     quotes ``\\``, ``\"`` and ``\,`` are escapes and only an UNESCAPED comma
+#     separates items, so the exact password (spaces, unicode, ``%41``...) survives.
+#   * free    ``CREDS=a:b:P&ss;w|o'rd`` -- ends at whitespace ONLY. A value that ends
+#     with ``,`` continues after the whitespace (``a:b:p1, c:d:p2``) and a following
+#     line shaped like ``user:secret`` continues it too (hand-typed lists).
+# Over-consuming is safe (more text becomes CRED); under-consuming leaks.
+_QUOTED_VAL = r"(?P<qc>[\"'])(?P<q>(?:\\.|(?!(?P=qc))[^\\])*)(?P=qc)?"
+_FREE_VAL = (
+    r"(?P<val>\S+(?:(?<=,)\s+\S+"
+    r"|\n[ \t]*(?![A-Za-z_][\w-]*\s*[:=]\s)(?![A-Za-z][\w+.-]*://)[^\s=:/]+[:/]\S+)*)"
+)
+_PROMPT_CRED_LIST_RE = re.compile(
+    r"(?i)(?P<key>(?<![\w-])(?:creds?|credentials?|login)\s*[:=]\s*)(?:" + _QUOTED_VAL + "|" + _FREE_VAL + ")"
+)
+_AUTH_SCHEMES = r"(?:bearer|basic|token|digest|negotiate|ntlm|apikey)"
+_SCHEME_ITEM_RE = re.compile(r"(?i)^(?P<scheme>" + _AUTH_SCHEMES + r")(?P<sp>\s+)(?P<tok>\S.*)$", re.S)
+_PROMPT_TOKEN_LIST_RE = re.compile(
+    r"(?i)(?P<key>(?<![\w-])(?:tokens?|api[_-]?keys?|bearer)\s*[:=]\s*)(?:" + _QUOTED_VAL
+    + r"|(?P<scheme>" + _AUTH_SCHEMES + r")(?P<sp>[ \t]+)(?P<tok>\S+)|" + _FREE_VAL + ")"
+)
+
+
+def split_quoted_items(body: str) -> List[str]:
+    """Items of a quoted CREDS/TOKEN value: unescaped ``,`` separates; ``\\x`` -> ``x``."""
+    items, cur, i = [], [], 0
+    while i < len(body):
+        ch = body[i]
+        if ch == "\\" and i + 1 < len(body):
+            cur.append(body[i + 1])
+            i += 2
+            continue
+        if ch == ",":
+            items.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+        i += 1
+    items.append("".join(cur))
+    return items
+
+
+_UNESCAPED_QUOTE_RE = re.compile(r'(?<!\\)"')
+
+
+def unwrap_cli_message(text: str) -> str:
+    """Undo the quoting ``opencode run`` applies to its message argument.
+
+    opencode joins its positional args and wraps every arg holding a space as
+    ``"..."`` with each ``"`` turned into ``\\"``. The launch prompt always holds a
+    space, so the text the privacy plugin receives is ``"TARGET: ... CREDS=\\"a:b:p
+    w\\" ..."``: the quoted CREDS/TOKEN values then start with ``\\"`` instead of
+    ``"`` and the list parser ended them at the first space, sending the rest of a
+    password or token to the model. The wrap is recognised only when the text is
+    enclosed in quotes and every inner quote is escaped (what opencode produces);
+    removing the backslash in front of each quote is its exact inverse."""
+    if len(text) >= 2 and text[0] == '"' and text[-1] == '"':
+        inner = text[1:-1]
+        if _UNESCAPED_QUOTE_RE.search(inner) is None:
+            return inner.replace('\\"', '"')
+    return text
 
 
 def _is_private_ip(value: str) -> Optional[bool]:
@@ -235,6 +449,20 @@ class PrivacyVault:
     # Optional override for the server-wide default.
     privacy_enabled: Optional[bool] = None
 
+    # P4 v2. ``epoch`` identifies THIS mapping generation: a record stamped with
+    # another epoch must never be resolved against this vault (restart, TTL
+    # rollover, other run). ``reissued_from`` names the generation it replaced.
+    # ``prompt_placeholders`` are the placeholders minted from the operator's
+    # launch prompt (the only values trusted to identify a target).
+    epoch: str = field(default_factory=lambda: os.urandom(8).hex())
+    reissued_from: Optional[str] = None
+    prompt_placeholders: set = field(default_factory=set, repr=False)
+    # Every epoch of THIS process-local chain (TTL rollovers keep the numbering, so
+    # a placeholder name is never reissued inside a lineage). A record or a run
+    # stamped with an epoch outside the lineage (MCP restart: numbering restarted
+    # at _001) must never be resolved against this vault.
+    lineage: set = field(default_factory=set, repr=False)
+
     # internal state (never logged)
     _key: bytes = field(default_factory=lambda: os.urandom(32), repr=False)
     _hmac_key: bytes = field(default_factory=lambda: os.urandom(32), repr=False)
@@ -251,6 +479,7 @@ class PrivacyVault:
     _lock: "threading.RLock" = field(default_factory=threading.RLock, repr=False)
 
     def __post_init__(self) -> None:
+        self.lineage.add(self.epoch)
         if _HAVE_FERNET:
             import base64
 
@@ -260,6 +489,19 @@ class PrivacyVault:
             self._fernet = None
 
     # -- lifecycle -----------------------------------------------------------
+    def inherit_numbering(self, previous: "PrivacyVault") -> None:
+        """Continue the placeholder numbering of an expired generation (P4 v2, D4).
+
+        A fresh vault used to restart at ``_001`` while the model still held the
+        old ``URL_001``: the next tool output re-minted ``URL_001`` for another
+        value and the old token silently resolved to it. Never reissue a name
+        within a process."""
+        with self._lock:
+            for cat, n in previous._counters.items():
+                self._counters[cat] = max(self._counters.get(cat, 0), n)
+            self.reissued_from = previous.epoch
+            self.lineage |= previous.lineage | {previous.epoch}
+
     def is_expired(self) -> bool:
         return (time.time() - self.created_at) > self.ttl_seconds
 
@@ -335,17 +577,123 @@ class PrivacyVault:
         """
         if not text:
             return text
-        for pattern in _CRED_PATTERNS:
+        # cycle 3: whole private-key blocks first (psql/mysql/sqlite cells, JSON escapes, CRLF…), then table cells,
+        # BEFORE the line patterns below can tear a key body or a « password | value » row apart
+        text = self.register_private_keys(text)
+        text = self.register_table_secrets(text)
+        text = self._register_tool_slots(text)     # before the generic « key=… » rule mints a NAME (« key="DbPassword" »)
+        for pattern in _CRED_PATTERNS + _QUOTED_KEY_CRED_PATTERNS:
             def sub(m):
                 secret = m.group("secret")
-                if not secret or secret.lower() in _CRED_FALSE_POSITIVES:
+                if not secret or is_cred_false_positive(secret):
                     return m.group(0)
                 if PLACEHOLDER_RE.fullmatch(secret):
                     return m.group(0)  # already tokenized
-                return m.group(0).replace(secret, self.register(secret, Category.CRED))
+                # only the SECRET span is replaced (round3-critique M2): ``postgres/postgres@db`` keeps its user
+                a, b = m.start("secret") - m.start(), m.end("secret") - m.start()
+                whole = m.group(0)
+                return whole[:a] + self.register(secret, Category.CRED) + whole[b:]
 
             text = pattern.sub(sub, text)
+        return _B64_USERPASS.sub(lambda m: self._b64_userpass(m), text)
+
+    def _register_tool_slots(self, text: str) -> str:
+        for pattern in _TOOL_CRED_PATTERNS:
+            def sub_tool(m):
+                if "name" in m.groupdict() and not is_secret_name(m.group("name")):
+                    return m.group(0)
+                secret = m.group("secret")
+                if not secret or is_cred_false_positive(secret) or PLACEHOLDER_ANY_RE.search(secret):
+                    return m.group(0)
+                a, b = m.start("secret") - m.start(), m.end("secret") - m.start()
+                whole = m.group(0)
+                return whole[:a] + self.register(secret, Category.CRED) + whole[b:]
+
+            text = pattern.sub(sub_tool, text)
         return text
+
+    def _replace_spans(self, text: str, spans) -> str:
+        out, cur = [], 0
+        for a, b, value in spans:
+            if a < cur or not value or PLACEHOLDER_RE.fullmatch(value.strip()):
+                continue
+            out.append(text[cur:a])
+            out.append(self.register(value, Category.CRED))
+            cur = b
+        out.append(text[cur:])
+        return "".join(out)
+
+    def register_private_keys(self, text: str) -> str:
+        """A private-key block is ONE secret, whatever wraps it (campaign 7: an OpenSSH key printed as a psql table
+        cell, with ``|`` borders and ``+`` continuation markers, reached the model). The whole block span becomes
+        one ``CRED_NNN`` whose value is the key's canonical bytes (BEGIN … END, ``\\n``-joined), so the gateway can
+        write it back to a file byte-exact. See ``keyblocks``."""
+        if not text:
+            return text
+        text = self._replace_spans(text, find_private_keys(text))
+        # v3 privacy audit: encoded keys (base64 of the PEM, URL-encoded), a key tail without its BEGIN (``tail``, a torn
+        # BEGIN, the second half of a split key), markers torn by a fixed-width terminal wrap
+        text = self._replace_spans(text, find_encoded_private_keys(text))
+        text = self._replace_spans(text, find_key_tails(text))
+        text = self._replace_spans(text, find_wrapped_private_keys(text))
+        text = self._replace_spans(text, find_headerless_openssh(text))
+        return self._replace_spans(text, find_bare_key_rows(text))
+
+    def known_key_windows(self) -> Dict[str, str]:
+        """16-char windows of every multi-line key value this vault holds -> its placeholder (local only)."""
+        out: Dict[str, str] = {}
+        if self.is_expired():
+            return out
+        for ph, entry in list(self._by_ph.items()):
+            if entry.category is not Category.CRED:
+                continue
+            try:
+                value = self._decrypt(entry.ciphertext)
+            except Exception:  # noqa: BLE001 — an unreadable entry has no window
+                continue
+            if "\n" in value:
+                for w in key_body_windows(value):
+                    out.setdefault(w, ph)
+        return out
+
+    def register_table_secrets(self, text: str) -> str:
+        """``password | value`` rows and secret-named columns of DB-client tables (psql/mysql/sqlite box output):
+        the value cell only, never the name, the borders or another cell."""
+        if not text:
+            return text
+
+        def accept(value: str) -> bool:
+            return not is_cred_false_positive(value) and not PLACEHOLDER_ANY_RE.search(value) \
+                and value.upper() != "NULL" and not re.fullmatch(r"[-+=─]+", value)
+
+        text = self._replace_spans(text, find_table_secrets(text, accept))
+        return self._replace_spans(text, find_delimited_secrets(text, accept))
+
+    def is_private_key(self, placeholder: str) -> bool:
+        """True when ``placeholder`` stands for a private-key block (local check, the value never leaves)."""
+        entry = self._by_ph.get(placeholder)
+        if entry is None or entry.category is not Category.CRED or self.is_expired():
+            return False
+        try:
+            return is_private_key_value(self._decrypt(entry.ciphertext))
+        except Exception:  # noqa: BLE001 — an unreadable entry is not a key
+            return False
+
+    def _b64_userpass(self, m: "re.Match") -> str:
+        """A base64 blob that decodes to a printable ``user:password`` (Basic credentials outside an Authorization
+        header: a config file, a log line) is a credential (round 5). Random base64 essentially never decodes to such
+        a printable pair, so this does not touch hashes, ids or JWT segments."""
+        tok = m.group(0)
+        try:
+            dec = base64.b64decode(tok + "=" * (-len(tok) % 4), validate=True).decode("ascii")
+        except Exception:  # noqa: BLE001 — not base64 / not ASCII: not a Basic credential
+            return tok
+        if not _USERPASS_DECODED.fullmatch(dec) or PLACEHOLDER_RE.search(dec):
+            return tok
+        user, pw = dec.split(":", 1)
+        if is_cred_false_positive(pw):
+            return tok
+        return self.register(tok, Category.CRED)
 
     def tokenize_prompt(self, text: str) -> str:
         """Tokenize a launch prompt before it ever reaches the model.
@@ -367,20 +715,89 @@ class PrivacyVault:
         """
         if not text:
             return text
+        text = unwrap_cli_message(text)
 
         def _pair(m: "re.Match") -> str:
+            # replaced by SPAN, never by str.replace (fourth mutation run): a user that also occurs in the key
+            # (« auth=auth:pw », « auth=u:pw ») replaced the key and stayed in clear
             user, secret = m.group("user"), m.group("secret")
-            out = m.group(0)
-            if user and not PLACEHOLDER_RE.fullmatch(user) and user.lower() not in _CRED_FALSE_POSITIVES:
-                out = out.replace(user, self.register(user, Category.USER), 1)
-            if secret and not PLACEHOLDER_RE.fullmatch(secret) and secret.lower() not in _CRED_FALSE_POSITIVES:
-                out = out.replace(secret, self.register(secret, Category.CRED))
-            return out
+            whole, o = m.group(0), m.start()
+            if user and not PLACEHOLDER_RE.fullmatch(user) and not is_cred_false_positive(user):
+                user = self.register(user, Category.USER)
+            if secret and not PLACEHOLDER_RE.fullmatch(secret) and not is_cred_false_positive(secret):
+                secret = self.register(secret, Category.CRED)
+            return (whole[:m.start("user") - o] + user + whole[m.end("user") - o:m.start("secret") - o] + secret
+                    + whole[m.end("secret") - o:])
 
-        text = _PROMPT_CRED_PAIR_RE.sub(_pair, text)
+        text = _PROMPT_CRED_LIST_RE.sub(self._cred_list, text)
+        text = _PROMPT_TOKEN_LIST_RE.sub(self._token_list, text)
+        # The generic pair pattern now only serves the keys the list parser does
+        # not own (``auth=user:pass``); re-running it over ``creds=role:USER_001:
+        # CRED_001`` would register the role and a placeholder string as secrets.
+        text = _PROMPT_AUTH_PAIR_RE.sub(_pair, text)
         text = self.register_credentials(text)
         text = self.tokenize(text)
         return text
+
+    def _secret(self, value: str) -> str:
+        if not value or PLACEHOLDER_RE.fullmatch(value) or is_cred_false_positive(value):
+            return value
+        return self.register(value, Category.CRED)
+
+    def _user(self, value: str) -> str:
+        if not value or PLACEHOLDER_RE.fullmatch(value) or is_cred_false_positive(value):
+            return value
+        return self.register(value, Category.USER)
+
+    def _cred_item(self, item: str) -> str:
+        """One CREDS item: 3+ fields = role:user:password (the password may contain
+        ':'), 2 = user:password (or user/password), 1 = a bare secret. The role
+        stays readable, the user becomes USER, the password CRED."""
+        if not item:
+            return item
+        parts = item.split(":")
+        if len(parts) == 1 and "/" in item:
+            u, p = item.split("/", 1)
+            return f"{self._user(u)}/{self._secret(p)}"
+        if len(parts) >= 3:
+            return f"{parts[0]}:{self._user(parts[1])}:{self._secret(':'.join(parts[2:]))}"
+        if len(parts) == 2:
+            return f"{self._user(parts[0])}:{self._secret(parts[1])}"
+        return self._secret(item)
+
+    def _cred_list(self, m: "re.Match") -> str:
+        """``CREDS=role:user:pass,user:pass,secret`` (the shape build_cli_prompt and
+        mask_secret_item use). P1: only the FIRST pair used to be tokenized, every
+        further password reached the model in clear. E1/E2 (review 2): quoted values
+        are unescaped first and a free value ends at whitespace only. The output is
+        always the unquoted ``role:USER_n:CRED_n`` list the agent prompt documents."""
+        if m.group("q") is not None:
+            items = split_quoted_items(m.group("q"))
+        else:
+            items = re.split(r",\s*", m.group("val"))
+            items = [x for line in items for x in re.split(r"\s*\n\s*", line)]
+        return m.group("key") + ",".join(self._cred_item(i.strip()) if i.strip() else "" for i in items)
+
+    def _token_item(self, item: str) -> str:
+        sm = _SCHEME_ITEM_RE.match(item)
+        if sm:
+            return f"{sm.group('scheme')} {self._secret(sm.group('tok').strip())}"
+        return self._secret(item)
+
+    def _token_list(self, m: "re.Match") -> str:
+        """``TOKEN=t1,t2``, ``TOKEN="Bearer x y"`` and the hand-typed ``TOKEN=Bearer
+        xyz`` (P2: the scheme word used to become the secret and ``xyz`` reached the
+        model)."""
+        if m.group("q") is not None:
+            return m.group("key") + ",".join(self._token_item(i.strip()) for i in split_quoted_items(m.group("q")))
+        scheme = m.group("scheme")
+        if scheme:
+            # ``Bearer CRED_001,CRED_002`` (an already tokenized list, re-seen by the
+            # messages.transform hook) must stay as is: each comma item is its own secret.
+            toks = ",".join(self._secret(t) for t in m.group("tok").split(","))
+            return f"{m.group('key')}{scheme}{m.group('sp')}{toks}"
+        items = re.split(r",\s*", m.group("val"))
+        return m.group("key") + ",".join(self._token_item(t) if t else t for t in items)
 
     def _categorize_host(self, host: str) -> Category:
         low = host.lower()
@@ -407,6 +824,10 @@ class PrivacyVault:
             return self.register(m.group(0), Category.URL)
 
         def sub_email(m: re.Match) -> str:
+            # ``CRED_001@db.internal`` is the userinfo of a DSN whose secret is already tokenized, not an address: the
+            # host is left to the host passes (an EMAIL holding a placeholder would never rehydrate for execution)
+            if PLACEHOLDER_RE.fullmatch(m.group(0).split("@", 1)[0]):
+                return m.group(0)
             return self.register(m.group(0), Category.EMAIL)
 
         def sub_ip(m: re.Match) -> str:
