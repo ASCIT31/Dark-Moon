@@ -14,13 +14,20 @@ from . import score as _score
 PROJECT_VERSION = "darkmoon-project-score/1"
 
 
+def _kind(c: Dict[str, Any]) -> str:
+    sig = c.get("coverage_signals")
+    return str(sig.get("campaign_kind") or "") if isinstance(sig, dict) else "full"   # legacy record: a campaign
+
+
 def reference_campaign(campaigns: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """The target's last complete campaign, else its latest one (open-weakness counts read this campaign).
-    Same rule as the historical ``campaign_view._reference_campaign``; sub-agent records are ignored."""
+    """The campaign open-weakness counts read: the target's last complete FULL campaign (a record without coverage
+    signals predates campaign kinds and counts as full), else its last complete campaign, else its latest one.
+    A retest or a short run never hides the findings of the last full assessment. Sub-agent records are ignored."""
     camps = sorted([c for c in campaigns or [] if isinstance(c, dict) and not c.get("is_subagent")],
-                   key=lambda c: str(c.get("date", "")))
+                   key=lambda c: (str(c.get("date", "")), str(c.get("id", ""))))
     complete = [c for c in camps if str(c.get("status", "")).lower() in _score.COMPLETE]
-    return (complete or camps or [None])[-1]
+    full = [c for c in complete if _kind(c) == "full"]
+    return (full or complete or camps or [None])[-1]
 
 
 def _date(bundle: Dict[str, Any]) -> str:

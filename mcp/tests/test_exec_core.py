@@ -42,7 +42,7 @@ def rated(findings, **kw):
 def test_exclusions_and_open():
     assert identity.exclusion_reason(fnd(1, quarantined=True)) == "quarantined"
     assert identity.exclusion_reason(fnd(1, quarantined=True, quarantine_reviewed_by="op")) is None
-    assert identity.exclusion_reason(fnd(1, status="quarantined")) == "quarantined"
+    assert identity.exclusion_reason(fnd(1, status="quarantined")) is None, "only the server flag quarantines"
     for st in ("false_positive", "False Positive", "false-positive"):
         assert identity.exclusion_reason(fnd(1, status=st)) == "false_positive"
     assert identity.is_open(fnd(1)) and not identity.is_open(fnd(1, status="remediated"))
@@ -204,13 +204,45 @@ def test_quarantine_and_false_positive_counted_nowhere():
     assert b["evidence_summary"]["excluded"]["false_positive"] == 1
 
 
-def test_missing_data_is_not_penalised_as_non_compliance():
-    """A finding without severity weighs as low and is listed; missing coverage => not rated, never a low score."""
-    d = rated([{"id": "v1", "target_id": "tgt_t", "status": "confirmed", "category": "csrf"}])
-    assert d["evidence_summary"]["unknown_severity"] == ["v1"]
-    assert d["score"] >= 95
+def test_missing_coverage_is_not_rated_never_a_low_score():
     legacy = score.cyber_score({"campaign": camp(), "findings": [fnd(1, "critical", "exploited")]})
-    assert legacy["score"] is None
+    assert legacy["score"] is None and legacy["score_status"] == "not_rated"
+    empty_legacy = score.cyber_score({"campaign": camp(), "findings": []})
+    assert empty_legacy["score"] is None, "no data is never a 100 either"
+
+
+@pytest.mark.parametrize("label", ["very high", "P1", "9.8", "severe", None, ""])
+def test_unrecognised_severity_is_never_reassuring(label):
+    d = rated([fnd(1, label, "exploited", "rce")])
+    assert d["evidence_summary"]["unknown_severity"] == ["v1"]
+    assert d["score"] <= 59, "weighted as high (conservative) and capped like an exploited high"
+    assert any("recognised severity" in x for x in d["limitations"])
+
+
+def test_unrecognised_severity_takes_the_band_of_a_valid_vector():
+    v = fnd(1, "P1", "exploited", "rce", cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H")
+    assert score.scored_severity(v) == "critical"
+    assert rated([v])["score"] <= 39
+
+
+def test_agent_declared_closure_does_not_change_the_score():
+    """Treatment states never change the rating: a finding closed during the campaign is still scored."""
+    base = rated([fnd(1, "critical", "exploited", "rce")])
+    for st in ("remediated", "fixed", "closed", "resolved"):
+        d = rated([fnd(1, "critical", st, "rce")])
+        assert d["score"] <= 49 and d["evidence_summary"]["declared_closed"] == ["v1"]
+        assert any("declared closed" in x for x in d["limitations"])
+    assert base["score"] <= 39
+
+
+def test_agent_status_quarantined_is_not_a_quarantine():
+    d = rated([fnd(1, "critical", "quarantined", "rce")])
+    assert d["evidence_summary"]["excluded"]["quarantined"] == 0 and d["score"] < 100
+
+
+def test_false_positive_exclusion_is_disclosed():
+    d = rated([fnd(1, "critical", "false_positive", "rce")])
+    assert any("false positive" in x for x in d["limitations"])
 
 
 def test_malformed_signals_are_ignored_not_trusted():
@@ -219,8 +251,21 @@ def test_malformed_signals_are_ignored_not_trusted():
     assert score.cyber_score({"campaign": camp(signals=bad), "findings": []})["score_status"] == "not_rated"
     weird = sig(kind="mega", dur="abc", commands="lots")
     d = score.cyber_score({"campaign": camp(signals=weird), "findings": []})
-    assert d["assessment_coverage"]["campaign_kind"] == "full"
+    assert d["assessment_coverage"]["campaign_kind"] == "unknown"
     assert d["score_status"] == "not_rated"
+    for patch in ({"agents_dispatched": "xyz"}, {"agents_dispatched": [{"agent": None}, {"agent": 5}, None]},
+                  {"measured_duration_seconds": float("inf")}, {"measured_duration_seconds": float("nan")},
+                  {"assets_registered": -3}, {"commands_executed": [1, 2]}, {"agents_dispatched": 7}):
+        s2 = dict(sig(), **patch)
+        d = score.cyber_score({"campaign": camp(signals=s2), "findings": []})   # never raises
+        assert d["score"] is None or d["score"] <= score.LIMITED_CAP, patch
+
+
+def test_agent_floor_needs_agents_observed_in_the_session_log():
+    d = rated([], agents_source="tool_calls_only")
+    assert d["score_status"] == "limited" and "agents_not_observed" in [r["code"] for r in d["status_reasons"]]
+    d = rated([], agents=("general", "build", "php"))
+    assert d["score_status"] == "limited" and "few_agents" in [r["code"] for r in d["status_reasons"]]
 
 
 def test_deterministic_and_input_order_independent():
@@ -293,6 +338,16 @@ def test_reference_campaign_rule():
     assert project.reference_campaign(cs)["id"] == "a"
     assert project.reference_campaign([{"id": "b", "date": "2", "status": "running"}])["id"] == "b"
     assert project.reference_campaign([]) is None
+
+
+def test_reference_campaign_is_never_a_retest_or_a_short_run_when_a_full_one_exists():
+    cs = [{"id": "full", "date": "1", "status": "completed", "coverage_signals": sig()},
+          {"id": "rt", "date": "2", "status": "completed", "coverage_signals": sig(kind="retest")},
+          {"id": "sh", "date": "3", "status": "completed", "coverage_signals": sig(kind="short")}]
+    assert project.reference_campaign(cs)["id"] == "full"
+    assert project.reference_campaign(cs[1:])["id"] == "sh", "no full campaign: the last complete one"
+    tie = [{"id": "b", "date": "1", "status": "completed"}, {"id": "a", "date": "1", "status": "completed"}]
+    assert project.reference_campaign(tie)["id"] == project.reference_campaign(list(reversed(tie)))["id"] == "b"
 
 
 # ---------------------------------------------------------------- legend

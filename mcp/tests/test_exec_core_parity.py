@@ -6,6 +6,9 @@
    and give exactly the committed expected outputs.
 3. exec_core stays pure: standard library only, no file, network or process access.
 4. Community: the copy vendored for the terminal explorer matches the manifest too.
+5. The other modules both editions must ship identically (``SHARED_SHA256``: coverage recorder, score adapter,
+   fix triage) match the hashes below. This file itself is shipped identically, so a change in one edition only
+   fails the other edition's run once the file is copied (no cross-repository access from a test).
 
 After a deliberate change: ``python3 tests/test_exec_core_parity.py`` prints the new values (regenerate the expected
 outputs first with ``tests/fixtures/exec_core/regen_expected.py``), then copy the package, fixtures and this file
@@ -30,8 +33,13 @@ CORE = MCP / "api" / "exec_core"
 FIXTURES = MCP / "tests" / "fixtures" / "exec_core"
 VENDORED = MCP.parent / "conf" / "plugins" / "darkmoon-explorer" / "_vendor" / "exec_core"
 
-INIT_SHA256 = "168d884592b46f99ec6d9c98fa044aa31c09e5e79cc90df3e2b539d15de9ba52"
-FIXTURES_SHA256 = "ce78130382c532eecceb849f1b5dcd893ff369709f979fa43914fca27ddd946a"
+INIT_SHA256 = "3c71c7bf106019b0547eec3a0e29be54a8feca40848238af1ea7588105b62a20"
+SHARED_SHA256 = {
+    "coverage_signals.py": "c800cf3d5ba6f3c873ec01b9991a35b4e43d9219b13da79d655f17366017ac64",
+    "exec_score.py": "94e6bd24282becd2e382dc02556cd4ae90eea7ba5b898473516d112615b3bd94",
+    "fix_triage.py": "606aa30b5090c4c91799a18c5931923de8398de12bcbf9442df198502fc0c55e",
+}
+FIXTURES_SHA256 = "40443c8253d7900390de4abf34167f6d8ae35c8c032e4fa4ca01760111c55a8d"
 
 STDLIB_ALLOWED = {"__future__", "hashlib", "json", "math", "re", "typing", "urllib.parse"}
 FORBIDDEN_CALLS = {"open", "exec", "eval", "compile", "__import__", "input"}
@@ -71,6 +79,11 @@ def test_vendored_explorer_copy_matches_when_present():
     for p in _modules(VENDORED):
         assert _sha(p) == exec_core.MANIFEST[p.name], f"vendored {p.name} drifted"
     assert _sha(VENDORED / "__init__.py") == INIT_SHA256
+
+
+def test_shared_modules_are_identical():
+    for name, sha in SHARED_SHA256.items():
+        assert _sha(MCP / "api" / name) == sha, f"api/{name} differs from the other edition"
 
 
 def test_fixtures_are_identical():
@@ -130,4 +143,8 @@ if __name__ == "__main__":
         print(f'    "{p.name}": "{_sha(p)}",')
     print("}")
     print(f'INIT_SHA256 = "{_sha(CORE / "__init__.py")}"')
+    print("SHARED_SHA256 = {")
+    for name in SHARED_SHA256:
+        print(f'    "{name}": "{_sha(MCP / "api" / name)}",')
+    print("}")
     print(f'FIXTURES_SHA256 = "{_fixtures_digest()}"')

@@ -2,7 +2,7 @@
 
 Pure functions, standard library only, no I/O. One finding has:
 
-* a status class: counted, or excluded with one reason (``quarantined``, ``false_positive``);
+* a status class: counted, or excluded with one reason (``quarantined`` = the server flag, ``false_positive``);
 * an open flag: counted and not closed (``remediated``, ``resolved``, ``closed``, ``fixed``);
 * a displayed severity (the severity of the findings table, aliases normalised);
 * a ``fingerprint``: the cross-campaign identity of one weakness (same algorithm as the historical
@@ -85,8 +85,9 @@ def status_of(v: Dict[str, Any]) -> str:
 
 
 def is_quarantined(v: Dict[str, Any]) -> bool:
-    """Held by the strict privacy policy: quarantined and not reviewed by an operator."""
-    return (bool(v.get("quarantined")) and not v.get("quarantine_reviewed_by")) or status_of(v) == "quarantined"
+    """Held by the strict privacy policy: the server's ``quarantined`` flag, not reviewed by an operator. A status
+    string « quarantined » sent by an agent is not a quarantine (it reads as an unconfirmed finding)."""
+    return bool(v.get("quarantined")) and not v.get("quarantine_reviewed_by")
 
 
 def exclusion_reason(v: Dict[str, Any]) -> Optional[str]:

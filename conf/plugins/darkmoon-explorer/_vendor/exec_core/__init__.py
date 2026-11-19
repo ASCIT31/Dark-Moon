@@ -11,9 +11,9 @@ Modules: ``identity`` (finding identity, weakness class, asset key), ``stats`` (
 VERSION = "1.0.0"
 
 MANIFEST = {
-    "identity.py": "715f2ca4bcc24aaff3b5fbd86809b144d6b6406c1c5ebb9c298b843888180413",
+    "identity.py": "cc77116b2766602d9e4b34f9426fc4ae4fbb97eef076fd69884b343d29dd4159",
     "legend.py": "84df25e47eda2e4616248a1a4afa4b09f07159ef7f66ce720168649f87163ea5",
-    "project.py": "face60537963bbede0540fb0cd6a14e54531e6005460d5e46b9e594485fe393d",
-    "score.py": "28de18c3b2242976a50a75accc206f337224e1f71c582970711e97993888db58",
+    "project.py": "897ea6c825ad270ed3648cee4e452d74dae2d73b26b501ce58b8bf19bfe27b88",
+    "score.py": "02a610b35777eb2b78ece837ef3a51f41a5b596111df08a3c2e6567d402331db",
     "stats.py": "42af8a28a0f30946551d2fac6cbfb20901071155376df2ddea5c207671b03c12",
 }

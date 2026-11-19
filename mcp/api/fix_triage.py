@@ -224,7 +224,7 @@ def triage(a: Dict[str, Any], label_of: Callable[[str, List[str]], str], path_in
         # never ordered nor counted as open, like attack paths and the report (_analyse marks the status too)
         # exclusion rules shared with the stats and the score (exec_core.identity)
         reason = _identity.exclusion_reason(v)
-        if reason == "quarantined":
+        if reason == "quarantined" or _status(v) == "quarantined":   # _analyse marks held findings by status
             excluded["quarantined"] += 1
             continue
         if _identity.is_closed(v):

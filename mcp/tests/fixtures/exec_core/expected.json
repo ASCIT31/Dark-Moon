@@ -62,6 +62,10 @@
      "measured_duration_seconds": 4000,
      "present": true,
      "sentence": "full campaign, 2 test agent(s), 67 min measured, 3 asset(s) registered, 90 toolbox command(s) executed.",
+     "specialised_agents": [
+      "graphql",
+      "php"
+     ],
      "started_at": "2026-11-19T10:00:00Z",
      "workflows_executed": 0
     },
@@ -120,8 +124,8 @@
      "medium": 0
     },
     "counted_findings": 0,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -205,6 +209,7 @@
     "measured_duration_seconds": 68,
     "present": true,
     "sentence": "full campaign, 0 test agent(s), 1 min measured, 2 asset(s) registered, 10 toolbox command(s) executed.",
+    "specialised_agents": [],
     "started_at": "2026-11-19T10:30:20Z",
     "workflows_executed": 2
    },
@@ -226,8 +231,8 @@
      "medium": 0
     },
     "counted_findings": 0,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -247,7 +252,7 @@
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "The campaign did not complete (status: aborted).",
     "Measured duration 1 min, under 30 min.",
-    "0 agent(s) dispatched, under 2."
+    "0 specialised agent(s) dispatched, under 2."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
    "penalty_total": null,
@@ -267,7 +272,7 @@
     },
     {
      "code": "few_agents",
-     "text": "0 agent(s) dispatched, under 2."
+     "text": "0 specialised agent(s) dispatched, under 2."
     }
    ],
    "target_id": "tgt_fx_aborted",
@@ -660,8 +665,8 @@
      "medium": 23
     },
     "counted_findings": 68,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 1,
      "quarantined": 0
@@ -744,6 +749,11 @@
     "measured_duration_seconds": 3746,
     "present": true,
     "sentence": "full campaign, 3 test agent(s), 62 min measured, 5 asset(s) registered, 325 toolbox command(s) executed.",
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "python-flask"
+    ],
     "started_at": "2026-11-19T10:31:35Z",
     "workflows_executed": 0
    },
@@ -1182,8 +1192,8 @@
      "medium": 23
     },
     "counted_findings": 68,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 1,
      "quarantined": 0
@@ -1540,8 +1550,8 @@
      "medium": 18
     },
     "counted_findings": 59,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -1623,6 +1633,10 @@
     "measured_duration_seconds": 3386,
     "present": true,
     "sentence": "full campaign, 2 test agent(s), 56 min measured, 4 asset(s) registered, 23 toolbox command(s) executed.",
+    "specialised_agents": [
+     "headless-browser",
+     "php"
+    ],
     "started_at": "2026-11-19T12:22:11Z",
     "workflows_executed": 0
    },
@@ -1977,8 +1991,8 @@
      "medium": 18
     },
     "counted_findings": 59,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -2081,8 +2095,8 @@
      "medium": 1
     },
     "counted_findings": 2,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -2163,6 +2177,9 @@
     "measured_duration_seconds": 60,
     "present": true,
     "sentence": "short campaign, 1 test agent(s), 1 min measured, 1 asset(s) registered, 2 toolbox command(s) executed.",
+    "specialised_agents": [
+     "graphql"
+    ],
     "started_at": "2026-11-19T10:25:45Z",
     "workflows_executed": 1
    },
@@ -2215,8 +2232,8 @@
      "medium": 1
     },
     "counted_findings": 2,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -2236,7 +2253,7 @@
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "Declared as a short campaign.",
     "Measured duration 1 min, under 30 min.",
-    "1 agent(s) dispatched, under 2.",
+    "Dispatched agents were not observed in the agent session log; the agent names given in the MCP calls cannot meet the coverage floor.",
     "2 toolbox command(s) executed, under 10.",
     "Dispatched agents were taken from the MCP calls that carried an agent name (the agent session log was not readable); an agent that ran without reporting is not seen."
    ],
@@ -2257,8 +2274,8 @@
      "text": "Measured duration 1 min, under 30 min."
     },
     {
-     "code": "few_agents",
-     "text": "1 agent(s) dispatched, under 2."
+     "code": "agents_not_observed",
+     "text": "Dispatched agents were not observed in the agent session log; the agent names given in the MCP calls cannot meet the coverage floor."
     },
     {
      "code": "few_commands",
@@ -2315,6 +2332,11 @@
     "measured_duration_seconds": 3600,
     "present": true,
     "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
     "started_at": "2026-11-19T10:00:00Z",
     "workflows_executed": 0
    },
@@ -2362,8 +2384,8 @@
      "medium": 0
     },
     "counted_findings": 1,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -2446,6 +2468,11 @@
     "measured_duration_seconds": 3600,
     "present": true,
     "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
     "started_at": "2026-11-19T10:00:00Z",
     "workflows_executed": 0
    },
@@ -2563,8 +2590,8 @@
      "medium": 3
     },
     "counted_findings": 9,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -2641,6 +2668,11 @@
     "measured_duration_seconds": 3600,
     "present": true,
     "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
     "started_at": "2026-11-19T10:00:00Z",
     "workflows_executed": 0
    },
@@ -2748,8 +2780,8 @@
      "medium": 1
     },
     "counted_findings": 3,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -2824,6 +2856,9 @@
     "measured_duration_seconds": 600,
     "present": true,
     "sentence": "full campaign, 1 test agent(s), 10 min measured, 1 asset(s) registered, 3 toolbox command(s) executed.",
+    "specialised_agents": [
+     "php"
+    ],
     "started_at": "2026-11-19T10:00:00Z",
     "workflows_executed": 0
    },
@@ -2875,8 +2910,8 @@
      "medium": 0
     },
     "counted_findings": 1,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -2895,7 +2930,7 @@
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "Measured duration 10 min, under 30 min.",
-    "1 agent(s) dispatched, under 2.",
+    "1 specialised agent(s) dispatched, under 2.",
     "3 toolbox command(s) executed, under 10."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
@@ -2912,7 +2947,7 @@
     },
     {
      "code": "few_agents",
-     "text": "1 agent(s) dispatched, under 2."
+     "text": "1 specialised agent(s) dispatched, under 2."
     },
     {
      "code": "few_commands",
@@ -2969,6 +3004,11 @@
     "measured_duration_seconds": 3600,
     "present": true,
     "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
     "started_at": "2026-11-19T10:00:00Z",
     "workflows_executed": 0
    },
@@ -2990,8 +3030,8 @@
      "medium": 0
     },
     "counted_findings": 0,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -3094,8 +3134,8 @@
      "medium": 0
     },
     "counted_findings": 1,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -3178,6 +3218,11 @@
     "measured_duration_seconds": 3600,
     "present": true,
     "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
     "started_at": "2026-11-19T10:00:00Z",
     "workflows_executed": 0
    },
@@ -3239,8 +3284,8 @@
      "medium": 0
     },
     "counted_findings": 1,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -3317,6 +3362,11 @@
     "measured_duration_seconds": 3600,
     "present": true,
     "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
     "started_at": "2026-11-19T10:00:00Z",
     "workflows_executed": 0
    },
@@ -3408,8 +3458,8 @@
      "medium": 1
     },
     "counted_findings": 3,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -3490,6 +3540,11 @@
     "measured_duration_seconds": 3600,
     "present": true,
     "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
     "started_at": "2026-11-19T10:00:00Z",
     "workflows_executed": 0
    },
@@ -3558,8 +3613,8 @@
      "medium": 0
     },
     "counted_findings": 2,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 1,
      "informational": 0,
      "quarantined": 1
@@ -3577,7 +3632,8 @@
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
-    "1 finding(s) held for privacy review are not counted."
+    "1 finding(s) held for privacy review are not counted.",
+    "1 finding(s) marked false positive by an agent or an operator are not counted."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
    "penalty_total": 13.6,
@@ -3636,6 +3692,10 @@
     "measured_duration_seconds": 900,
     "present": true,
     "sentence": "retest campaign, 2 test agent(s), 15 min measured, 2 asset(s) registered, 40 toolbox command(s) executed.",
+    "specialised_agents": [
+     "headless-browser",
+     "php"
+    ],
     "started_at": "2026-11-19T10:00:00Z",
     "workflows_executed": 0
    },
@@ -3683,8 +3743,8 @@
      "medium": 0
     },
     "counted_findings": 1,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -3770,6 +3830,9 @@
     "measured_duration_seconds": 600,
     "present": true,
     "sentence": "short campaign, 1 test agent(s), 10 min measured, 1 asset(s) registered, 12 toolbox command(s) executed.",
+    "specialised_agents": [
+     "php"
+    ],
     "started_at": "2026-11-19T10:00:00Z",
     "workflows_executed": 0
    },
@@ -3821,8 +3884,8 @@
      "medium": 1
     },
     "counted_findings": 1,
+    "declared_closed": [],
     "excluded": {
-     "closed": 0,
      "false_positive": 0,
      "informational": 0,
      "quarantined": 0
@@ -3842,7 +3905,7 @@
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "Declared as a short campaign.",
     "Measured duration 10 min, under 30 min.",
-    "1 agent(s) dispatched, under 2."
+    "1 specialised agent(s) dispatched, under 2."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
    "penalty_total": 4.0,
@@ -3862,7 +3925,7 @@
     },
     {
      "code": "few_agents",
-     "text": "1 agent(s) dispatched, under 2."
+     "text": "1 specialised agent(s) dispatched, under 2."
     }
    ],
    "target_id": "tgt_fx_syn",

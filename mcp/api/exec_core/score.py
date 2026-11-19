@@ -8,8 +8,8 @@ Order of evaluation (methodology 04-CYBER-SCORE-METHODOLOGY.md):
 1. Status gate, before any number:
    * ``not_rated``: campaign not completed, retest campaign, coverage signals absent (campaign recorded before they
      existed) or below the minimum (no measured duration, no agent and no command observed). No number.
-   * ``limited``: completed but below the coverage floor (short campaign, measured duration, dispatched agents,
-     registered assets or executed commands under the floor). Number capped at ``LIMITED_CAP``.
+   * ``limited``: completed but below the coverage floor (short campaign, measured duration, specialised agents
+     observed in the session log, registered assets or executed commands under the floor). Capped at ``LIMITED_CAP``.
    * ``rated``: otherwise.
 2. Penalty per unit (asset, weakness class): the highest ``severity weight x proof factor`` of the unit, plus a
    bounded increment per additional distinct weakness (fingerprint) in the unit. Units of one class on several
@@ -17,8 +17,9 @@ Order of evaluation (methodology 04-CYBER-SCORE-METHODOLOGY.md):
 3. Score = 100 - sum of class penalties, rounded, floored at 0.
 4. Caps by worst evidence (exploited critical, confirmed critical, exploited high), then the limited cap.
 
-Not in the v1 number: attack paths (shown beside it), treatment states, retest verdicts, CVSS (the displayed
-severity is used), agent count (a coverage signal only).
+Not in the v1 number: attack paths (shown beside it), treatment states and closures declared during the campaign
+(closed findings are still scored), retest verdicts, CVSS (the displayed severity is used; a valid vector only
+replaces a severity that is none of the five levels), agent count (a coverage signal only).
 """
 from __future__ import annotations
 
@@ -32,7 +33,8 @@ from . import identity, stats as _stats
 METHODOLOGY_VERSION = "darkmoon-cyber-score/1"
 SIGNALS_SCHEMA = "darkmoon-coverage-signals/1"
 
-SEVERITY_WEIGHT = {"critical": 30.0, "high": 15.0, "medium": 5.0, "low": 2.0, "info": 0.0, "unknown": 2.0}
+SEVERITY_WEIGHT = {"critical": 30.0, "high": 15.0, "medium": 5.0, "low": 2.0, "info": 0.0}
+UNKNOWN_SEVERITY_AS = "high"   # a severity that is none of the five levels, without a valid CVSS vector: conservative
 PROOF_FACTOR = {"exploited": 1.0, "confirmed": 0.8, "unconfirmed": 0.5}
 UNIT_INCREMENT = 0.10          # per additional distinct weakness in one unit
 UNIT_INCREMENT_CAP = 0.30      # at most +30 % of the unit's highest penalty
@@ -52,6 +54,8 @@ MIN_COMMANDS = 10              # toolbox commands executed through the MCP serve
 
 COMPLETE = frozenset({"completed", "complete", "done", "finished"})
 KINDS = ("full", "retest", "short")
+# OpenCode's own generic agents: a session of theirs is not a specialised test agent
+GENERIC_AGENTS = frozenset({"general", "build", "plan", "explore", "task", "compaction", "title", "summary"})
 
 GRADES = (("A", 90), ("B", 75), ("C", 60), ("D", 40), ("E", 0))
 
@@ -81,12 +85,72 @@ def grade_of(score: Optional[int]) -> Optional[str]:
 
 
 def _int(x: Any) -> Optional[int]:
-    try:
-        if x is None or isinstance(x, bool):
-            return None
-        return int(x)
-    except (TypeError, ValueError):
+    """A finite integer, else None (strings, NaN, infinities, booleans and containers are refused)."""
+    if x is None or isinstance(x, bool):
         return None
+    try:
+        if isinstance(x, float) and not math.isfinite(x):
+            return None
+        v = int(x)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return v if v >= 0 else None
+
+
+def _cvss_band(vector: Any) -> Optional[str]:
+    """Severity band of a valid CVSS 3.x base vector (FIRST CVSS v3.1 §7), else None."""
+    text = str(vector or "").strip()
+    if not text.startswith(("CVSS:3.0/", "CVSS:3.1/")):
+        return None
+    m = dict(p.split(":", 1) for p in text.split("/")[1:] if p.count(":") == 1)
+    W = {"AV": {"N": 0.85, "A": 0.62, "L": 0.55, "P": 0.2}, "AC": {"L": 0.77, "H": 0.44},
+         "UI": {"N": 0.85, "R": 0.62}, "C": {"H": 0.56, "L": 0.22, "N": 0.0}}
+    try:
+        scope = {"U": False, "C": True}[m["S"]]
+        pr = {"N": 0.85, "L": 0.68 if scope else 0.62, "H": 0.5 if scope else 0.27}[m["PR"]]
+        av, ac, ui = W["AV"][m["AV"]], W["AC"][m["AC"]], W["UI"][m["UI"]]
+        c, i, a = W["C"][m["C"]], W["C"][m["I"]], W["C"][m["A"]]
+    except KeyError:
+        return None
+    iss = 1 - (1 - c) * (1 - i) * (1 - a)
+    impact = 7.52 * (iss - 0.029) - 3.25 * (iss - 0.02) ** 15 if scope else 6.42 * iss
+    if impact <= 0:
+        return "info"
+    expl = 8.22 * av * ac * pr * ui
+    raw = min(1.08 * (impact + expl), 10) if scope else min(impact + expl, 10)
+    base = math.ceil(raw * 10 - 1e-9) / 10
+    return "critical" if base >= 9 else "high" if base >= 7 else "medium" if base >= 4 else "low"
+
+
+def scored_severity(v: Dict[str, Any]) -> str:
+    """Severity the score uses: the displayed severity; when it is none of the five levels, the band of a valid
+    CVSS vector, else ``UNKNOWN_SEVERITY_AS`` (an unreadable label must never read as reassuring)."""
+    sev = identity.severity_of(v)
+    if sev != "unknown":
+        return sev
+    return _cvss_band(v.get("cvss_vector")) or UNKNOWN_SEVERITY_AS
+
+
+def scored_proof(v: Dict[str, Any]) -> str:
+    """Proof the score uses: the stored proof status; a finding declared closed during the campaign (remediated,
+    fixed...) was found and its closure is not verified, so it is scored as confirmed."""
+    if identity.is_closed(v):
+        return "confirmed"
+    return identity.proof_of(v)
+
+
+def _agent_names(value: Any) -> List[str]:
+    out: List[str] = []
+    if not isinstance(value, list):
+        return out
+    for a in value:
+        name = a.get("agent") if isinstance(a, dict) else a
+        if not isinstance(name, str):
+            continue
+        name = name.strip()[:64]
+        if name and name not in out:
+            out.append(name)
+    return sorted(out)
 
 
 def coverage_of(campaign: Dict[str, Any]) -> Dict[str, Any]:
@@ -94,20 +158,17 @@ def coverage_of(campaign: Dict[str, Any]) -> Dict[str, Any]:
     sig = campaign.get("coverage_signals")
     if not isinstance(sig, dict) or sig.get("schema") != SIGNALS_SCHEMA:
         return {"present": False}
-    agents = []
-    for a in sig.get("agents_dispatched") or []:
-        name = str((a or {}).get("agent") if isinstance(a, dict) else a or "").strip()
-        if name and name not in agents:
-            agents.append(name)
-    kind = str(sig.get("campaign_kind") or "full").strip().lower()
+    agents = _agent_names(sig.get("agents_dispatched"))
+    kind = str(sig.get("campaign_kind") or "").strip().lower()
     return {
         "present": True,
-        "campaign_kind": kind if kind in KINDS else "full",
+        "campaign_kind": kind if kind in KINDS else "unknown",
         "campaign_kind_source": str(sig.get("campaign_kind_source") or "default"),
         "started_at": sig.get("started_at"),
         "finalized_at": sig.get("finalized_at"),
         "measured_duration_seconds": _int(sig.get("measured_duration_seconds")),
-        "agents_dispatched": sorted(agents),
+        "agents_dispatched": agents,
+        "specialised_agents": [a for a in agents if a.lower() not in GENERIC_AGENTS],
         "agents_source": str(sig.get("agents_source") or "unknown"),
         "assets_registered": _int(sig.get("assets_registered")) or 0,
         "commands_executed": _int(sig.get("commands_executed")) or 0,
@@ -121,7 +182,7 @@ def _coverage_sentence(cov: Dict[str, Any]) -> str:
     mins = cov.get("measured_duration_seconds")
     parts = [
         f"{cov['campaign_kind']} campaign",
-        f"{len(cov['agents_dispatched'])} test agent(s)",
+        f"{len(cov['specialised_agents'])} test agent(s)",
         f"{round(mins / 60)} min measured" if mins else "duration not measured",
         f"{cov['assets_registered']} asset(s) registered",
         f"{cov['commands_executed'] + cov['workflows_executed']} toolbox command(s) executed",
@@ -146,6 +207,8 @@ def gate(campaign: Dict[str, Any]) -> Dict[str, Any]:
         if cov["campaign_kind"] == "retest":
             not_rated.append({"code": "retest",
                               "text": "A retest checks selected findings again; it is not rated as an assessment."})
+        if cov["campaign_kind"] == "unknown":
+            not_rated.append({"code": "unknown_kind", "text": "The campaign kind recorded is not recognised."})
         dur = cov["measured_duration_seconds"]
         if not dur or dur <= 0:
             not_rated.append({"code": "no_measured_duration", "text": "No server-measured duration."})
@@ -157,9 +220,14 @@ def gate(campaign: Dict[str, Any]) -> Dict[str, Any]:
         if dur and 0 < dur < MIN_DURATION_SECONDS:
             limited.append({"code": "short_duration",
                             "text": f"Measured duration {round(dur / 60)} min, under {MIN_DURATION_SECONDS // 60} min."})
-        if len(cov["agents_dispatched"]) < MIN_AGENTS:
+        if cov["agents_source"] != "opencode_sessions":
+            limited.append({"code": "agents_not_observed",
+                            "text": "Dispatched agents were not observed in the agent session log; the agent names "
+                                    "given in the MCP calls cannot meet the coverage floor."})
+        elif len(cov["specialised_agents"]) < MIN_AGENTS:
             limited.append({"code": "few_agents",
-                            "text": f"{len(cov['agents_dispatched'])} agent(s) dispatched, under {MIN_AGENTS}."})
+                            "text": f"{len(cov['specialised_agents'])} specialised agent(s) dispatched, "
+                                    f"under {MIN_AGENTS}."})
         if cov["assets_registered"] < MIN_ASSETS:
             limited.append({"code": "no_assets", "text": "No asset registered in the infrastructure map."})
         if cov["commands_executed"] + cov["workflows_executed"] < MIN_COMMANDS:
@@ -178,12 +246,12 @@ def gate(campaign: Dict[str, Any]) -> Dict[str, Any]:
 def _units(open_findings: List[Dict[str, Any]], target_id: str) -> Dict[str, Dict[str, Any]]:
     units: Dict[str, Dict[str, Any]] = {}
     for v in open_findings:
-        sev = identity.severity_of(v)
+        sev = scored_severity(v)
         if sev == "info":
             continue
         vv = {**v, "target_id": v.get("target_id") or target_id}
         key = identity.unit_key(vv)
-        proof = identity.proof_of(vv)
+        proof = scored_proof(vv)
         pen = SEVERITY_WEIGHT[sev] * PROOF_FACTOR[proof]
         u = units.setdefault(key, {"unit": key, "asset": identity.asset_key(vv),
                                    "weakness_class": identity.weakness_class(vv),
@@ -228,7 +296,7 @@ def _caps(open_findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     out = []
     for rule, sev, proof, cap in CAPS:
         ids = sorted(str(v.get("id")) for v in open_findings
-                     if identity.severity_of(v) == sev and identity.proof_of(v) == proof)
+                     if scored_severity(v) == sev and scored_proof(v) == proof)
         if ids:
             out.append({"rule": rule, "cap": cap, "finding_ids": ids})
     return out
@@ -254,9 +322,11 @@ def cyber_score(bundle: Dict[str, Any], previous: Optional[Dict[str, Any]] = Non
     st = g["score_status"]
 
     kept, excluded = _stats.split(findings)
-    open_f = [v for v in kept if not identity.is_closed(v)]
-    closed_n = len(kept) - len(open_f)
-    info_n = sum(1 for v in open_f if identity.severity_of(v) == "info")
+    # every counted finding is scored: a closure (remediated, fixed...) declared during the campaign is not verified,
+    # and treatment states never change the rating; closed ones are listed and scored as confirmed
+    open_f = kept
+    closed_ids = sorted(str(v.get("id")) for v in kept if identity.is_closed(v))
+    info_n = sum(1 for v in open_f if scored_severity(v) == "info")
     unknown = sorted(str(v.get("id")) for v in open_f if identity.severity_of(v) == "unknown")
     units = _units(open_f, target_id)
     comps = _components(units)
@@ -287,12 +357,12 @@ def cyber_score(bundle: Dict[str, Any], previous: Optional[Dict[str, Any]] = Non
     by_proof = {p: 0 for p in identity.PROOF_STATUSES}
     by_sev = {s: 0 for s in identity.SEVERITIES}
     for v in open_f:
-        by_proof[identity.proof_of(v)] += 1
-        s = identity.severity_of(v)
+        by_proof[scored_proof(v)] += 1
+        s = scored_severity(v)
         if s in by_sev:
             by_sev[s] += 1
     to_confirm = sorted(str(v.get("id")) for v in open_f
-                        if identity.proof_of(v) == "unconfirmed" and identity.severity_of(v) in ("critical", "high"))
+                        if scored_proof(v) == "unconfirmed" and scored_severity(v) in ("critical", "high"))
 
     limitations = list(BASE_LIMITATIONS)
     limitations += [r["text"] for r in g["not_rated_reasons"]]
@@ -301,9 +371,16 @@ def cyber_score(bundle: Dict[str, Any], previous: Optional[Dict[str, Any]] = Non
         limitations.append("Dispatched agents were taken from the MCP calls that carried an agent name (the agent "
                            "session log was not readable); an agent that ran without reporting is not seen.")
     if unknown:
-        limitations.append(f"{len(unknown)} finding(s) without a valid severity were weighted as low.")
+        limitations.append(f"{len(unknown)} finding(s) without a recognised severity were weighted from their CVSS "
+                           f"vector, else as {UNKNOWN_SEVERITY_AS} (conservative).")
     if excluded.get("quarantined"):
         limitations.append(f"{excluded['quarantined']} finding(s) held for privacy review are not counted.")
+    if excluded.get("false_positive"):
+        limitations.append(f"{excluded['false_positive']} finding(s) marked false positive by an agent or an "
+                           f"operator are not counted.")
+    if closed_ids:
+        limitations.append(f"{len(closed_ids)} finding(s) declared closed during the campaign are still scored (as "
+                           f"confirmed): a closure is not verified until a completed retest.")
     if to_confirm:
         limitations.append(f"{len(to_confirm)} unconfirmed critical/high finding(s) to confirm; they weigh less "
                            f"than proven ones and never set a cap.")
@@ -327,7 +404,8 @@ def cyber_score(bundle: Dict[str, Any], previous: Optional[Dict[str, Any]] = Non
             "by_proof": by_proof, "by_severity": by_sev,
             "units": len(units), "weakness_classes": len({u["weakness_class"] for u in units.values()}),
             "to_confirm": to_confirm, "unknown_severity": unknown,
-            "excluded": {**excluded, "closed": closed_n, "informational": info_n},
+            "declared_closed": closed_ids,
+            "excluded": {**excluded, "informational": info_n},
         },
         "components": comps,
         "caps": caps,
@@ -358,8 +436,8 @@ def trend_between(current: Dict[str, Any], previous: Dict[str, Any]) -> Dict[str
     delta = int(current["score"]) - int(previous["score"])
     a, b = current["assessment_coverage"], previous["assessment_coverage"]
     diffs = []
-    added = sorted(set(a.get("agents_dispatched") or []) - set(b.get("agents_dispatched") or []))
-    removed = sorted(set(b.get("agents_dispatched") or []) - set(a.get("agents_dispatched") or []))
+    added = sorted(set(a.get("specialised_agents") or []) - set(b.get("specialised_agents") or []))
+    removed = sorted(set(b.get("specialised_agents") or []) - set(a.get("specialised_agents") or []))
     if added:
         diffs.append("agents added: " + ", ".join(added))
     if removed:
