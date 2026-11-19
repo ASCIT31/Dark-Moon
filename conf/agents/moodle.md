@@ -1017,6 +1017,15 @@ When pushing a finding, fill ALL evidence fields:
     access, file, foothold), set enabled_by=["<its vuln_id>"] (push replies list
     recent ones in recent_exploited). Never guess.
 
+TARGET SAFETY (every request to the target):
+    Never point an SSRF/fetch/import/callback at the tested service itself: its host
+    name, its own IP (also as a placeholder such as IP_PRIVATE_001), localhost, 127.0.0.1
+    or 0.0.0.0 on the tested port. A request to itself hangs single-threaded servers.
+    Never invoke an operation that changes the target's state or availability (reset,
+    start over, restart, shutdown, update, delete, backup...): report it as attack surface.
+    Use curl --max-time 10. If the target stops responding, stop and record it as a side
+    effect: a hang caused by our own test is never reported as a DoS finding.
+
 A finding not pushed DOES NOT EXIST for the operator.
 
 The campaign_id is provided in your CONTEXT block by the orchestrator.
