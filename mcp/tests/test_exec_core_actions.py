@@ -99,7 +99,8 @@ def test_many_actions_one_finding_verified_in_each():
     items = [{"fix_id": "g1", "finding_ids": ["a", "b"], "rank": 1, "of_total": 2, "breaks": 1},
              {"fix_id": "g2", "finding_ids": ["a", "c"], "rank": 2, "of_total": 2, "breaks": 1}]
     ranking = {"fixes": [{"fix_id": "g1", "interrupts": ["p1"]}, {"fix_id": "g2", "interrupts": ["p2"]}]}
-    paths = [{"id": "p1", "finding_ids": ["a", "b"], "hypothesis": False},
+    # p1 observed by the server (Evidence-Backed); p2 not a hypothesis, but nothing backs it: a Possible path
+    paths = [{"id": "p1", "finding_ids": ["a", "b"], "hypothesis": False, "provenance": "observed"},
              {"id": "p2", "finding_ids": ["a", "c"], "hypothesis": False}]
     doc = _doc([], source="attack-paths", paths=paths, ranking=ranking, items=items)
     rt = [_retest({"a": "fixed", "b": "fixed", "c": "still_present"})]
@@ -107,7 +108,15 @@ def test_many_actions_one_finding_verified_in_each():
     plan = A.build_plan(CID, doc, vs, st, rt)
     g1, g2 = plan["actions"]
     assert g1["interrupts_attack_paths"] == ["p1"] and g2["interrupts_attack_paths"] == ["p2"]
-    assert g1["expected_impact"]["text"] == "Findings covered: 2 · Proven attack paths interrupted: 1 of 2"
+    # the impact text counts Evidence-Backed Attack Paths only (legend vocabulary), the rest is said apart (L9)
+    assert g1["expected_impact"]["text"] == "Findings covered: 2 · Evidence-Backed Attack Paths interrupted: 1 of 1"
+    assert g2["expected_impact"]["text"] == ("Findings covered: 2 · Evidence-Backed Attack Paths interrupted: 0 of 1"
+                                             " · other attack paths interrupted (not evidence-backed): 1")
+    assert g1["expected_impact"]["evidence_backed_paths_interrupted"] == 1
+    assert g2["expected_impact"]["attack_paths_interrupted"] == 1 and g2["proven_attack_paths"] == ["p1"]  # via « a »
+    assert g1["proven_attack_paths"] == ["p1"]
+    assert all("Proven" not in a["expected_impact"]["text"] and "proven" not in a["explanation"]
+               for a in plan["actions"])
     assert g1["status"] == "verified_resolved" and g1["status_text"] == "Not reproduced at retest (2026-11-10)"
     assert g2["status"] == "partially_resolved"
 

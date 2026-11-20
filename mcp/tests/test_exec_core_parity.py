@@ -7,7 +7,7 @@
 3. exec_core stays pure: standard library only, no file, network or process access.
 4. Community: the copy vendored for the terminal explorer matches the manifest too.
 5. The other modules both editions must ship identically (``SHARED_SHA256``: coverage recorder, score adapter,
-   fix triage) match the hashes below, and so do the treatment-plan and framework-assessment parity fixtures and
+   fix triage, security log) match the hashes below, and so do the treatment-plan and framework-assessment parity fixtures and
    their tests. This file itself is shipped identically, so a change in one edition only
    fails the other edition's run once the file is copied (no cross-repository access from a test).
 
@@ -34,24 +34,29 @@ CORE = MCP / "api" / "exec_core"
 FIXTURES = MCP / "tests" / "fixtures" / "exec_core"
 VENDORED = MCP.parent / "conf" / "plugins" / "darkmoon-explorer" / "_vendor" / "exec_core"
 
-INIT_SHA256 = "2273e40a105fc641caf33aca89931746e38280cd3b1aab0d2800a5ddde24e355"
+INIT_SHA256 = "d2e66e788874996d411272afa9cded467f81c561ed05145d27ad444e7063e1b1"
 SHARED_SHA256 = {
     "coverage_signals.py": "c800cf3d5ba6f3c873ec01b9991a35b4e43d9219b13da79d655f17366017ac64",
     "exec_score.py": "94e6bd24282becd2e382dc02556cd4ae90eea7ba5b898473516d112615b3bd94",
     "fix_triage.py": "341b8dda61b3dd080f8dcbbae9366e204e53f9211475d610cc3041e19a6a38bb",
+    "security_log.py": "f0c55e93aded8461847a55039e61d0d4f24f907bf30f28b6320ae740d6702a52",
 }
 SHARED_TESTS_SHA256 = {
-    "test_exec_core_actions.py": "3bea2178676f730838a1edddf68078ab0e517827488bd7be549f91b63aab049e",
+    "test_exec_core_actions.py": "214a20a11c04412d5ea82c15ba331bac706551163eb363b58ce843ce934ec0ee",
     "test_exec_core_executive.py": "017bbfa4b8c33b5ff3782346047c392080183bfc4da7177ee01cd2c1e1d82650",
+    "test_exec_core_maintenance.py": "acf24b4263c9de6ce00f66dd28196449b78d11b72ead10ab689a20daa3fa284a",
+    "test_exec_core_taxonomy.py": "f55f8efaac308b2600c52c0bc8388bb0d89cf12ddc5565161a66cecdaf4eb35a",
     "test_exec_core_frameworks.py": "ba9b0ba3d5dffb8cdca8d00693a18479804bb85afeae0ceedde59afa6a1a8730",
     "test_exec_core_report_model.py": "1a671d67afee0fd8cefd7e03f774fe38c8bacf7296fb380bb46741d86e05e910",
 }
-TREATMENT_FIXTURES_SHA256 = "3ea1f25ed7e7f9799f6ee0e30196f673d2b6097fdd49b998c6fd26b8676773c5"
+TREATMENT_FIXTURES_SHA256 = "13ab9a0be32456d24efd3707ef0e05fbe9e13684f7c3b127f0194f9c55647140"
 FRAMEWORK_FIXTURES_SHA256 = "fee0eaeca54d097a7f2cfc5f51193a13fd00e1b2ae8df23cb81d1f66eec3bf0a"
+MAINTENANCE_FIXTURES_SHA256 = "0b2b564c884671b8bf75db474e4a6b88d853b448dab412ef9fdfb6a42cf31c1f"
 REPORT_FIXTURES_SHA256 = "cacd1bff96dd003b63dac18e5da23a60a2cc29d570a57d7a9e42370674559f9a"
 FIXTURES_SHA256 = "40443c8253d7900390de4abf34167f6d8ae35c8c032e4fa4ca01760111c55a8d"
 
-STDLIB_ALLOWED = {"__future__", "datetime", "hashlib", "json", "math", "re", "typing", "urllib.parse"}
+# zoneinfo (maintenance windows) reads the host's time-zone database: the only outside input exec_core accepts
+STDLIB_ALLOWED = {"__future__", "datetime", "hashlib", "json", "math", "re", "typing", "urllib.parse", "zoneinfo"}
 FORBIDDEN_CALLS = {"open", "exec", "eval", "compile", "__import__", "input"}
 FORBIDDEN_NAMES = {"os", "sys", "subprocess", "socket", "pathlib", "shutil", "sqlite3", "io", "tempfile"}
 
@@ -110,6 +115,11 @@ def test_treatment_plan_fixtures_and_tests_are_identical():
 def test_framework_assessment_fixtures_are_identical():
     """The framework-assessment / profile parity fixture and its expected output run unchanged in both editions."""
     assert _fixtures_digest(FIXTURES / "frameworks") == FRAMEWORK_FIXTURES_SHA256
+
+
+def test_maintenance_fixtures_are_identical():
+    """The maintenance-window golden cases and their expected evaluations run unchanged in both editions."""
+    assert _fixtures_digest(FIXTURES / "maintenance") == MAINTENANCE_FIXTURES_SHA256
 
 
 def test_report_model_fixtures_are_identical():
@@ -180,5 +190,6 @@ if __name__ == "__main__":
     print("}")
     print(f'TREATMENT_FIXTURES_SHA256 = "{_fixtures_digest(FIXTURES / "treatment")}"')
     print(f'FRAMEWORK_FIXTURES_SHA256 = "{_fixtures_digest(FIXTURES / "frameworks")}"')
+    print(f'MAINTENANCE_FIXTURES_SHA256 = "{_fixtures_digest(FIXTURES / "maintenance")}"')
     print(f'REPORT_FIXTURES_SHA256 = "{_fixtures_digest(FIXTURES / "report")}"')
     print(f'FIXTURES_SHA256 = "{_fixtures_digest()}"')

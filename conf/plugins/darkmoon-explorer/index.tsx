@@ -17,6 +17,7 @@ import {
   applicabilityOf,
   frameworkLine,
   legendLines,
+  maintenanceLines,
   pathKindCounts,
   profileValue,
   provenanceBadge,
@@ -33,6 +34,7 @@ import {
   type FrameworkAssessment,
   type Legend,
   type ProfileDoc,
+  type MaintenanceDoc,
   type TreatmentPlan,
   buckets,
   durationText,
@@ -930,6 +932,24 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
     if (!c) return api.ui.toast({ variant: "info", message: "No campaign yet." })
     push({ k: target, campaign: c } as View)
   }
+  async function showMaintenance() {
+    const pr = contextProject()
+    if (!pr) return api.ui.toast({ variant: "info", message: "No project in context." })
+    let doc: MaintenanceDoc | undefined
+    try {
+      doc = await src.maintenance(pr.id)
+    } catch {
+      doc = undefined
+    }
+    api.ui.dialog.replace(() => (
+      <api.ui.DialogAlert
+        title="Maintenance windows"
+        message={maintenanceLines(doc, pr.name ?? pr.id).join("\n")}
+        onConfirm={() => api.ui.dialog.clear()}
+      />
+    ))
+    api.ui.dialog.setSize(W() >= 120 ? "xlarge" : W() >= 92 ? "large" : "medium")
+  }
   async function showLegend() {
     if (!legendDoc()) {
       try {
@@ -982,6 +1002,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
           "F R P    findings, report, attack paths of the campaign",
           "T X A    treatment plan, frameworks, application profile",
           "L        legend (paths, evidence status, treatment, score)",
+          "W        maintenance windows of the project",
           "t        contents (report) / target filter",
           "] [      next / previous page, finding or chapter",
           "g        go to chapter",
@@ -1030,6 +1051,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             { name: "dmx.frameworks", title: "Frameworks (technical assessment)", run: () => quickExec("frameworks") },
             { name: "dmx.profile", title: "Application profile", run: () => quickExec("profile") },
             { name: "dmx.legend", title: "Legend", run: () => void showLegend() },
+            { name: "dmx.maintenance", title: "Maintenance windows", run: () => void showMaintenance() },
             ...TABS.map((t, i) => ({ name: `dmx.tab${i + 1}`, title: t.label, run: () => goTab(t.id) })),
           ],
           bindings: [
@@ -1061,6 +1083,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             { key: "shift+x", cmd: "dmx.frameworks", desc: "Frameworks" },
             { key: "shift+a", cmd: "dmx.profile", desc: "Profile" },
             { key: "shift+l", cmd: "dmx.legend", desc: "Legend" },
+            { key: "shift+w", cmd: "dmx.maintenance", desc: "Windows" },
             ...TABS.map((t, i) => ({ key: String(i + 1), cmd: `dmx.tab${i + 1}`, desc: t.label })),
           ],
         }

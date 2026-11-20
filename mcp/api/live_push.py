@@ -603,6 +603,15 @@ def _init_live_campaign_unlocked(
     # a record that predates coverage signals never gets any; Community = single-user TUI: the run's root session
     # is the latest one when the campaign key is not a session prefix
     coverage_signals.on_init(campaign, campaign_kind, create=_prior is None, latest_root_fallback=True)
+    # maintenance windows (advisory in Community): evaluated once, when the campaign is created; outside the owner's
+    # policy the server logs a WARNING and records it here; the campaign goes on and the model is told nothing
+    if _prior and isinstance(_prior.get("maintenance_check"), dict):
+        campaign["maintenance_check"] = _prior["maintenance_check"]
+    elif _prior is None:
+        from api import maintenance_local
+        _mc = maintenance_local.check_at_start(campaign, campaign_kind)
+        if _mc:
+            campaign["maintenance_check"] = _mc
     save_campaign(campaign)
 
     # Only init empty vulns if file doesn't exist yet

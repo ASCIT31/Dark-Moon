@@ -1003,6 +1003,12 @@ def dashboard_finalize_campaign(
 
 def main():
     """Run the MCP server."""
+    # Security events (darkmoon.audit) on stderr; DARKMOON_LOG_FORMAT=json writes every darkmoon.* record as JSON
+    try:
+        from api import security_log
+        security_log.configure()
+    except Exception:  # noqa: BLE001 - logging set-up never stops the server
+        pass
     # Print startup info
     print("=" * 60)
     print("Darkmoon MCP Server")

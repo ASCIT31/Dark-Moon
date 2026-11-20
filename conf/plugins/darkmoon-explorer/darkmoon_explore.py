@@ -23,13 +23,16 @@ Safety
   project's reference campaign. ``legend``: the shared vocabulary (exec_core.legend). Same fail-closed rule as ``plan``.
 - Darkmoon's own catalogue and legend texts are never masked (``exec_core.static_text``): only an exact static text
   is kept as written; everything else, evidence first, goes through the redaction engine.
-- Declarations (treatment statuses, application profile) are made ONLY by the owner editing the local files above by
-  hand. This adapter has no write command, and the MCP server exposes no tool a model could call to write them.
+- Maintenance windows (``maintenance``): the MCP server's ``api.maintenance_local`` (exec_core.maintenance, the
+  owner's own file ``<data>/policies/<project_id>.json`` validated on read): the policy in words and what a launch would
+  get now. Community warns outside the windows, it never blocks. Same fail-closed rule as ``plan``.
+- Declarations (treatment statuses, application profile, maintenance windows) are made ONLY by the owner editing the
+  local files above by hand. This adapter has no write command, and the MCP server exposes no tool a model could call to write them.
 
 Usage: darkmoon_explore.py [--data DIR] [--reports DIR] [--mcp DIR] <command> [args]
   projects | campaigns | campaign ID | finding ID | vulnerabilities [--project ID] [--campaign ID]
   | report CAMPAIGN_ID | paths CAMPAIGN_ID | plan CAMPAIGN_ID | frameworks CAMPAIGN_ID | profile PROJECT_ID
-  | executive CAMPAIGN_ID | executive --project PROJECT_ID | legend
+  | executive CAMPAIGN_ID | executive --project PROJECT_ID | legend | maintenance PROJECT_ID
 Exit codes: 0 ok, 2 not found / refused, 1 error.
 """
 from __future__ import annotations
@@ -424,6 +427,24 @@ def cmd_executive(st: Store, red, cid: str | None, pid: str | None) -> dict:
     return safe_doc(doc, red)
 
 
+def cmd_maintenance(st: Store, red, pid: str) -> dict:
+    """Maintenance windows of a project: the owner's policy file validated on read, in words, and the evaluation now.
+    Fail closed like ``plan`` (the labels and note are the owner's free text: they go through the redaction)."""
+    check_id(pid)
+    if not any(isinstance(p, dict) and p.get("id") == pid for p in st.projects()):
+        raise NotFound(pid)
+    if red is None:
+        raise NotFound("maintenance windows withheld: the redaction engine is not available")
+    try:
+        from api.maintenance_local import policy_doc  # type: ignore
+    except Exception:  # noqa: BLE001
+        raise NotFound("maintenance windows unavailable: the Darkmoon MCP server is not installed")
+    doc = policy_doc(pid)
+    if doc is None:
+        raise NotFound(pid)
+    return safe_doc(doc, red)
+
+
 def cmd_legend() -> dict:
     """The shared vocabulary (exec_core.legend): Darkmoon's own words, no data."""
     return exec_core_mod("legend").legend()
@@ -458,6 +479,7 @@ COMMANDS = (
     ("executive CAMPAIGN_ID", "executive block of a campaign"),
     ("executive --project PROJECT_ID", "executive block of a project (reference campaign)"),
     ("legend", "shared vocabulary of the executive views"),
+    ("maintenance PROJECT_ID", "maintenance windows (+ policies/<project_id>.json), warning only"),
 )
 
 
@@ -506,6 +528,8 @@ def main(argv: list[str]) -> int:
             out = cmd_executive(st, red, a.arg, a.project)
         elif a.cmd == "legend":
             out = cmd_legend()
+        elif a.cmd == "maintenance":
+            out = cmd_maintenance(st, red, a.arg or "")
         else:
             print(f"unknown command: {a.cmd}", file=sys.stderr)
             return 1

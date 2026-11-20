@@ -412,3 +412,43 @@ describe("executive views: display only, the words of exec_core", () => {
     expect(seen.length).toBe(6 + 3) // cached per key; a project block and a campaign block never share a key
   })
 })
+
+describe("maintenance windows (L9)", () => {
+  const DOC = {
+    policy: { timezone: "Europe/Paris" },
+    summary: ["Every campaign may start only inside these windows (Europe/Paris time):", "• Monday to Friday, 22:00–06:00 (next day)"],
+    evaluation_now: { decision: "blocked", next_window_start_utc: "2026-11-20T21:00:00Z",
+      reasons: [{ code: "inside-window", message: "x", effect: "none" }, { code: "outside-window", message: "Outside every maintenance window\x1b[2J\nforged", effect: "block" }] },
+    enforced: true,
+  }
+
+  test("Pro: GET /projects/{id}/maintenance-policy; Community: the adapter's maintenance command", async () => {
+    const urls: string[] = []
+    const api = new ExplorerApi("http://x/api/v1", (async (u: string) => (urls.push(u), new Response("{}", { status: 200 }))) as any)
+    await api.maintenance("p 1")
+    expect(urls[0]).toBe("http://x/api/v1/projects/p%201/maintenance-policy")
+    const core = await import("./core")
+    const seen: string[][] = []
+    const fs = new core.FileSource(async (args: string[]) => (seen.push(args), { code: 0, stdout: "{}", stderr: "" }))
+    await fs.maintenance("p1")
+    expect(seen[0]).toEqual(["maintenance", "p1"])
+  })
+
+  test("lines: the policy in words, the state now with its blocking reasons only, who enforces; no control character", async () => {
+    const { maintenanceLines } = await import("./core")
+    const pro = maintenanceLines(DOC as any, "Shop").join("\n")
+    expect(pro).toContain("Monday to Friday, 22:00–06:00 (next day)")
+    expect(pro).toContain("Now: a launch would be blocked.")
+    expect(pro).toContain("Next allowed start: 2026-11-20T21:00:00Z (UTC)")
+    expect(pro).toContain("Pro blocks New Campaign, the scheduler and retests")
+    expect(pro).not.toContain("\x1b")
+    expect(pro.split("\n").filter((l) => l.includes("forged")).every((l) => l.includes("Outside"))).toBe(true)
+    expect(pro).not.toMatch(/·\s*x$/m)                                       // reasons without effect are not listed
+    const community = maintenanceLines({ ...DOC, enforced: false, evaluation_now: { ...DOC.evaluation_now, decision: "warn", advisory_of: "blocked" },
+      file: { path: "policies/p1.json", status: "read" } } as any, "Lab").join("\n")
+    expect(community).toContain("Now: outside the windows (a launch gets a WARNING, it is not blocked).")
+    expect(community).toContain("File: policies/p1.json (read), edited by hand, never by an agent.")
+    expect(community).toContain("Community warns outside the windows; it never blocks a launch.")
+    expect(maintenanceLines(undefined, "Lab")[0]).toContain("not available")
+  })
+})

@@ -16,7 +16,10 @@ Actions are derived, never invented:
   is generated. Without a text the action says so;
 * ``treatment_type`` is derived from the weakness class (to confirm by the owner), ``unknown`` when the class says
   nothing;
-* ``expected_impact`` is counts only (findings covered, proven attack paths interrupted): never a risk reduction %;
+* ``expected_impact`` is counts only: findings covered, attack paths the fix interrupts in the server's simulation
+  (``attack_paths_interrupted``), and among them the Evidence-Backed Attack Paths (``legend.path_kind_of``:
+  ``evidence_backed_paths_interrupted``, the only count the impact text calls interrupted paths); never a risk
+  reduction %. ``proven_attack_paths`` (key kept for compatibility) lists the Evidence-Backed Attack Paths only;
 * ``related_controls`` = the framework controls the action's counted findings are technical evidence for
   (``frameworks_assess.related_controls``); dependencies, owner, approval requirement and service interruption risk
   are ``unknown`` unless a person declared them.
@@ -38,6 +41,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from . import frameworks_assess as _fa
 from . import identity
+from . import legend as _legend
 
 PLAN_VERSION = "darkmoon-treatment-plan/1"
 STATE_VERSION = "darkmoon-treatment-state/1"
@@ -208,6 +212,9 @@ def build_actions(campaign_id: str, paths_doc: Dict[str, Any], findings: Iterabl
     provenance) built WITHOUT retest verdicts, so the plan keeps the campaign's own findings."""
     vmap = {str(v.get("id")): v for v in findings or [] if isinstance(v, dict) and v.get("id")}
     by_finding, interrupts = _paths_index(paths_doc)
+    kind_of = {str(p["id"]): _legend.path_kind_of(p) for p in (paths_doc or {}).get("paths") or []
+               if isinstance(p, dict) and p.get("id")}
+    eb_total = sum(1 for k in kind_of.values() if k == "evidence_backed")
     _, cands = _candidates(paths_doc)
     actions = []
     for pos, it in enumerate(cands, 1):
@@ -215,7 +222,7 @@ def build_actions(campaign_id: str, paths_doc: Dict[str, Any], findings: Iterabl
         head = vmap.get(str(it.get("head_finding_id") or it.get("finding_id") or "")) or _head(ids, vmap)
         fix_id = str(it.get("fix_id"))
         related = sorted({p["id"] for i in ids for p in by_finding.get(i, [])})
-        proven = sorted({p["id"] for i in ids for p in by_finding.get(i, []) if not p.get("hypothesis")})
+        proven = sorted({p["id"] for i in ids for p in by_finding.get(i, []) if kind_of.get(str(p["id"])) == "evidence_backed"})
         if it["_basis"] == "attack-paths":
             broken = interrupts.get(fix_id, [])
             of_total = it.get("of_total")
@@ -225,9 +232,11 @@ def build_actions(campaign_id: str, paths_doc: Dict[str, Any], findings: Iterabl
         n = len(ids)
         sev = it.get("severity") or identity.severity_of(head or {})
         proof = it.get("proof") or identity.proof_of(head or {})
+        eb_broken = [pid for pid in broken if kind_of.get(str(pid)) == "evidence_backed"]
         if it["_basis"] == "attack-paths":
-            expl = (f"Interrupts {it.get('breaks', len(broken))} of {of_total} proven attack paths in the server's "
-                    f"simulation (not applied). Addresses {_plural(n, 'finding')}, worst {sev} ({proof}).")
+            expl = (f"Interrupts {it.get('breaks', len(broken))} of {of_total} known attack paths in the server's "
+                    f"simulation (not applied), {len(eb_broken)} of them Evidence-Backed. "
+                    f"Addresses {_plural(n, 'finding')}, worst {sev} ({proof}).")
         else:
             reasons = [str(r) for r in it.get("reasons") or []]
             expl = (f"Ordered by reported severity, then proof: {'; '.join(reasons) or sev + ', ' + proof}. "
@@ -236,7 +245,10 @@ def build_actions(campaign_id: str, paths_doc: Dict[str, Any], findings: Iterabl
                 expl += f" {it['fold']['label']}."
         impact_text = f"Findings covered: {n}"
         if broken or it["_basis"] == "attack-paths":
-            impact_text += f" · Proven attack paths interrupted: {len(broken)}" + (f" of {of_total}" if of_total else "")
+            impact_text += (f" · Evidence-Backed Attack Paths interrupted: {len(eb_broken)}"
+                            + (f" of {eb_total}" if it["_basis"] == "attack-paths" else ""))
+            if len(broken) > len(eb_broken):
+                impact_text += f" · other attack paths interrupted (not evidence-backed): {len(broken) - len(eb_broken)}"
         actions.append({
             "action_id": action_id(campaign_id, fix_id),
             "fix_id": fix_id,
@@ -260,7 +272,10 @@ def build_actions(campaign_id: str, paths_doc: Dict[str, Any], findings: Iterabl
                                       "not an audit opinion)."),
             "dependencies": [],
             "expected_impact": {"findings_covered": n, "attack_paths_interrupted": len(broken),
-                                "attack_paths_total": of_total, "text": impact_text},
+                                "attack_paths_total": of_total,
+                                "evidence_backed_paths_interrupted": len(eb_broken),
+                                "evidence_backed_paths_total": eb_total if it["_basis"] == "attack-paths" else None,
+                                "text": impact_text},
         })
     return actions
 

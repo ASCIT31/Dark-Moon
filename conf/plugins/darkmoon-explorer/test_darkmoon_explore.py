@@ -485,3 +485,60 @@ class ExecutiveTests(unittest.TestCase):
         content = json.loads(out)["content"]
         self.assertIn(f"| {a85} |", content)
         self.assertNotIn(SECRET, content)
+
+
+class MaintenanceTests(unittest.TestCase):
+    """``maintenance``: the owner's policy file validated on read, in words, with the evaluation now; Community warns,
+    never blocks; read-only, redacted, fail closed (L9)."""
+
+    setUp = AdapterTests.setUp
+    tearDown = AdapterTests.tearDown
+    MCP = LocalEngineTests.MCP
+    cmd = FrameworkProfileTests.cmd
+
+    def write(self, doc):
+        d = self.root / "policies"
+        d.mkdir(exist_ok=True)
+        (d / "p1.json").write_text(json.dumps(doc) if not isinstance(doc, str) else doc)
+
+    def test_fail_closed_without_server_or_redaction(self):
+        self.assertEqual(run(self.root, "maintenance", "p1")[0], 2)
+        real = dx.load_redaction
+        dx.load_redaction = lambda *_: None
+        self.addCleanup(setattr, dx, "load_redaction", real)
+        code, out, err = run(self.root, "maintenance", "p1")
+        self.assertEqual((code, out), (2, ""))
+        self.assertIn("withheld", err)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_policy_in_words_and_never_enforced(self):
+        r = self.cmd("maintenance", "p1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        self.assertIsNone(d["policy"])
+        self.assertEqual(d["file"]["status"], "absent")
+        self.assertEqual(d["summary"], ["No maintenance policy: launches are not restricted by time."])
+        # a window that is never open now: Sunday 00:00–00:01 does not cover every instant -> use a blackout for today
+        self.write({"timezone": "UTC", "windows": [{"days": ["mon"], "start": "09:00", "end": "10:00",
+                                                    "label": f"note password={SECRET}"}],
+                    "blackouts": [{"start": "2000-01-01", "end": "2000-01-01"}]})
+        r = self.cmd("maintenance", "p1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        self.assertEqual(d["file"]["status"], "read")
+        self.assertFalse(d["enforced"])
+        self.assertNotEqual(d["evaluation_now"]["decision"], "blocked")      # advisory: never « blocked »
+        self.assertIn("Monday, 09:00–10:00", " ".join(d["summary"]))
+        self.assertNotIn(SECRET, r.stdout)
+        self.assertEqual(self.cmd("maintenance", "../etc").returncode, 2)
+        self.assertEqual(self.cmd("maintenance", "nope").returncode, 2)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_broken_or_foreign_file_warns_never_passes_silently(self):
+        for doc in ("{not json", {"timezone": "../../etc/passwd", "windows": []},
+                    {"project_id": "other", "timezone": "UTC", "windows": []}):
+            self.write(doc)
+            d = json.loads(self.cmd("maintenance", "p1").stdout)
+            self.assertEqual(d["file"]["status"], "unreadable", doc)
+            self.assertEqual(d["evaluation_now"]["decision"], "warn", doc)
+            self.assertEqual(d["evaluation_now"]["advisory_of"], "blocked", doc)

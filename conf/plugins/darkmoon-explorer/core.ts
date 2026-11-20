@@ -120,6 +120,16 @@ export type Executive = Doc & {
 }
 export type TreatmentPlan = Doc & { label?: string; definition?: string; plain?: string; actions?: ActionRow[]; summary?: Doc; statuses?: { value: string; label: string }[]; verification_note?: string; score_note?: string; declarations?: Doc }
 export type FrameworkAssessment = Doc & { reading?: string; summary_line?: string; states?: { value: string; label: string }[]; frameworks?: (FrameworkRow & { controls?: Doc[] })[]; coverage?: Doc }
+/** Maintenance windows of a project (L9): GET /projects/{id}/maintenance-policy (Pro) or the adapter's
+ *  ``maintenance`` command (Community, the owner's ``policies/<project_id>.json``; a warning, never a block). */
+export type MaintenanceDoc = Doc & {
+  policy?: Doc | null
+  summary?: string[]
+  evaluation_now?: { decision?: string; reasons?: { code?: string; message?: string; effect?: string }[]; next_window_start_utc?: string | null; timezone?: string | null; local_time?: string | null; advisory_of?: string }
+  file?: { path?: string; status?: string; note?: string }
+  enforced?: boolean
+  issues?: { field?: string; message?: string }[]
+}
 export type ProfileDoc = Doc & { profile?: { fields?: Record<string, Doc>; provenance_counts?: Record<string, number>; reading?: string }; declarations?: Doc; issues?: Doc[] }
 export type Legend = Doc & { path_kind?: Record<string, { label: string; meaning: string }>; evidence_status?: Record<string, { label: string; meaning: string }>; treatment?: Record<string, { label: string; meaning: string }>; score_status?: Record<string, { label: string; meaning: string }>; severity?: Record<string, string>; grade?: Record<string, string> }
 
@@ -148,6 +158,7 @@ export interface DataSource {
   plan(campaignId: string): Promise<TreatmentPlan>
   frameworks(campaignId: string): Promise<FrameworkAssessment>
   profile(projectId: string): Promise<ProfileDoc>
+  maintenance(projectId: string): Promise<MaintenanceDoc>
   legend(): Promise<Legend>
 }
 
@@ -234,6 +245,9 @@ export class ExplorerApi implements DataSource {
   }
   profile(projectId: string) {
     return this.request<ProfileDoc>(`/projects/${enc(projectId)}/profile`)
+  }
+  maintenance(projectId: string) {
+    return this.request<MaintenanceDoc>(`/projects/${enc(projectId)}/maintenance-policy`)
   }
   legend() {
     return this.request<Legend>("/executive/legend")
@@ -584,6 +598,9 @@ export class FileSource implements DataSource {
   profile(projectId: string) {
     return this.call<ProfileDoc>("profile", projectId)
   }
+  maintenance(projectId: string) {
+    return this.call<MaintenanceDoc>("maintenance", projectId)
+  }
   legend() {
     return this.call<Legend>("legend")
   }
@@ -660,6 +677,9 @@ export class CachedSource implements DataSource {
   }
   profile(id: string) {
     return this.get(`profile:${id}`, () => this.inner.profile(id))
+  }
+  maintenance(id: string) {
+    return this.get(`maint:${id}`, () => this.inner.maintenance(id))
   }
   legend() {
     return this.get("legend", () => this.inner.legend())
@@ -865,6 +885,30 @@ export function applicabilityOf(f: FrameworkRow): { status: string; label: strin
   const a = f.applicability
   if (a && typeof a === "object") return { status: String(a.status ?? "to_confirm"), label: clean(a.label ?? "", 80) }
   return { status: String(a ?? "to_confirm"), label: clean(f.applicability_label ?? "", 80) }
+}
+
+/** The maintenance windows of a project as dialog lines: the policy in words, what a launch would get now (with the
+ *  server's reasons) and who enforces it. Every string is cleaned (no control character reaches the terminal). */
+export function maintenanceLines(doc: MaintenanceDoc | undefined, projectName: string): string[] {
+  const one = (v: unknown, n: number) => clean(v, n).replace(/\s+/g, " ").trim()   // one dialog line per value
+  if (!doc) return [`${one(projectName, 60)}: maintenance windows not available from this server.`]
+  const out = [one(projectName, 60), ""]
+  for (const l of doc.summary ?? []) out.push(one(l, 200))
+  const ev = doc.evaluation_now
+  if (doc.policy && ev) {
+    out.push("")
+    const blocked = ev.decision === "blocked" || ev.advisory_of === "blocked"
+    out.push(blocked ? (doc.enforced === false ? "Now: outside the windows (a launch gets a WARNING, it is not blocked)." : "Now: a launch would be blocked.")
+      : ev.decision === "warn" ? "Now: a launch may start, with a warning." : "Now: a launch may start.")
+    for (const r of ev.reasons ?? []) if (r.effect && r.effect !== "none") out.push(`  · ${one(r.message ?? r.code ?? "", 200)}`)
+    if (ev.next_window_start_utc) out.push(`  Next allowed start: ${one(ev.next_window_start_utc, 40)} (UTC)`)
+  }
+  for (const i of doc.issues ?? []) out.push(`! ${one(i.field ?? "", 40)}: ${one(i.message ?? "", 160)}`)
+  out.push("")
+  if (doc.file?.path) out.push(`File: ${one(doc.file.path, 80)} (${one(doc.file.status ?? "", 20)}), edited by hand, never by an agent.`)
+  out.push(doc.enforced === false ? "Community warns outside the windows; it never blocks a launch."
+    : "Pro blocks New Campaign, the scheduler and retests outside the windows.")
+  return out
 }
 
 /** Provenance badge of a profile field: shape + word (Detected = dashed, Declared = filled, Verified = double). */
