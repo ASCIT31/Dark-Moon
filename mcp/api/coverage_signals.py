@@ -21,6 +21,16 @@ block, is never given one afterwards, and is never rated (exec_core.score.gate).
   server for the run key, minus what an earlier campaign of the same run key had already counted (commands run
   before init belong to the first campaign of the key). Commands run by the agent's own shell tool are not seen.
 
+* ``launch_restrictions`` (Pro): the restrictions given at launch (severity filter, attack exclusions, noise level,
+  out-of-scope assets, custom rules, focus list — counts, never their content), copied from the run sidecar written
+  by the API; they gate the score (``exec_core.score.gate``).
+
+Finalisation (``finalize_decision``, both editions): only ``completed``, ``aborted``, ``stopped``, ``failed`` and
+``error`` (and their aliases) are accepted. Once a campaign is terminal, a later finalize never changes its status nor
+its measured duration (``on_close(frozen=True)``): an aborted or stopped campaign never becomes completed. At the
+first close the digest of the gate fields is written on the campaign (``exec_core.score.signals_digest``); a later
+mismatch means the signals were edited after finalisation (detects naive edits only, not a security boundary).
+
 Every function here is advisory: a failure never fails the MCP call that triggered it.
 """
 from __future__ import annotations
@@ -44,6 +54,45 @@ CHILD_WINDOW_BEFORE_START_MS = 15 * 60 * 1000   # a sub-agent opened just before
 _LOG = logging.getLogger("darkmoon.coverage")
 _SUBAGENT_TITLE = re.compile(r"\(@([A-Za-z0-9_.-]{1,64}) subagent\)")
 _RANK = {"default": 0, "declared_at_init": 1, "launcher": 2, "retest_store": 3}
+TERMINAL = frozenset({"completed", "aborted", "stopped", "failed", "error"})
+_STATUS_ALIASES = {"cancelled": "aborted", "canceled": "aborted", "abort": "aborted", "done": "completed",
+                   "finish": "completed", "finished": "completed", "complete": "completed"}
+
+
+def finalize_decision(campaign: Dict[str, Any], requested: Any) -> Dict[str, Any]:
+    """The status a finalize may set: ``{"status", "frozen", "error"}``. A requested status outside the terminal
+    whitelist is refused (``error``); a campaign already terminal keeps its status and its measured duration
+    (``frozen``), so a later or forged finalize cannot turn an aborted / stopped campaign into a completed one."""
+    req = str(requested or "completed").strip().lower()
+    req = _STATUS_ALIASES.get(req, req)
+    current = str(campaign.get("status") or "").strip().lower()
+    if req not in TERMINAL:
+        return {"status": current or "running", "frozen": current in TERMINAL,
+                "error": f"final_status must be one of {sorted(TERMINAL)}"}
+    if current in TERMINAL:
+        return {"status": current, "frozen": True, "error": None}
+    return {"status": req, "frozen": False, "error": None}
+
+
+def launch_restrictions_from(meta: Any) -> Optional[Dict[str, Any]]:
+    """The launch restrictions a launcher recorded in its run sidecar, normalised (counts only), or None."""
+    r = (meta or {}).get("launch_restrictions") if isinstance(meta, dict) else None
+    if not isinstance(r, dict):
+        return None
+    out: Dict[str, Any] = {}
+    for k in ("severity", "noise"):
+        v = str(r.get(k) or "").strip().lower()[:16]
+        if v:
+            out[k] = v
+    for k in ("exclude", "out_of_scope", "rules", "focus"):
+        try:
+            n = int(r.get(k) or 0)
+        except (TypeError, ValueError):
+            n = 0
+        if n > 0:
+            out[k] = n
+    out["source"] = "launcher"
+    return out
 
 
 def _now() -> datetime:
@@ -335,6 +384,10 @@ def on_init(campaign: Dict[str, Any], declared_kind: Any = None, create: bool = 
         kind = resolve_kind(declared_kind, str(campaign.get("session_id") or ""))
         if _RANK.get(kind["campaign_kind_source"], 0) > _RANK.get(sig.get("campaign_kind_source"), 0):
             sig.update(kind)
+        if not sig.get("finalized_at") and "launch_restrictions" not in sig:
+            lr = launch_restrictions_from(run_meta(str(campaign.get("session_id") or "")))
+            if lr is not None:
+                sig["launch_restrictions"] = lr
     except Exception:  # noqa: BLE001
         _LOG.warning("coverage signals: init not recorded", exc_info=True)
 
@@ -356,13 +409,16 @@ def note_agent(campaign: Dict[str, Any], agent: Any, via: str) -> None:
         _LOG.warning("coverage signals: agent not recorded", exc_info=True)
 
 
-def on_close(campaign: Dict[str, Any]) -> None:
+def on_close(campaign: Dict[str, Any], frozen: bool = False) -> None:
     """Called by finalize / abort before the campaign record is saved: server-measured duration, dispatched agents,
-    registered assets and toolbox counters. Re-running it (a second finalize of the same run) refreshes the values."""
+    registered assets and toolbox counters, then the digest of the gate fields (first close only). ``frozen`` (the
+    campaign was already terminal, ``finalize_decision``): nothing is recomputed, the first close stands."""
     try:
         sig = campaign.get("coverage_signals")
         if not isinstance(sig, dict) or sig.get("schema") != SCHEMA:
             return  # recorded before coverage signals existed: never invent them afterwards
+        if frozen and sig.get("finalized_at"):
+            return
         now = _now()
         start = _parse(sig.get("started_at")) or _parse(campaign.get("date"))
         sig["finalized_at"] = _iso(now)
@@ -392,5 +448,7 @@ def on_close(campaign: Dict[str, Any]) -> None:
             sig["agents_dispatched"] = [{"agent": r.get("agent"), "sessions": 0, "active_seconds": 0}
                                         for r in sig.get("agents_reporting") or [] if r.get("agent")]
             sig["agents_source"] = "tool_calls_only"
+        from api.exec_core import score as _score
+        campaign[_score.SIGNALS_DIGEST_KEY] = _score.signals_digest(sig)   # each real close (never a frozen one)
     except Exception:  # noqa: BLE001
         _LOG.warning("coverage signals: close not recorded", exc_info=True)

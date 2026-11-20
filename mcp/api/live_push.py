@@ -1140,8 +1140,9 @@ def _generate_report_from_db(
     A(f"**Campaign:** {campaign_id}  \n")
     # The campaign's declared methodology, not a fixed label: a synthetic or partial run must not be presented as a
     # full ISO 27001 / NIST SP 800-115 assessment in the report header.
-    methodology = _md_inline(str(campaign.get("methodology") or "").strip() or "ISO 27001 / NIST SP 800-115 / MITRE ATT&CK")
-    A(f"**Methodology:** {methodology}  \n")
+    from api.exec_core import legend as _legend
+    methodology = _md_inline(_legend.methodology_label(campaign.get("methodology")))   # never ISO 27001 as a test method
+    A(f"**Method:** {methodology}  \n")
     # A partial run says so in the report itself
     _st = str(campaign.get("status") or "").lower()
     _partial = {"stopped": "Stopped by the operator", "aborted": "Aborted", "error": "Ended with an error",
@@ -1395,6 +1396,12 @@ def _finalize_campaign_unlocked(
     campaign = load_campaign(campaign_id)
     if not campaign:
         return {"error": f"Campaign {campaign_id} not found"}
+    from api import coverage_signals
+    # R4 S3: status whitelist; a campaign already terminal keeps its status and measured duration (never aborted ->
+    # completed through a later or forged finalize)
+    decision = coverage_signals.finalize_decision(campaign, final_status)
+    if decision["error"]:
+        return {"error": decision["error"], "campaign_id": campaign_id, "status": campaign.get("status")}
 
     # Guard: if a good report (>10KB) already exists, never overwrite with shorter content.
     # This prevents sub-agents (headless-browser, php, etc.) from replacing the
@@ -1423,11 +1430,11 @@ def _finalize_campaign_unlocked(
         except Exception:
             pass
 
-    normalized_status = _normalize_campaign_status(final_status)
+    normalized_status = decision["status"]
     campaign["status"] = normalized_status
-    campaign["duration_seconds"] = _measured_duration(campaign, duration_seconds)
-    from api import coverage_signals
-    coverage_signals.on_close(campaign)
+    if not decision["frozen"]:
+        campaign["duration_seconds"] = _measured_duration(campaign, duration_seconds)
+    coverage_signals.on_close(campaign, frozen=decision["frozen"])
     campaign["executive_summary"] = executive_summary
 
     if agents_dispatched:

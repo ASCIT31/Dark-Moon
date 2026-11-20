@@ -26,12 +26,15 @@ def _camp(**kw):
 
 def test_header_uses_declared_methodology(storage):  # noqa: F811
     head = _header(_camp(methodology=SIM))
-    assert f"**Methodology:** {SIM}" in head
+    assert f"**Method:** {SIM}" in head
     assert "ISO 27001" not in head
 
 
 def test_header_default_methodology(storage):  # noqa: F811
-    assert "**Methodology:** ISO 27001 / NIST SP 800-115 / MITRE ATT&amp;CK" in _header(_camp())  # & escaped by _md_inline, renders as &
+    """R2 H-1: ISO/IEC 27001 is never shown as a test method; the default names the test references only."""
+    head = _header(_camp())
+    assert "**Method:** Test references: NIST SP 800-115, MITRE ATT&amp;CK" in head  # & escaped by _md_inline
+    assert "ISO 27001" not in head
 
 
 def test_header_methodology_is_inert_markdown(storage):  # noqa: F811
