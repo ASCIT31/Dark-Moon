@@ -21,7 +21,7 @@
 </div>
 
 > [!IMPORTANT]
-> **License change.** Darkmoon Community is moving from the GNU GPL v3.0 to the GNU AGPL v3.0. Every commit published up to `edfe9cb` (27 October 2026) stays under the GNU GPL v3.0, and the contributions made by outside contributors before the switch also stay under the GNU GPL v3.0 (they are not relicensed). Details: [LICENSING.md](https://github.com/ASCIT31/Dark-Moon/blob/master/LICENSING.md).
+> **License change.** Darkmoon Community is moving from the GNU GPL v3.0 to the GNU AGPL v3.0. Every commit published up to `edfe9cb` (27 October 2026) stays under the GNU GPL v3.0; `master` is under the AGPL v3.0 since 19 November 2026 (PR #59), and no AGPL release has been tagged yet (the latest release, v1.6.0, is GPL v3.0). The contributions made by outside contributors before the switch also stay under the GNU GPL v3.0 (they are not relicensed). Details: [LICENSING.md](https://github.com/ASCIT31/Dark-Moon/blob/master/LICENSING.md).
 
 **DarkMoon is autonomous AI penetration testing for your own infrastructure.** Point it at an authorized target and it runs the whole assessment on its own, then documents every finding with the exact command and raw output.
 
@@ -188,8 +188,8 @@ The screenshots below are the **paid Darkmoon Pro** web dashboard. They are **no
 <p align="center"><b>Pro: exportable web reports.</b> A management summary in plain language plus full technical detail, exportable to Markdown and PDF.</p>
 </td>
 <td width="50%" valign="top">
-<img src="docs/pics/infra-orbital.gif" alt="Darkmoon Pro orbital attack-surface map: an animated infrastructure graph with exposure rings, per-node vulnerability badges and the MITRE attack path racing from the internet-facing entry to the database" />
-<p align="center"><b>Pro: orbital attack-surface map.</b> A live 3D graph of nodes, connections and per-node vulnerabilities, with the MITRE attack path walked across the whole target, and **every finding linked to its proposed remediation as a reviewed pull request**. Renders in the browser and in VR.</p>
+<img src="docs/pics/infra-orbital.gif" alt="Darkmoon Pro orbital attack-surface map: an animated infrastructure graph with exposure rings, per-node vulnerability badges and an exposure path, tagged with MITRE ATT&CK techniques, running from the internet-facing entry to the database" />
+<p align="center"><b>Pro: orbital attack-surface map.</b> A live 3D graph of nodes, connections and per-node vulnerabilities, with an exposure path (tagged with MITRE ATT&CK techniques; a reading of the inventory, not a proven attack chain) walked across the whole target, and **every finding linked to its proposed remediation as a reviewed pull request**. Renders in the browser and in VR.</p>
 </td>
 </tr>
 <tr>
@@ -258,7 +258,7 @@ It does not replace the pentester. It clears the repetitive part of an assessmen
 
 ## 📊 Benchmark: 57 real vulnerabilities on OWASP Juice Shop
 
-Real, reproducible **black-box** run against OWASP Juice Shop with **Claude Opus 4.6** (Anthropic, cloud frontier model). DarkMoon also runs **fully local** (Ollama / llama.cpp) behind the Privacy Gateway — so nothing leaves your infrastructure; local-model coverage depends on the model you run.
+A single **black-box** run against OWASP Juice Shop with **Claude Opus 4.6** (Anthropic, cloud frontier model), made by the Darkmoon team on 2026-04-26. It has **not been independently reproduced**, and only a summary page is published (no raw run evidence); our research repository records it with evidence label [UNKNOWN (EXP-004)](https://github.com/ASCIT31/darkmoon-attack-paths-research/blob/main/experiments/inconclusive/EXP-004.md). DarkMoon also runs **fully local** (Ollama / llama.cpp) behind the Privacy Gateway — so nothing leaves your infrastructure; local-model coverage depends on the model you run.
 
 | Metric | Result |
 |---|---|
@@ -267,7 +267,7 @@ Real, reproducible **black-box** run against OWASP Juice Shop with **Claude Opus
 | Proof-of-exploitation | command + raw output per finding |
 | LLM | Claude Opus 4.6 (Anthropic, cloud); local models supported |
 
-Source: the [run page](https://github.com/ASCIT31/Darkmoon-Benchmarks/blob/main/runs/juice-shop-2026-04-26.md) in **[ASCIT31/Darkmoon-Benchmarks](https://github.com/ASCIT31/Darkmoon-Benchmarks)**, where you can reproduce it and compare tools yourself.
+Source: the [run page](https://github.com/ASCIT31/Darkmoon-Benchmarks/blob/main/runs/juice-shop-2026-04-26.md) in **[ASCIT31/Darkmoon-Benchmarks](https://github.com/ASCIT31/Darkmoon-Benchmarks)**, which includes a dated correction note on its sources. You can run DarkMoon against your own Juice Shop instance and compare.
 
 ## 🆚 How DarkMoon compares
 
@@ -514,7 +514,7 @@ DarkMoon is open source and welcomes contributions. Whether you want to add new 
 
 ## License
 
-Darkmoon Community is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0-only). See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md) for what this means for users, service operators and contributors. Releases published before the switch remain available under the GNU GPL v3.0.
+Darkmoon Community is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0-only). See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md) for what this means for users, service operators and contributors. `master` is under the AGPL-3.0 since 19 November 2026 (PR #59); no AGPL release has been tagged yet. Every commit up to `edfe9cb` (27 October 2026), including release v1.6.0, remains under the GNU GPL v3.0.
 
 ---
 

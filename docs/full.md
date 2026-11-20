@@ -2920,8 +2920,9 @@ To contribute to the project, read the guidelines in [CONTRIBUTING.md](../CONTRI
 
 # IX. License
 
-Darkmoon Community is licensed under the [GNU AGPL v3](../LICENSE) (AGPL-3.0-only) from 2026-10-27 onwards. Earlier
-releases (up to v1.6.0) and earlier outside contributions remain under the GNU GPL v3. See
+Darkmoon Community is licensed under the [GNU AGPL v3](../LICENSE) (AGPL-3.0-only) on `master` since 2026-11-19 (PR #59);
+no AGPL release has been tagged yet. Every commit up to `edfe9cb` (27 October 2026), including release v1.6.0, and earlier
+outside contributions remain under the GNU GPL v3. See
 [LICENSING.md](../LICENSING.md) for the details. Darkmoon Pro is a separate commercial product.
 
 [Back to Summary](#summary)
