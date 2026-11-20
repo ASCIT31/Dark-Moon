@@ -2117,7 +2117,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             <T fg={pal.ink}>{`${treatmentMark(a.status, G.mark === "■")} ${treatmentLabel(a)}`}</T>
           </box>
           {kv("", a.status_text && a.status_text !== treatmentLabel(a) ? a.status_text : "")}
-          {kv("Retest", retestNote(a))}
+          {kv("Retest", a.last_retest && (a.last_retest.coverage_ok === false || clean(a.last_retest.text ?? "", 200) !== clean(a.status_text ?? "", 200)) ? retestNote(a) : "")}
           {kv("Verification", a.status === "applied" ? "Declared by the owner, not verified: only a completed retest can verify it." : pl?.verification_note)}
           {kv("Unit", a.weakness_class_label ? `${clean(a.weakness_class_label, 60)} on ${clean(a.asset ?? "", 60)}` : "")}
           {kv("Effort", effortText(a))}

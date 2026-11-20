@@ -864,8 +864,9 @@ export function retestNote(a: ActionRow | undefined | null): string {
 export function effortText(a: ActionRow | undefined | null, short = false): string {
   const e = (a as Doc | undefined)?.effort as Doc | undefined
   if (!e?.band) return ""
-  const band = clean(e.band, 2)
-  return short ? band : `${band} ${clean(e.label ?? "", 12)} · indicative — to confirm`
+  const known = ["S", "M", "L"].includes(String(e.band))
+  if (!known) return short ? "—" : `${clean(e.label ?? "Not determined", 30)} (no band for this weakness class)`
+  return short ? String(e.band) : `${e.band} ${clean(e.label ?? "", 12)} · indicative — to confirm`
 }
 
 /** Risk acceptance of an action: named risk owner and expiry (server values); expired → « Risk acceptance expired ». */

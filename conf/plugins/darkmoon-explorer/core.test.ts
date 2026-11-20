@@ -365,6 +365,8 @@ describe("executive views: display only, the words of exec_core", () => {
     expect(core.effortText({ action_id: "a", effort: { band: "M", label: "Medium" } })).toBe("M Medium · indicative — to confirm")
     expect(core.effortText({ action_id: "a", effort: { band: "S", label: "Small" } }, true)).toBe("S")
     expect(core.effortText({ action_id: "a" })).toBe("")
+    expect(core.effortText({ action_id: "a", effort: { band: "unknown", label: "Not determined" } }, true)).toBe("—")
+    expect(core.effortText({ action_id: "a", effort: { band: "unknown", label: "Not determined" } })).toBe("Not determined (no band for this weakness class)")
     expect(core.riskAcceptanceText({ action_id: "a", risk_acceptance: { risk_owner: "CISO", until: "2027-03-31", recorded_by: "admin", expired: false, complete: true } }))
       .toBe("CISO until 2027-03-31, recorded by admin")
     expect(core.riskAcceptanceText({ action_id: "a", risk_acceptance: { risk_owner: "CISO", until: "2026-01-31", expired: true } })).toBe("Risk acceptance expired (CISO, until 2026-01-31)")
