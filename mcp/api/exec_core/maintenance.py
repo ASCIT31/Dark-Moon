@@ -36,6 +36,8 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from . import taxonomy as _tx
+
 POLICY_VERSION = "darkmoon-maintenance-policy/1"
 EVALUATION_VERSION = "darkmoon-maintenance-evaluation/1"
 
@@ -520,6 +522,83 @@ def summary_line(evaluation: Dict[str, Any]) -> str:
     tail = " ".join(msgs)
     nxt = evaluation.get("next_window_start_utc")
     return " ".join(x for x in (head, tail, f"Next allowed start: {nxt} (UTC)." if nxt else "") if x)
+
+
+# ── the decision recorded on a campaign, for display (campaign view, executive document, report) ─────────────────
+
+REASON_WORDS = {
+    "blackout": "blackout date",
+    "outside-window": "outside every window",
+    "run-enters-blackout": "the planned run reaches a blackout date",
+    "duration-over-maximum": "planned run longer than the accepted maximum",
+    "policy-invalid": "policy not valid",
+    "timezone-unavailable": "time zone not available",
+    "may-run-past-window": "the run may go on after the window ends",
+    "duration-not-declared": "planned duration not declared",
+}
+OVERRIDE_REASON_MAX = 500
+LAUNCH_TEXT = {
+    "not_recorded": "Not recorded (the campaign predates the maintenance record)",
+    "no_policy": "No maintenance policy applied",
+    "within": "Within the maintenance policy",
+    "outside": "Outside the maintenance policy",
+}
+NOT_ENFORCED_MCP = "recorded, not enforced (campaign started outside the dashboard)"
+NOT_ENFORCED_COMMUNITY = "recorded, not enforced (Community warns, it does not block a launch)"
+
+
+def _codes(record: Dict[str, Any]) -> List[str]:
+    """The reason codes of a recorded decision, in order, once each: Pro keeps them per project, Community at the top."""
+    out: List[str] = []
+    groups = [record.get("reasons")] + [p.get("reasons") for p in record.get("projects") or [] if isinstance(p, dict)]
+    for g in groups:
+        for c in g if isinstance(g, list) else []:
+            c = str(c.get("code") if isinstance(c, dict) else c)
+            if c not in out:
+                out.append(c)
+    return out
+
+
+def _utc_words(at: Any) -> str:
+    u = _utc(at)
+    if u is None:
+        return _tx.clean_text(at, 40) if at else "time not recorded"
+    return u.strftime("%Y-%m-%d %H:%M UTC")
+
+
+def launch_view(record: Any) -> Dict[str, Any]:
+    """The maintenance decision recorded on a campaign (``maintenance_check``), in words: ``decision`` (``within``,
+    ``outside``, ``no_policy`` or ``not_recorded``), ``overridden``, ``by``, ``at``, ``reason``, ``enforced``,
+    ``reasons`` (readable words) and ``text`` (one line). The override reason is the administrator's free text: secrets
+    masked, control characters escaped, at most ``OVERRIDE_REASON_MAX`` characters. Same words in both editions."""
+    view: Dict[str, Any] = {"decision": "not_recorded", "overridden": False, "by": None, "at": None, "reason": None,
+                            "enforced": None, "reasons": [], "text": LAUNCH_TEXT["not_recorded"]}
+    if not isinstance(record, dict) or not record.get("decision"):
+        return view
+    codes = _codes(record)
+    view["enforced"] = record.get("enforced") is not False
+    projects = record.get("projects")
+    if (isinstance(projects, list) and not projects) or (codes and set(codes) <= {"no-policy"}):
+        return {**view, "decision": "no_policy", "text": LAUNCH_TEXT["no_policy"]}
+    blocking = [c for c in codes if c in BLOCKING]
+    outside = bool(blocking) or record.get("decision") == "blocked" or record.get("advisory_of") == "blocked"
+    words = [REASON_WORDS[c] for c in (blocking if outside else [c for c in codes if c in WARNING]) if c in REASON_WORDS]
+    view["reasons"] = words
+    ov = record.get("override")
+    if outside and isinstance(ov, dict) and ov.get("override"):
+        by = _tx.clean_text(ov.get("by") or "unknown account", 80)
+        at = _utc_words(ov.get("at"))
+        reason = _tx.clean_text(str(ov.get("reason") or "").strip(), OVERRIDE_REASON_MAX) or "not recorded"
+        view.update(overridden=True, by=by, at=at, reason=reason)
+    head = LAUNCH_TEXT["outside" if outside else "within"]
+    if words:
+        head += f" ({', '.join(words)})" if outside else f", with a warning ({', '.join(words)})"
+    if view["overridden"]:
+        head += (f" — launched by an administrator override: {view['by']}, {view['at']}, "
+                 f"reason: « {view['reason']} »")
+    elif outside and not view["enforced"]:
+        head += " — " + (NOT_ENFORCED_MCP if record.get("source") == "mcp_init" else NOT_ENFORCED_COMMUNITY)
+    return {**view, "decision": "outside" if outside else "within", "text": head}
 
 
 # ── which stored targets a launch target touches ─────────────────────────────────────────────────────────────────

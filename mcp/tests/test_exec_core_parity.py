@@ -34,7 +34,7 @@ CORE = MCP / "api" / "exec_core"
 FIXTURES = MCP / "tests" / "fixtures" / "exec_core"
 VENDORED = MCP.parent / "conf" / "plugins" / "darkmoon-explorer" / "_vendor" / "exec_core"
 
-INIT_SHA256 = "bd6449684f0eb14b35f93ceedfe02c44213d5608a1ba43fd7aba91119e1f4fcf"
+INIT_SHA256 = "4bd0955f4c00503ea21023ed6808c3002088824f5dae97a806f91fc00532eaa8"
 SHARED_SHA256 = {
     "coverage_signals.py": "709bde05795a7b5f0ed83d0b700933542f14fa697c0dbba8755abf653e3bdb1f",
     "exec_score.py": "94e6bd24282becd2e382dc02556cd4ae90eea7ba5b898473516d112615b3bd94",
@@ -44,17 +44,17 @@ SHARED_SHA256 = {
 }
 SHARED_TESTS_SHA256 = {
     "test_exec_core_actions.py": "dddf9d25e8c1b1d88c1dc00e266e81438239ce894598ba57ae771131c7fd58ee",
-    "test_exec_core_executive.py": "017bbfa4b8c33b5ff3782346047c392080183bfc4da7177ee01cd2c1e1d82650",
-    "test_exec_core_maintenance.py": "6faa6124b8c75934a6be1c4f202e566e2792d3d8e96d91b3a4eb5c3949cc6eb7",
+    "test_exec_core_executive.py": "b6eb28e4b4f67684b0317162383fb5c3165fd6e4c3f27efaeaa7f3a191e14da6",
+    "test_exec_core_maintenance.py": "b01da7cc688fe4e6f3efde0cb53c55ecc678c1885b201fdf21592b28262df1a7",
     "test_exec_core_taxonomy.py": "f55f8efaac308b2600c52c0bc8388bb0d89cf12ddc5565161a66cecdaf4eb35a",
     "test_exec_core_frameworks.py": "d4816a3bfa29a441309653a38687d5d40d13dd6d881988fa32a5002f198317b1",
-    "test_exec_core_report_model.py": "7e6159864fa6bf72bf52bae866e1644c9c98ce53dd9750719671e1a81a6477d9",
+    "test_exec_core_report_model.py": "df02fcf170f4533b5749ce2f70d8fd38d845097d1c1030e8158969c16afdf7d9",
     "test_run_binding.py": "d5f937f95b77269ae9f33f782b081b8a8968d7ddfd229f0759e48ebe67863187",
 }
 TREATMENT_FIXTURES_SHA256 = "c0dec06c1da681d658206603a6347dc055d089013c74c7733805752b0612e750"
 FRAMEWORK_FIXTURES_SHA256 = "54797efc393278623b6cc26792e29ed354c0e2f5a71725564bbdef61bb0f41d6"
 MAINTENANCE_FIXTURES_SHA256 = "0b2b564c884671b8bf75db474e4a6b88d853b448dab412ef9fdfb6a42cf31c1f"
-REPORT_FIXTURES_SHA256 = "e05b8f88c8dd83b3b31a23a68316784e3e5399a1768df6c40ea6d3229a807b19"
+REPORT_FIXTURES_SHA256 = "3ba50f62a1a44037b9adf513dfb92fc156eed3f14ef60abecf73ea15f0590972"
 FIXTURES_SHA256 = "9a5944cce69bb4e86a4eae2f8bf4a452feb09a42b23d0de172ffe7c93b413597"
 
 # zoneinfo (maintenance windows) reads the host's time-zone database: the only outside input exec_core accepts

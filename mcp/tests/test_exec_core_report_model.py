@@ -142,6 +142,44 @@ def test_parity_fixture_gives_the_expected_model():
     assert got == want
 
 
+def _override_model():
+    fx = _fx()
+    mc = json.loads((FIX / "maintenance_override.json").read_text(encoding="utf-8"))["maintenance_check"]
+    fx["campaign"] = {**fx["campaign"], "maintenance_check": mc}
+    return RM.build(_inputs(fx))
+
+
+def _method_section(model):
+    return json.loads(json.dumps(next(s for s in model["sections"] if s["id"] == "method_coverage"), sort_keys=True))
+
+
+def test_maintenance_override_golden_case():
+    """Owner decision 20/11: an administrator override of the maintenance policy is a fact of the method and coverage
+    table, with a short factual paragraph (never a « not covered » line); the rest of the report is unchanged."""
+    m = _override_model()
+    got = _method_section(m)
+    assert got == json.loads((FIX / "expected_method_coverage_override.json").read_text(encoding="utf-8"))
+    facts = {r["label"]: r["value"] for b in got["blocks"] if b["type"] == "facts" for r in b["rows"]}
+    assert facts["Maintenance policy at launch"].startswith("Outside the maintenance policy (blackout date, outside "
+                                                            "every window) — launched by an administrator override: ada")
+    assert any(b.get("id") == "maintenance-override" for b in got["blocks"])
+    nc = next(b for b in got["blocks"] if b.get("id") == "not-covered")
+    assert "maintenance" not in json.dumps(nc).lower()
+    base = strip_edition_specific(_model())
+    other = strip_edition_specific(m)
+    assert [s for s in other["sections"] if s["id"] != "method_coverage"] == \
+        [s for s in base["sections"] if s["id"] != "method_coverage"]
+    md = _section_md(RMD.render(m), "method_coverage")
+    assert "Maintenance policy at launch" in md and "Emergency patch validation agreed" in md
+    assert RM.MAINTENANCE_OVERRIDE_NOTE in md
+
+
+def test_maintenance_row_without_a_record():
+    facts = {r["label"]: r["value"] for b in _method_section(_model())["blocks"] if b["type"] == "facts"
+             for r in b["rows"]}
+    assert facts["Maintenance policy at launch"] == "Not recorded (the campaign predates the maintenance record)"
+
+
 def test_counts_follow_the_one_stats_function():
     m = _model()
     # 8 stored: false positive and held finding counted nowhere, informational counted
@@ -371,3 +409,7 @@ if __name__ == "__main__":
     (FIX / "expected_model.json").write_text(
         json.dumps(strip_edition_specific(_model()), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
     print("expected_model.json written")
+    (FIX / "expected_method_coverage_override.json").write_text(
+        json.dumps(_method_section(_override_model()), indent=1, sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8")
+    print("expected_method_coverage_override.json written")

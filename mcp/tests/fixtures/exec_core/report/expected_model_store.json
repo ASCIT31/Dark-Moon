@@ -390,6 +390,10 @@
       {
        "label": "Launch restrictions",
        "value": "none recorded"
+      },
+      {
+       "label": "Maintenance policy at launch",
+       "value": "Not recorded (the campaign predates the maintenance record)"
       }
      ],
      "source": "campaign record + coverage_signals",

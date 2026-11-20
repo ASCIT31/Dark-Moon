@@ -257,6 +257,56 @@ def test_target_matching_forms():
     assert M.parse_ip("999.1.1.1") is None and M.parse_network("10.0.0.0/99") is None
 
 
+# ── the decision recorded on a campaign, in words (owner decision 20/11: an override is visible) ──
+
+_OVERRIDE = {"decision": "blocked", "at_utc": "2026-11-20T14:03:00Z", "kind": "full", "source": "launch",
+             "enforced": True,
+             "projects": [{"project_id": "p1", "decision": "blocked", "reasons": ["blackout", "outside-window"]}],
+             "override": {"override": True, "by": "ada", "at": "2026-11-20T14:03:09Z",
+                          "reason": "Emergency fix validation agreed with the owner"}}
+
+
+def test_launch_view_every_case():
+    v = M.launch_view
+    assert v(None)["decision"] == v({})["decision"] == v("x")["decision"] == "not_recorded"
+    assert v(None)["text"] == "Not recorded (the campaign predates the maintenance record)"
+    assert v({"decision": "allowed", "projects": [], "source": "launch"})["text"] == "No maintenance policy applied"
+    assert v({"decision": "allowed", "reasons": ["no-policy"], "enforced": False})["decision"] == "no_policy"
+    inside = v({"decision": "allowed", "projects": [{"reasons": ["inside-window"]}], "source": "launch", "enforced": True})
+    assert (inside["decision"], inside["text"], inside["overridden"]) == ("within", "Within the maintenance policy", False)
+    warn = v({"decision": "warn", "projects": [{"reasons": ["inside-window", "duration-not-declared"]}]})
+    assert warn["text"] == "Within the maintenance policy, with a warning (planned duration not declared)"
+    o = v(_OVERRIDE)
+    assert (o["decision"], o["overridden"], o["by"], o["at"]) == ("outside", True, "ada", "2026-11-20 14:03 UTC")
+    assert o["text"] == ("Outside the maintenance policy (blackout date, outside every window) — launched by an "
+                         "administrator override: ada, 2026-11-20 14:03 UTC, reason: « Emergency fix validation agreed "
+                         "with the owner »")
+    mcp = v({"decision": "blocked", "projects": [{"reasons": ["outside-window"]}], "source": "mcp_init", "enforced": False})
+    assert mcp["text"] == ("Outside the maintenance policy (outside every window) — recorded, not enforced (campaign "
+                           "started outside the dashboard)") and not mcp["overridden"]
+    com = v({"decision": "warn", "advisory_of": "blocked", "reasons": ["outside-window"], "enforced": False})
+    assert com["decision"] == "outside" and com["text"].endswith("recorded, not enforced (Community warns, it does not "
+                                                                 "block a launch)")
+    # an override record on a decision that was not outside the policy is not shown as an override
+    assert not v({**_OVERRIDE, "decision": "allowed", "projects": [{"reasons": ["inside-window"]}]})["overridden"]
+
+
+def test_launch_view_sanitises_the_override_reason():
+    long = "x" * 900
+    for reason, check in (
+            ("line one\nline two\u202e", lambda r: "\n" not in r and "\u202e" not in r),
+            ("token ghp_abcdefghijklmnopqrstuvwxyz0123 used", lambda r: "ghp_" not in r and "[redacted]" in r),
+            ("Bearer abcdefghijklmnop1234", lambda r: "abcdefghijklmnop1234" not in r),
+            (long, lambda r: len(r) == M.OVERRIDE_REASON_MAX and r.endswith("…")),
+            ("", lambda r: r == "not recorded")):
+        got = M.launch_view({**_OVERRIDE, "override": {**_OVERRIDE["override"], "reason": reason}})
+        assert check(got["reason"]), (reason, got["reason"])
+        assert got["reason"] in got["text"]
+    odd = M.launch_view({**_OVERRIDE, "override": {"override": True, "by": "a\nb", "at": "not a date", "reason": "r"}})
+    assert "\n" not in odd["by"] and odd["at"] == "not a date"
+    assert M.launch_view({**_OVERRIDE, "override": {"override": True}})["by"] == "unknown account"
+
+
 if __name__ == "__main__":
     (FIX / "expected.json").write_text(json.dumps(_run_all(), indent=1, sort_keys=True, ensure_ascii=False) + "\n",
                                        encoding="utf-8")

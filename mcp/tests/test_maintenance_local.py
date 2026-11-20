@@ -58,11 +58,27 @@ def _init():
     return lp.init_live_campaign(FRAG, "shop.example.test", "192.0.2.20", project_name="Shop")
 
 
-def test_no_policy_nothing_recorded(store, audit):
+def test_no_policy_recorded_as_such_without_event(store, audit):
     r = _init()
     assert r["status"] == "campaign_initialized"
-    assert "maintenance_check" not in js.load_campaign(r["campaign_id"])
+    mc = js.load_campaign(r["campaign_id"])["maintenance_check"]
+    assert (mc["decision"], mc["reasons"], mc["file_status"], mc["enforced"]) == ("allowed", ["no-policy"], "absent", False)
+    from api.exec_core import maintenance as M
+    assert M.launch_view(mc)["text"] == "No maintenance policy applied"
     assert [e for e in audit() if e["event"] == "campaign.launch"] == []
+
+
+def test_outside_the_policy_reads_recorded_not_enforced(store, monkeypatch):
+    first = _init()
+    _policy(store, first["project_id"], CLOSED)
+    (store / "campaigns" / f"{first['campaign_id']}.json").unlink()
+    _freeze(monkeypatch, datetime(2026, 11, 20, 10, 0, tzinfo=timezone.utc))
+    r = _init()
+    from api.exec_core import maintenance as M
+    v = M.launch_view(js.load_campaign(r["campaign_id"])["maintenance_check"])
+    assert v["decision"] == "outside" and not v["overridden"]
+    assert v["text"].startswith("Outside the maintenance policy (outside every window)")
+    assert v["text"].endswith("recorded, not enforced (Community warns, it does not block a launch)")
 
 
 def test_outside_the_policy_warns_and_records_but_never_blocks(store, audit, monkeypatch, caplog):

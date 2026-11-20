@@ -211,6 +211,16 @@ def test_not_rated_block_has_no_number_and_missing_parts_are_none():
     b = X.campaign_block({"id": "c1"}, None, None, None, None)
     assert (b["score"]["score"], b["score"]["grade"], b["score"]["status_label"]) == (None, None, "Not rated")
     assert b["treatment_plan"] is b["frameworks"] is b["attack_paths"] is None
+    assert b["maintenance"]["decision"] == "not_recorded"
+
+
+def test_campaign_block_shows_a_maintenance_override():
+    mc = {"decision": "blocked", "projects": [{"reasons": ["outside-window"]}], "source": "launch", "enforced": True,
+          "override": {"override": True, "by": "ada", "at": "2026-11-20T14:03:09Z", "reason": "Agreed with the owner"}}
+    m = X.campaign_block({"id": "c1", "maintenance_check": mc}, None, None, None, None)["maintenance"]
+    assert (m["decision"], m["overridden"], m["by"], m["at"], m["reason"]) == (
+        "outside", True, "ada", "2026-11-20 14:03 UTC", "Agreed with the owner")
+    assert m["text"].startswith("Outside the maintenance policy (outside every window) — launched by an administrator")
 
 
 def test_project_block_uses_the_reference_campaign():

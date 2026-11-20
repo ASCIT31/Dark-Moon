@@ -92,13 +92,15 @@ def policy_doc(project_id: str) -> Optional[Dict[str, Any]]:
 
 
 def check_at_start(campaign: Dict[str, Any], kind: Optional[str]) -> Optional[Dict[str, Any]]:
-    """Called when a campaign is initialised: the evaluation to record on it (None without a policy), and a WARNING
-    log line + security event outside the policy. Never raises."""
+    """Called when a campaign is initialised: the evaluation to record on it, and a WARNING log line + security event
+    outside the policy. Without a policy file the record says so (« No maintenance policy applied » in the report and
+    the executive document; no event). Never raises (None when the evaluation itself failed)."""
     try:
         pid = str(campaign.get("project_id") or "")
         ev = evaluate(pid, kind or "full")
         if not ev.get("policy_present") and ev.get("file_status") == "absent":
-            return None
+            return {"decision": "allowed", "at_utc": ev.get("at_utc"), "campaign_kind": ev.get("campaign_kind"),
+                    "file_status": "absent", "reasons": ["no-policy"], "enforced": False}
         from api import security_log as SL
         target = {"project_id": pid, "campaign_id": campaign.get("id")}
         if ev["decision"] != "allowed":

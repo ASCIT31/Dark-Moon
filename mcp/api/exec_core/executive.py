@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from . import legend as _legend
+from . import maintenance as _maintenance
 
 EXECUTIVE_VERSION = "darkmoon-executive/1"
 PROJECT_EXECUTIVE_VERSION = "darkmoon-project-executive/1"
@@ -162,6 +163,8 @@ def campaign_block(campaign: Dict[str, Any], score: Optional[Dict[str, Any]], pl
         "attack_paths": paths_summary(paths_doc),
         "treatment_plan": plan_summary(plan),
         "frameworks": frameworks_summary(assessment),
+        # the maintenance decision recorded at launch (an administrator override: by, at, reason), in words
+        "maintenance": _maintenance.launch_view(campaign.get("maintenance_check")),
         "legend": _legend.legend(),
         "links": dict(links or {}),
     }

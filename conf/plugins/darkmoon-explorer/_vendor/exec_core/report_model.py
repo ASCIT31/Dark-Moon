@@ -23,7 +23,8 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from . import frameworks_assess as _fa
-from . import identity, legend as _legend, profile as _profile, score as _score, stats as _stats
+from . import identity, legend as _legend, maintenance as _maintenance, profile as _profile, score as _score
+from . import stats as _stats
 
 SCHEMA_VERSION = "darkmoon-report/v2"
 LANGUAGE = "en"
@@ -88,6 +89,9 @@ COUNTS_NOTE = ("Findings are counted per finding reported in this campaign. Else
 NO_IMPACT_NOTE = ("Darkmoon does not estimate business impact, financial loss or return on investment. This section "
                   "lists only the facts the organisation declared and the counts measured by this campaign; relating "
                   "them is the system owner's decision.")
+MAINTENANCE_OVERRIDE_NOTE = ("This campaign was started outside the project's maintenance policy: an administrator "
+                             "overrode the block at launch. The account, the time and the reason above are recorded by "
+                             "the server; the reason is quoted as the administrator wrote it.")
 RESILIENCE_NOTE = ("Recovery and availability figures are declared by the organisation and shown as declared: Darkmoon "
                    "does not test recovery, backups or load, and does not assess these figures.")
 REPORT_LIMITS = [
@@ -247,6 +251,7 @@ def _method_coverage(campaign: Dict[str, Any], score: Dict[str, Any], stats: Dic
                      assessment: Optional[Dict[str, Any]], annex: Dict[str, Any], target: str) -> Dict[str, Any]:
     cov = score.get("assessment_coverage") or {}
     st = text(campaign.get("status")) or "unknown"
+    maint = _maintenance.launch_view(campaign.get("maintenance_check"))
     rows: List[List[str]] = [
         ["Target (in scope)", target or "unknown"],
         ["Campaign", text(campaign.get("id"))],
@@ -265,6 +270,7 @@ def _method_coverage(campaign: Dict[str, Any], score: Dict[str, Any], stats: Dic
         ["Toolbox commands executed", str(cov.get("commands_executed")) if cov.get("present") else "not recorded"],
         ["Test references", _legend.methodology_label(campaign.get("methodology"))],
         ["Launch restrictions", _restrictions_text(cov.get("launch_restrictions"), cov.get("present"))],
+        ["Maintenance policy at launch", text(maint["text"])],
     ]
     numbers: Dict[str, Any] = {}
     if cov.get("present"):
@@ -286,6 +292,8 @@ def _method_coverage(campaign: Dict[str, Any], score: Dict[str, Any], stats: Dic
                                        f"(not counted): {_n(ex.get('quarantined'))}. Marked false positive (not counted): "
                                        f"{_n(ex.get('false_positive'))}.")},
     ]
+    if maint["overridden"]:
+        blocks.append({"type": "paragraph", "id": "maintenance-override", "text": MAINTENANCE_OVERRIDE_NOTE})
     fl = cov.get("floors") or {}
     if fl:
         blocks.append({"type": "paragraph", "text": (
