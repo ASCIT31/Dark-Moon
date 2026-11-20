@@ -334,18 +334,56 @@ describe("executive views: display only, the words of exec_core", () => {
     expect(core.scoreWhy({ status_meaning: "No rating" })).toBe("No rating")
   })
 
-  test("treatment: applied always reads not verified; a retest wording needs its completed retest", () => {
+  test("treatment: the server's status words (same as the dashboard); applied always reads not verified", () => {
     expect(core.treatmentLabel({ action_id: "a", status: "applied", status_label: "Applied" })).toBe("Applied — not verified")
     expect(core.treatmentLabel({ action_id: "a", status: "applied", status_label: "Applied — not verified" })).toBe("Applied — not verified")
     expect(core.treatmentLabel({ action_id: "a", status: "verified_resolved", status_label: "Not reproduced at retest", last_retest: { retest_id: "r1" } })).toBe("Not reproduced at retest")
-    expect(core.treatmentLabel({ action_id: "a", status: "verified_resolved", status_label: "Not reproduced at retest" })).toBe("Retest result not on file — not verified")
+    // no client-side downgrade: exec_core decides every status (the dashboard shows the same label)
+    expect(core.treatmentLabel({ action_id: "a", status: "verified_resolved", status_label: "Not reproduced at retest" })).toBe("Not reproduced at retest")
     expect(core.treatmentLabel({ action_id: "a", status: "proposed", status_label: "Proposed" })).toBe("Proposed")
     expect(core.treatmentLabel(undefined)).toBe("proposed")
     for (const s of ["proposed", "in_progress", "applied", "verified_resolved", "failed_verification", "risk_accepted", "deferred"]) {
       expect(core.treatmentMark(s, true).length).toBe(1)
       expect(core.treatmentMark(s, false)).toMatch(/^[ -~]$/)
     }
+    // treatment marks are their own family: never the evidence circles (unicode) nor the evidence ASCII marks
+    const fams = ["proposed", "in_progress", "verified_resolved", "failed_verification", "risk_accepted", "deferred"]
+    for (const s of fams) {
+      expect(["●", "◐", "○"]).not.toContain(core.treatmentMark(s, true))
+      expect(["*", "+", "o"]).not.toContain(core.treatmentMark(s, false))
+    }
+    expect(new Set(fams.map((s) => core.treatmentMark(s, true))).size).toBe(fams.length)
+    expect(new Set(fams.map((s) => core.treatmentMark(s, false))).size).toBe(fams.length)
     expect(core.treatmentLabel({ action_id: "a", status: "applied", status_label: "Applied\x1b[2J" })).not.toContain("\x1b")
+  })
+
+  test("plan v2 fields: retest coverage, effort, risk acceptance, grade lever, maintenance, declared by", () => {
+    expect(core.retestNote({ action_id: "a", last_retest: { text: "Not reproduced at retest (2026-11-20)", coverage_ok: true } })).toBe("Not reproduced at retest (2026-11-20)")
+    expect(core.retestNote({ action_id: "a", last_retest: { text: "x", coverage_ok: false, coverage_text: "retest without coverage: no asset registered" } }))
+      .toBe("Retest without coverage — not verified (retest without coverage: no asset registered)")
+    expect(core.retestNote({ action_id: "a" })).toBe("")
+    expect(core.effortText({ action_id: "a", effort: { band: "M", label: "Medium" } })).toBe("M Medium · indicative — to confirm")
+    expect(core.effortText({ action_id: "a", effort: { band: "S", label: "Small" } }, true)).toBe("S")
+    expect(core.effortText({ action_id: "a" })).toBe("")
+    expect(core.riskAcceptanceText({ action_id: "a", risk_acceptance: { risk_owner: "CISO", until: "2027-03-31", recorded_by: "admin", expired: false, complete: true } }))
+      .toBe("CISO until 2027-03-31, recorded by admin")
+    expect(core.riskAcceptanceText({ action_id: "a", risk_acceptance: { risk_owner: "CISO", until: "2026-01-31", expired: true } })).toBe("Risk acceptance expired (CISO, until 2026-01-31)")
+    const lever = core.gradeLever({ next_cap_level: { text: "Capped at 39 while 10 exploited critical finding(s) remain open." },
+      top_classes: [{ weakness_class: "code_execution", share_text: "16 % of the penalty sum" }, { weakness_class: "sql_injection", share_text: "9 % of the penalty sum" }] },
+      { weakness_class: { sql_injection: "SQL injection" } } as any)
+    expect(lever.holds).toContain("Capped at 39")
+    expect(lever.classes).toBe("Code execution 16 % · SQL injection 9 %")
+    expect(core.gradeLever(undefined)).toEqual({ holds: "", classes: "" })
+    expect(core.maintenanceCheckLine({ maintenance_check: { decision: "blocked", source: "mcp_init", enforced: false } }))
+      .toBe("Maintenance: started from the terminal / agent, outside the maintenance windows — recorded, not enforced.")
+    expect(core.maintenanceCheckLine({ maintenance_check: { decision: "allowed" } })).toBe("")
+    expect(core.maintenanceCheckLine({})).toBe("")
+    const f = { value: "high", provenance: "declared_by_customer", at: "2026-11-20T01:00:47Z", by: "admin", by_role: "admin" }
+    expect(core.declaredByText(f, false)).toBe("Declared by admin on 2026-11-20")
+    expect(core.declaredByText(f, true)).toBe("Declared in the local profile file on 2026-11-20")
+    expect(core.declaredByText({ value: "x", provenance: "detected" }, false)).toBe("")
+    expect(core.applicabilityMark("declared_by_customer")).not.toBe("●")
+    expect(new Set(["declared_by_customer", "to_confirm", "not_applicable_declared"].map((s) => core.applicabilityMark(s, false))).size).toBe(3)
   })
 
   test("frameworks: four states in words, never a percentage, a grade or « compliant »", () => {
@@ -353,6 +391,9 @@ describe("executive views: display only, the words of exec_core", () => {
     const line = core.frameworkLine(f)
     expect(line).toBe("3 weakness observed · 1 none observed in tested scope · 2 not tested · 4 not technically assessable")
     expect(line + core.frameworkLine(f, true)).not.toMatch(/%|compliant|grade/i)
+    // « not technically assessable » is never shortened to something that reads « not applicable »
+    expect(core.frameworkLine(f, true)).toContain("4 not assessable")
+    expect(core.frameworkLine(f, true)).not.toMatch(/n\/a/i)
     expect(core.applicabilityOf(f)).toEqual({ status: "to_confirm", label: "To confirm" })
     expect(core.applicabilityOf({ framework: "x", applicability: "declared_by_customer", applicability_label: "Applicable" })).toEqual({ status: "declared_by_customer", label: "Applicable" })
   })
@@ -363,6 +404,7 @@ describe("executive views: display only, the words of exec_core", () => {
     expect(core.provenanceBadge("detected").word).toBe("Detected")
     expect(core.provenanceBadge("unknown").word).toBe("Not provided")
     expect(new Set(["verified", "declared_by_customer", "detected", "unknown"].map((p) => core.provenanceBadge(p).mark)).size).toBe(4)
+    for (const p of ["verified", "declared_by_customer", "detected", "unknown"]) expect(["●", "◐", "○"]).not.toContain(core.provenanceBadge(p).mark)
     expect(core.provenanceBadge("verified", false).mark).toMatch(/^[ -~]$/)
     expect(core.profileValue(null)).toBe("—")
     expect(core.profileValue(["a", "b"])).toBe("a, b")
@@ -447,7 +489,8 @@ describe("maintenance windows (L9)", () => {
     const community = maintenanceLines({ ...DOC, enforced: false, evaluation_now: { ...DOC.evaluation_now, decision: "warn", advisory_of: "blocked" },
       file: { path: "policies/p1.json", status: "read" } } as any, "Lab").join("\n")
     expect(community).toContain("Now: outside the windows (a launch gets a WARNING, it is not blocked).")
-    expect(community).toContain("File: policies/p1.json (read), edited by hand, never by an agent.")
+    expect(community).toContain("File: policies/p1.json (read), edited by hand; no MCP tool writes it, but the local agent has shell access: not tamper-evident.")
+    expect(community).not.toContain("never by an agent")
     expect(community).toContain("Community warns outside the windows; it never blocks a launch.")
     expect(maintenanceLines(undefined, "Lab")[0]).toContain("not available")
   })

@@ -14,8 +14,15 @@ import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 
 import { execFile } from "node:child_process"
 import {
   activityOf,
+  applicabilityMark,
   applicabilityOf,
+  declaredByText,
+  effortText,
   frameworkLine,
+  gradeLever,
+  maintenanceCheckLine,
+  retestNote,
+  riskAcceptanceText,
   legendLines,
   maintenanceLines,
   pathKindCounts,
@@ -491,14 +498,14 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
         // the status words are never cut: the column is as wide as the longest status of this plan
         const sw = Math.min(28, Math.max(12, ...(plan()?.actions ?? []).map((a) => treatmentLabel(a).length)))
         return [
-          { key: "h", header: true, cells: [{ text: "#", w: 3, right: true }, { text: "ACTION" }, ...(narrow ? [] : [{ text: "SEV", w: 4 }]), { text: "STATUS", w: sw }] },
+          { key: "h", header: true, cells: [{ text: "#", w: 3, right: true }, { text: "ACTION" }, ...(narrow ? [] : [{ text: "SEV", w: 4 }, { text: "EFF", w: 3 }]), { text: "STATUS", w: sw }] },
           ...(plan()?.actions ?? []).map((a) => ({
             key: `a:${a.action_id}`,
             mark: { glyph: treatmentMark(a.status, G.mark === "■"), fg: treatmentHex(a.status) },
             cells: [
               { text: num(a.priority), w: 3, right: true, fg: p.off },
               { text: clean(a.title ?? a.action_id, 200), fg: p.ink },
-              ...(narrow ? [] : [{ text: severityTag(a.severity).trim(), w: 4, fg: p.ink3 }]),
+              ...(narrow ? [] : [{ text: severityTag(a.severity).trim(), w: 4, fg: p.ink3 }, { text: effortText(a, true) || "—", w: 3, fg: p.ink3 }]),
               { text: treatmentLabel(a), w: sw, fg: treatmentHex(a.status) },
             ],
           })),
@@ -507,13 +514,13 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
       case "frameworks": {
         const narrow = listWidth() < 56
         return [
-          { key: "h", header: true, cells: [{ text: "FRAMEWORK" }, { text: "WEAK", w: 4, right: true }, { text: "NONE", w: 4, right: true }, { text: "N/T", w: 3, right: true }, ...(narrow ? [] : [{ text: "N/A", w: 3, right: true }])] },
+          { key: "h", header: true, cells: [{ text: "FRAMEWORK" }, { text: "WEAK", w: 4, right: true }, { text: "NONE", w: 4, right: true }, { text: "N/T", w: 3, right: true }, ...(narrow ? [] : [{ text: "NTA", w: 3, right: true }])] },
           ...(assessment()?.frameworks ?? []).map((f) => {
             const c = (f.counts ?? {}) as Record<string, number>
             const app = applicabilityOf(f)
             return {
               key: `w:${f.framework}`,
-              mark: { glyph: app.status === "declared_by_customer" ? G.node : app.status === "not_applicable_declared" ? "–" : G.nodeOpen, fg: p.ink3 },
+              mark: { glyph: applicabilityMark(app.status, G.mark === "■"), fg: p.ink3 },
               cells: [
                 { text: clean(f.label ?? f.framework, 80), fg: p.ink },
                 { text: num(c.weakness_observed), w: 4, right: true, fg: Number(c.weakness_observed) ? p.ink : p.off },
@@ -1221,7 +1228,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
   })
   const Footer = () => (
     <box flexDirection="row" height={1} backgroundColor={C(P().surface)} paddingLeft={2} paddingRight={1} overflow="hidden">
-      <For each={W() < 100 ? hints().slice(0, 5) : hints()}>
+      <For each={W() < 100 ? [...hints().filter((h) => h[0] !== "?").slice(0, 4), ...hints().filter((h) => h[0] === "?")] : hints()}>
         {(h) => (
           <box flexDirection="row" paddingRight={3} flexShrink={0}>
             <T fg={P().ink} bold>{h[0]}</T>
@@ -1247,6 +1254,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
       borderStyle="single"
       customBorderChars={G.mark === "■" ? undefined : ASCII_BORDER}
       borderColor={C(p.focused ? P().jordy : P().edge)}
+      titleColor={C(p.focused ? P().jordy : P().off)}
       title={` ${p.title}${p.meta ? `  ${p.meta}` : ""} `}
       titleAlignment="left"
       paddingLeft={p.pad ?? 1}
@@ -1592,6 +1600,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             <T fg={pal.ink} bold>{clean(p.c.id, 80)}</T>
           </box>
           <T fg={pal.ink3} wrap>{[campaignTarget(p.c), shortDate(p.c.date), p.c.status, durationText((p.c as any).duration_seconds)].filter((x) => x && x !== "—").join("  ·  ")}</T>
+          <Show when={maintenanceCheckLine(p.c as any)}><T fg={pal.ink2} wrap>{maintenanceCheckLine(p.c as any)}</T></Show>
         </box>
         <box flexDirection="row" flexShrink={0}>
           <Tile label="FINDINGS" value={num(list().length || (counts() as any).total_findings)} width={tileW()} sub={<SevStrip counts={counts()} width={tileW() - 4} />} />
@@ -1657,7 +1666,10 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
     const got = () => execDocs()[p.k]
     const d = () => got()?.doc
     const head = () => scoreHeadline(d()?.score)
-    const statusMark = () => (head().rated ? G.node : head().limited ? (G.mark === "■" ? "◐" : "+") : G.nodeOpen)
+    const lever = () => gradeLever(d()?.score, (d()?.legend as Legend | undefined) ?? legendDoc())
+    const firstLine = () => clean(d()?.treatment_plan?.first_actions_line ?? "", 200)
+    // dense block (80 columns): 6 rows inside the pane; the frameworks line only when the rows above leave room
+    const denseUsed = () => 1 + Math.max(1, wrapLines(coverage(), w(), 2).length) + ((head().rated || head().limited) && lever().holds ? 1 : 0) + Math.max(1, top().length)
     const top = () => d()?.treatment_plan?.top_actions ?? []
     const total = () => Number(d()?.treatment_plan?.actions_total ?? 0)
     const reg = () => d()?.frameworks?.summary_line
@@ -1679,7 +1691,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             <T fg={pal.ink} bold>{head().big}</T>
             <Show when={head().rated || head().limited}>
               <T fg={pal.off}>{"   "}</T>
-              <T fg={head().rated ? pal.ink2 : pal.ink3}>{`${statusMark()} ${head().status}`}</T>
+              <T fg={head().rated ? pal.ink2 : pal.ink3}>{head().status}</T>
             </Show>
             <Show when={p.dense && sub()}>
               <T fg={pal.off}>{`  ·  ${fit(sub(), Math.max(0, w() - head().big.length - (head().rated || head().limited ? head().status.length + 5 : 0) - 6))}`}</T>
@@ -1689,8 +1701,16 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             <T fg={pal.ink3}>{fit(sub(), w())}</T>
           </Show>
           <Show when={coverage()} fallback={<T fg={pal.off}>Coverage not recorded.</T>}>
-            <Show when={p.dense} fallback={<For each={wrapLines(coverage(), w(), 2)}>{(l) => <T fg={pal.ink2}>{l}</T>}</For>}>
-              <T fg={pal.ink2}>{fit(coverage(), w())}</T>
+            <For each={wrapLines(coverage(), w(), 2)}>{(l) => <T fg={pal.ink2}>{l}</T>}</For>
+          </Show>
+          <Show when={(head().rated || head().limited) && lever().holds}>
+            <Show when={p.dense} fallback={
+              <box flexDirection="column">
+                <For each={wrapLines(`What holds the grade: ${lever().holds}`, w(), 2)}>{(l) => <T fg={pal.ink3}>{l}</T>}</For>
+                <Show when={lever().classes}><T fg={pal.off}>{fit(`Weigh most: ${lever().classes}`, w())}</T></Show>
+              </box>
+            }>
+              <T fg={pal.ink3}>{fit(`Holds the grade: ${lever().classes ? `${lever().classes} of the penalties` : lever().holds}`, w())}</T>
             </Show>
           </Show>
           <Show when={project() && !p.dense}>
@@ -1709,6 +1729,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
           <Show when={d()?.treatment_plan} fallback={<T fg={pal.off}>{d()?.campaign_status === "running" ? "Plan available when the campaign ends." : "No treatment plan."}</T>}>
             <Show when={!p.dense}>
               <Label>{`PRIORITIZED TREATMENT PLAN · ${total()} action${total() === 1 ? "" : "s"}`}</Label>
+              <Show when={firstLine()}><T fg={pal.off}>{fit(firstLine(), w())}</T></Show>
             </Show>
             <Show when={top().length} fallback={<T fg={pal.off}>No open finding to treat.</T>}>
               <For each={top()}>
@@ -1729,7 +1750,7 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
               </For>
             </Show>
           </Show>
-          <Show when={!project()}>
+          <Show when={!project() && (!p.dense || denseUsed() < 6)}>
             <box flexDirection="row" height={1}>
               <T fg={pal.jordy}>{`${G.mark === "■" ? "▸" : ">"} `}</T>
               <T fg={pal.off}>{"Frameworks  "}</T>
@@ -1769,12 +1790,12 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
       if (k.startsWith("p:")) return `EXECUTIVE · ${clean(projects().find((x) => x.id === k.slice(2))?.name ?? k.slice(2), 28)}`
       return k ? `EXECUTIVE · campaign ${shortCampaign(k.slice(2))}` : "EXECUTIVE"
     }
-    const execH = () => (ek().startsWith("p:") ? 12 : 12)
+    const execH = () => (ek().startsWith("p:") ? 13 : 16)
     return (
       <box flexDirection="column" flexGrow={1} minHeight={0}>
         <Show when={!two()}>
           <box flexDirection="column" paddingLeft={1} paddingRight={1} flexShrink={0}>
-            <Pane title={execTitle()} meta="T X L" width={W() - 2} height={8}>
+            <Pane title={execTitle()} meta="T plan · X frameworks · L legend" width={W() - 2} height={9}>
               <Show when={ek()} keyed>{(k) => <ExecBlock k={k} width={W() - 6} dense />}</Show>
             </Pane>
           </box>
@@ -2096,14 +2117,16 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             <T fg={pal.ink}>{`${treatmentMark(a.status, G.mark === "■")} ${treatmentLabel(a)}`}</T>
           </box>
           {kv("", a.status_text && a.status_text !== treatmentLabel(a) ? a.status_text : "")}
+          {kv("Retest", retestNote(a))}
           {kv("Verification", a.status === "applied" ? "Declared by the owner, not verified: only a completed retest can verify it." : pl?.verification_note)}
+          {kv("Unit", a.weakness_class_label ? `${clean(a.weakness_class_label, 60)} on ${clean(a.asset ?? "", 60)}` : "")}
+          {kv("Effort", effortText(a))}
           {kv("Impact", a.expected_impact?.text)}
           {kv("Treatment", a.treatment_type ? `${clean(a.treatment_type.label, 40)} · ${clean(a.treatment_type.basis, 120)}` : "")}
           {kv("Owner", declared(a.owner))}
           {kv("Due date", declared(a.due_date))}
           {kv("Interruption", declared(a.service_interruption_risk))}
-          {kv("Accepted until", declared(a.risk_accepted_until))}
-          {kv("Last retest", a.last_retest ? a.last_retest.text : "")}
+          {kv("Risk accepted", riskAcceptanceText(a) || declared(a.risk_accepted_until))}
         </box>
         <Show when={a.explanation}>
           <box flexDirection="column">
@@ -2113,7 +2136,20 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
         </Show>
         <box flexDirection="column">
           <Label>{`FINDINGS · ${num((a.finding_ids ?? []).length)}`}</Label>
-          <T fg={pal.ink2} wrap>{fit((a.finding_ids ?? []).map((x: string) => clean(x, 40)).join(", "), 600)}</T>
+          <Show when={(a.findings ?? []).length} fallback={<T fg={pal.ink2} wrap>{fit((a.finding_ids ?? []).map((x: string) => clean(x, 40)).join(", "), 600)}</T>}>
+            <For each={(a.findings ?? []).slice(0, 12)}>
+              {(f: any) => (
+                <box flexDirection="row" height={1}>
+                  <T fg={pal.ink3}>{`${pm(f.proof)} `}</T>
+                  <T fg={sevHex(f.severity)}>{`${severityTag(f.severity).trim().padEnd(4)} `}</T>
+                  <T fg={pal.ink2}>{fit(clean(f.title ?? f.finding_id, 200), Math.max(8, p.width - 7))}</T>
+                </box>
+              )}
+            </For>
+            <Show when={(a.findings ?? []).length > 12}>
+              <T fg={pal.off}>{`… and ${num((a.findings ?? []).length - 12)} more`}</T>
+            </Show>
+          </Show>
           <T fg={pal.jordy}>enter  open the first finding</T>
         </box>
         <box flexDirection="column">
@@ -2172,6 +2208,8 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
     const showList = () => inline() || focus() === "list"
     const showDetail = () => inline() || focus() === "detail"
     const a = () => selectedAction()
+    const tall = () => dims().height >= 40
+    const expired = () => Number(((pl()?.summary as any) ?? {}).risk_acceptance_expired ?? 0) || 0
     return (
       <box flexDirection="column" flexGrow={1} minHeight={0}>
         <box flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} flexShrink={0}>
@@ -2180,12 +2218,15 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             <T fg={pal.off}>{fit(`  ·  ${num(pl()?.actions?.length)} actions  ·  ${clean(pl()?.basis_label ?? "", 60)}`, Math.max(0, W() - 34))}</T>
           </box>
           <T fg={pal.ink3}>{fit(clean(pl()?.definition ?? (busy() ? "Loading…" : ""), 400), W() - 4)}</T>
-          <T fg={pal.ink2}>{fit(counts().map((c) => `${c.n} ${clean(c.label, 40)}`).join("  ·  ") || " ", W() - 4)}</T>
+          <Show when={tall() && pl()?.unit}>
+            <T fg={pal.ink3}>{fit(`${clean(pl()?.unit, 300)} ${clean(pl()?.effort_note ?? "", 300)}`, W() - 4)}</T>
+          </Show>
+          <T fg={pal.ink2}>{fit([...counts().map((c) => `${c.n} ${clean(c.label, 40)}`), ...(expired() ? [`${expired()} risk acceptance${expired() === 1 ? "" : "s"} expired`] : [])].join("  ·  ") || " ", W() - 4)}</T>
         </box>
         <box flexDirection="row" flexGrow={1} minHeight={0} gap={1} paddingLeft={1} paddingRight={1} paddingTop={1}>
           <Show when={showList()}>
             <Pane title="ACTIONS" meta={`${num(pl()?.actions?.length)}`} focused={focus() === "list"} width={lw()}>
-              <ListBody width={lw() - 4} height={paneH() - 4} focused={focus() === "list"} />
+              <ListBody width={lw() - 4} height={paneH() - 4 - (tall() && pl()?.unit ? 1 : 0)} focused={focus() === "list"} />
             </Pane>
           </Show>
           <Show when={showDetail()}>
@@ -2231,8 +2272,8 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             <Pane title="FRAMEWORKS" meta="controls per state" focused={focus() === "list"} width={lw()}>
               <ListBody width={lw() - 4} height={paneH() - 3} focused={focus() === "list"} />
               <box height={1} />
-              <T fg={pal.off} wrap>{`${G.node} applicable (declared)  ${G.nodeOpen} to confirm  – not applicable`}</T>
-              <T fg={pal.off} wrap>WEAK weakness observed · NONE none observed in the tested scope · N/T not tested · N/A not technically assessable</T>
+              <T fg={pal.off} wrap>{`${applicabilityMark("declared_by_customer", G.mark === "■")} applicable (declared)  ${applicabilityMark("to_confirm", G.mark === "■")} to confirm  ${applicabilityMark("not_applicable_declared", G.mark === "■")} declared not applicable`}</T>
+              <T fg={pal.off} wrap>WEAK weakness observed · NONE none observed in the tested scope · N/T not tested · NTA not technically assessable</T>
             </Pane>
           </Show>
           <Show when={showDetail()}>
@@ -2345,18 +2386,17 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
             <T fg={pal.alice} bold>Application profile</T>
             <T fg={pal.off}>{fit(`  ·  ${num(pc().declared_by_customer)} declared · ${num(pc().verified)} verified · ${num(pc().detected)} detected · ${num(pc().unknown)} not provided`, Math.max(0, W() - 25))}</T>
           </box>
-          <T fg={pal.ink3}>
-            {fit(
+          <For each={wrapLines(
               decl()
-                ? `Declared by the owner in ${clean(decl()!.file, 80)} (${clean(decl()!.status, 12)}), edited by hand: never by an agent. Business facts are never guessed.`
+                ? `Owner's file ${clean(decl()!.file, 80)} (${clean(decl()!.status, 12)}), edited by hand; no MCP tool writes it, but the local agent has shell access: not tamper-evident.`
                 : "Declared by the organisation on the dashboard. Business facts are never guessed; detected values are not confirmed.",
-              W() - 4,
-            )}
-          </T>
+              W() - 4, 2)}>
+            {(l) => <T fg={pal.ink3}>{l}</T>}
+          </For>
         </box>
         <box flexDirection="row" flexGrow={1} minHeight={0} gap={1} paddingLeft={1} paddingRight={1} paddingTop={1}>
           <Show when={showList()}>
-            <Pane title="PROFILE" meta={`${G.node} declared  ${G.mark === "■" ? "◉" : "@"} verified  ${G.mark === "■" ? "◌" : ":"} detected`} focused={focus() === "list"} width={lw()}>
+            <Pane title="PROFILE" meta={`${provenanceBadge("declared", G.mark === "■").mark} declared  ${provenanceBadge("verified", G.mark === "■").mark} verified  ${provenanceBadge("detected", G.mark === "■").mark} detected`} focused={focus() === "list"} width={lw()}>
               <ListBody width={lw() - 4} height={paneH() - 3} focused={focus() === "list"} />
             </Pane>
           </Show>
@@ -2374,8 +2414,9 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
                       </box>
                       <box flexDirection="column">
                         <T fg={pal.ink2}>{`${b.mark} ${clean(f!.provenance_label ?? b.word, 80)}`}</T>
+                        <Show when={declaredByText(f, !!decl())}><T fg={pal.ink3} wrap>{declaredByText(f, !!decl())}</T></Show>
                         <Show when={f!.at}><Kv k="When" v={shortDate(String(f!.at))} /></Show>
-                        <Show when={f!.by_role}><Kv k="By" v={clean(f!.by_role, 80)} /></Show>
+                        <Show when={f!.by_role}><Kv k={decl() ? "Role, as written" : "Role"} v={clean(f!.by_role, 80)} kw={18} /></Show>
                         <Show when={f!.campaign_id}><Kv k="Campaign" v={clean(f!.campaign_id, 60)} /></Show>
                       </box>
                       <Show when={f!.note}><T fg={pal.off} wrap>{clean(f!.note, 300)}</T></Show>

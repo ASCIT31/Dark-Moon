@@ -840,28 +840,101 @@ export function scoreWhy(s: ScoreBlock | undefined | null): string {
   return clean(r || s?.status_meaning || "", 300)
 }
 
-const RETEST_ONLY = new Set(["verified_resolved", "partially_resolved", "failed_verification"])
 const IN_PROGRESS = new Set(["approved", "scheduled", "in_progress", "applied", "verification_pending"])
 
-/** The status words of an action. « Applied » always reads « not verified »; a retest wording (« Not reproduced at
- *  retest »…) only stands with the completed retest it comes from, otherwise the status is shown as unverified. */
+/** The status words of an action: the server's label (exec_core decides every status, retest ones included — the same
+ *  words as the dashboard). « Applied » always reads « not verified ». */
 export function treatmentLabel(a: ActionRow | undefined | null): string {
   const st = String(a?.status ?? "proposed")
   let label = clean(a?.status_label ?? st.replace(/_/g, " "), 60)
   if (st === "applied" && !/not verified/i.test(label)) label = `${label} — not verified`
-  if (RETEST_ONLY.has(st) && !(a?.last_retest && (a.last_retest as Doc).retest_id)) label = "Retest result not on file — not verified"
   return label
 }
 
-/** Glyph of a treatment status (never colour alone; the words are always shown next to it). */
+/** The retest line of an action, from the server's ``last_retest``: a completed retest below its coverage gate is
+ *  recorded but verifies nothing (« Retest without coverage — not verified »). */
+export function retestNote(a: ActionRow | undefined | null): string {
+  const r = a?.last_retest as Doc | null | undefined
+  if (!r) return ""
+  if (r.coverage_ok === false) return `Retest without coverage — not verified${r.coverage_text ? ` (${clean(r.coverage_text, 160)})` : ""}`
+  return clean(r.text ?? r.label ?? "", 200)
+}
+
+/** Effort band of an action (exec_core actions): « M Medium · indicative — to confirm », never a cost or a duration. */
+export function effortText(a: ActionRow | undefined | null, short = false): string {
+  const e = (a as Doc | undefined)?.effort as Doc | undefined
+  if (!e?.band) return ""
+  const band = clean(e.band, 2)
+  return short ? band : `${band} ${clean(e.label ?? "", 12)} · indicative — to confirm`
+}
+
+/** Risk acceptance of an action: named risk owner and expiry (server values); expired → « Risk acceptance expired ». */
+export function riskAcceptanceText(a: ActionRow | undefined | null): string {
+  const r = (a as Doc | undefined)?.risk_acceptance as Doc | undefined
+  if (!r) return ""
+  const who = r.risk_owner ? clean(r.risk_owner, 60) : "no named risk owner"
+  const until = r.until ? clean(r.until, 12) : "no expiry"
+  const by = r.recorded_by ? `, recorded by ${clean(r.recorded_by, 40)}` : ""
+  if (r.expired) return `Risk acceptance expired (${who}, until ${until})`
+  return `${who} until ${until}${by}${r.complete === false ? " — incomplete" : ""}`
+}
+
+/** Label of a weakness class: the legend's word when the source sends it, else the key made readable. */
+export function classLabel(key: string | undefined, legend?: Legend | null): string {
+  const k = String(key ?? "")
+  const w = (legend as Doc | undefined)?.weakness_class?.[k]
+  if (w) return clean(w, 60)
+  const t = k.replace(/_/g, " ")
+  return t.charAt(0).toUpperCase() + t.slice(1)
+}
+
+/** What holds the grade (exec_core ``score.next_cap_level``) and the classes that weigh most (``top_classes``). */
+export function gradeLever(s: ScoreBlock | undefined | null, legend?: Legend | null): { holds: string; classes: string } {
+  const n = (s as Doc | undefined)?.next_cap_level as Doc | undefined
+  const top = ((s as Doc | undefined)?.top_classes ?? []) as Doc[]
+  return {
+    holds: clean(n?.text ?? "", 500),
+    classes: top.map((c) => `${classLabel(c.weakness_class, legend)} ${clean(c.share_text ?? "", 40).replace(/ of the penalty sum$/, "")}`).join(" · "),
+  }
+}
+
+/** Glyph of a treatment status — its own family (□ ▶ ✓ ✗ ⊘ –), never the evidence circles (● ◐ ○); the words are
+ *  always shown next to it. */
 export function treatmentMark(status: string | undefined, unicode = true): string {
   const s = String(status ?? "proposed")
-  if (s === "verified_resolved") return unicode ? "◇" : "v"
+  if (s === "verified_resolved") return unicode ? "✓" : "v"
   if (s === "failed_verification" || s === "partially_resolved") return unicode ? "✗" : "x"
   if (s === "risk_accepted") return unicode ? "⊘" : "a"
   if (s === "deferred") return unicode ? "–" : "-"
-  if (IN_PROGRESS.has(s)) return unicode ? "◐" : "+"
-  return unicode ? "○" : "o"
+  if (IN_PROGRESS.has(s)) return unicode ? "▶" : "~"
+  return unicode ? "□" : "_"
+}
+
+/** Applicability mark of a framework (its own family: ▪ declared applicable, ▫ to confirm, – declared not applicable). */
+export function applicabilityMark(status: string | undefined, unicode = true): string {
+  const s = String(status ?? "")
+  if (s === "declared_by_customer") return unicode ? "▪" : "+"
+  if (s === "not_applicable_declared") return unicode ? "–" : "-"
+  return unicode ? "▫" : "?"
+}
+
+/** One line about the maintenance windows of a campaign started outside the API (TUI / agent launch): the server
+ *  evaluated it at init and recorded the result; it was not enforced. Empty when allowed or not recorded. */
+export function maintenanceCheckLine(c: Doc | undefined | null): string {
+  const m = c?.maintenance_check as Doc | undefined
+  if (!m || !m.decision || m.decision === "allowed") return ""
+  const what = m.decision === "blocked" ? "outside the maintenance windows" : "with a maintenance warning"
+  return `Maintenance: started${m.source === "mcp_init" ? " from the terminal / agent," : ""} ${what} — recorded, not enforced.`
+}
+
+/** Who declared a profile field: Pro « Declared by <account> on <date> »; Community « Declared in the local profile file
+ *  on <date> » (the file says who wrote it, the server cannot). */
+export function declaredByText(f: Doc | undefined | null, localFile: boolean): string {
+  if (!f || !["declared_by_customer", "declared", "verified"].includes(String(f.provenance))) return ""
+  const on = f.at ? ` on ${clean(String(f.at), 40).slice(0, 10)}` : ""
+  if (localFile) return `Declared in the local profile file${on}`
+  const by = f.by ?? f.by_role
+  return by ? `Declared by ${clean(by, 60)}${on}` : `Declared${on}`
 }
 
 export const FRAMEWORK_STATES = ["weakness_observed", "none_observed_in_tested_scope", "not_tested", "not_technically_assessable"] as const
@@ -877,7 +950,7 @@ export function frameworkLine(f: FrameworkRow, short = false): string {
   const c = f.counts ?? {}
   const n = (k: string) => Number(c[k] ?? 0) || 0
   return short
-    ? `${n("weakness_observed")} weak · ${n("none_observed_in_tested_scope")} none obs. · ${n("not_tested")} not tested · ${n("not_technically_assessable")} n/a`
+    ? `${n("weakness_observed")} weak · ${n("none_observed_in_tested_scope")} none obs. · ${n("not_tested")} not tested · ${n("not_technically_assessable")} not assessable`
     : FRAMEWORK_STATES.map((k) => `${n(k)} ${FRAMEWORK_STATE_SHORT[k]}`).join(" · ")
 }
 
@@ -905,19 +978,20 @@ export function maintenanceLines(doc: MaintenanceDoc | undefined, projectName: s
   }
   for (const i of doc.issues ?? []) out.push(`! ${one(i.field ?? "", 40)}: ${one(i.message ?? "", 160)}`)
   out.push("")
-  if (doc.file?.path) out.push(`File: ${one(doc.file.path, 80)} (${one(doc.file.status ?? "", 20)}), edited by hand, never by an agent.`)
+  if (doc.file?.path) out.push(`File: ${one(doc.file.path, 80)} (${one(doc.file.status ?? "", 20)}), edited by hand; no MCP tool writes it, but the local agent has shell access: not tamper-evident.`)
   out.push(doc.enforced === false ? "Community warns outside the windows; it never blocks a launch."
     : "Pro blocks New Campaign, the scheduler and retests outside the windows.")
   return out
 }
 
-/** Provenance badge of a profile field: shape + word (Detected = dashed, Declared = filled, Verified = double). */
+/** Provenance badge of a profile field: shape + word, its own family (◆ Declared, ◈ Verified, ◇ Detected, · Not
+ *  provided), distinct from the evidence circles. */
 export function provenanceBadge(p: string | undefined, unicode = true): { mark: string; word: string } {
   const v = String(p ?? "unknown")
-  if (v === "verified") return { mark: unicode ? "◉" : "@", word: "Verified" }
-  if (v === "declared_by_customer" || v === "declared") return { mark: unicode ? "●" : "*", word: "Declared" }
-  if (v === "detected") return { mark: unicode ? "◌" : ":", word: "Detected" }
-  if (v === "inferred") return { mark: unicode ? "◌" : ":", word: "Inferred" }
+  if (v === "verified") return { mark: unicode ? "◈" : "@", word: "Verified" }
+  if (v === "declared_by_customer" || v === "declared") return { mark: unicode ? "◆" : "*", word: "Declared" }
+  if (v === "detected") return { mark: unicode ? "◇" : ":", word: "Detected" }
+  if (v === "inferred") return { mark: unicode ? "◇" : ":", word: "Inferred" }
   return { mark: unicode ? "·" : ".", word: "Not provided" }
 }
 
@@ -974,10 +1048,10 @@ export function legendLines(l: Legend | undefined, unicode = true, compact = fal
       ` ${g.node} a step with a finding   ${g.open} an exposure`,
       "EVIDENCE STATUS (not severity)",
       ` ${pmk("exploited")} ${lab(ev.exploited, "Exploited")}   ${pmk("confirmed")} ${lab(ev.confirmed, "Confirmed")}   ${pmk("")} ${lab(ev.unconfirmed, "To confirm")}`,
-      "TREATMENT",
-      ` ${treatmentMark("in_progress", unicode)} ${lab(tr.in_progress, "Treatment in Progress")}   ${treatmentMark("risk_accepted", unicode)} ${lab(tr.risk_accepted, "Risk accepted")}`,
-      ` ${treatmentMark("verified_resolved", unicode)} ${lab(tr.not_reproduced, "Not reproduced at retest")} (completed retest only)`,
-      " « Applied » is a declaration, never a verification.",
+      "TREATMENT (own marks, not the evidence circles)",
+      ` ${treatmentMark("proposed", unicode)} ${lab(tr.to_do, "To do")}   ${treatmentMark("in_progress", unicode)} ${lab(tr.in_progress, "Treatment in Progress")}   ${treatmentMark("deferred", unicode)} Deferred`,
+      ` ${treatmentMark("verified_resolved", unicode)} ${lab(tr.not_reproduced, "Not reproduced at retest")}   ${treatmentMark("failed_verification", unicode)} Reproduced at retest`,
+      ` ${treatmentMark("risk_accepted", unicode)} ${lab(tr.risk_accepted, "Risk accepted")}   « Applied » is not a verification`,
       "CYBER SCORE",
       ` ${lab(ss.rated, "Rated")} · ${lab(ss.limited, "Limited test")} · ${lab(ss.not_rated, "Not rated")} (no number)`,
     ]
@@ -991,9 +1065,11 @@ export function legendLines(l: Legend | undefined, unicode = true, compact = fal
     ...(["exploited", "confirmed", "unconfirmed"] as const).map((k) => line(` ${pmk(k === "unconfirmed" ? "" : k)}`, ev[k], k)),
     " Severity (Critical … Informational) says how bad a weakness would be; evidence status says how much proof is on file.",
     "",
-    "TREATMENT",
+    "TREATMENT (own marks, not the evidence circles)",
+    line(` ${treatmentMark("proposed", unicode)}`, tr.to_do, "To do"),
     line(` ${treatmentMark("in_progress", unicode)}`, tr.in_progress, "Treatment in Progress"),
     line(` ${treatmentMark("verified_resolved", unicode)}`, tr.not_reproduced, "Not reproduced at retest"),
+    ` ${treatmentMark("failed_verification", unicode)} Reproduced at retest — a completed retest found it again   ${treatmentMark("deferred", unicode)} Deferred`,
     line(` ${treatmentMark("risk_accepted", unicode)}`, tr.risk_accepted, "Risk accepted"),
     " « Applied » is a declaration, never a verification.",
     "",
