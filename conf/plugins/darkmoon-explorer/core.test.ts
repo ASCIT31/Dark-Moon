@@ -497,3 +497,61 @@ describe("maintenance windows (L9)", () => {
     expect(maintenanceLines(undefined, "Lab")[0]).toContain("not available")
   })
 })
+
+describe("top tabs and scrollable dialogs", () => {
+  const core = require("./core")
+  const TABS = [
+    { label: "Workspace", short: "Work" },
+    { label: "Projects", short: "Proj" },
+    { label: "Campaigns", short: "Camp" },
+    { label: "Findings", short: "Find" },
+    { label: "Plan", short: "Plan" },
+    { label: "Attack paths", short: "Paths" },
+    { label: "Reports", short: "Docs" },
+  ]
+  test("80 columns: every tab shows a label and the bar leaves room for the status", () => {
+    for (const w of [80, 90, 99]) {
+      const bar = core.topTabs(TABS, w, 2)
+      expect(bar.mode).toBe("narrow")
+      expect(bar.tabs.map((t) => t.text)).toEqual(["1 Work", "2 Proj", "3 Camp", "4 Find", "5 Plan", "6 Path", "7 Docs"])
+      expect(bar.tabs.filter((t) => t.active).map((t) => t.text)).toEqual(["3 Camp"])
+      // DARKMOON + gaps + paddings = 17 cells, the status keeps at least 10
+      expect(17 + bar.total + 10).toBeLessThanOrEqual(80)
+    }
+  })
+  test("120 and 160 columns keep the short and full labels", () => {
+    const b120 = core.topTabs(TABS, 120, 0)
+    expect(b120.mode).toBe("short")
+    expect(b120.tabs.map((t) => t.text)).toEqual(["1 Work", "2 Proj", "3 Camp", "4 Find", "5 Plan", "6 Paths", "7 Docs"])
+    expect(b120.tabs.every((t) => t.padL === 1 && t.padR === 1)).toBe(true)
+    const b160 = core.topTabs(TABS, 160, 0)
+    expect(b160.mode).toBe("full")
+    expect(b160.tabs[5].text).toBe("6 Attack paths")
+    expect(core.topTabs(TABS, 79, 0)).toEqual({ tabs: [], total: 0, mode: "none" })
+  })
+  test("wrapDialogLines keeps blank lines and indents continuations", () => {
+    const out = core.wrapDialogLines(["A", "", " aaa bbb ccc ddd"], 10)
+    expect(out).toEqual(["A", "", " aaa bbb", "   ccc ddd"])
+    expect(out.every((l) => l.length <= 10)).toBe(true)
+    expect(core.wrapDialogLines(["x".repeat(30)], 10)).toEqual(["xxxxxxxxx…"])
+  })
+  test("scroll window and keys: clamped, page = height - 1, home/end", () => {
+    expect(core.scrollWindow(30, 10, 0)).toEqual({ offset: 0, max: 20, above: 0, below: 20 })
+    expect(core.scrollWindow(30, 10, 99)).toEqual({ offset: 20, max: 20, above: 20, below: 0 })
+    expect(core.scrollWindow(5, 10, 3)).toEqual({ offset: 0, max: 0, above: 0, below: 0 })
+    expect(core.scrollKey("down", 30, 10, 0)).toBe(1)
+    expect(core.scrollKey("up", 30, 10, 0)).toBe(0)
+    expect(core.scrollKey("pagedown", 30, 10, 0)).toBe(9)
+    expect(core.scrollKey("pagedown", 30, 10, 15)).toBe(20)
+    expect(core.scrollKey("pageup", 30, 10, 5)).toBe(0)
+    expect(core.scrollKey("end", 30, 10, 0)).toBe(20)
+    expect(core.scrollKey("home", 30, 10, 20)).toBe(0)
+    expect(core.scrollKey("x", 30, 10, 0)).toBeUndefined()
+  })
+  test("the full legend scrolls in a short terminal instead of being cut", () => {
+    const rows = core.wrapDialogLines(core.legendLines(undefined), 56)
+    const win = core.scrollWindow(rows.length, 8, 0)
+    expect(win.below).toBeGreaterThan(0)
+    expect(rows.slice(core.scrollKey("end", rows.length, 8, 0)!).join("\n")).toContain("CYBER SCORE")
+  })
+})

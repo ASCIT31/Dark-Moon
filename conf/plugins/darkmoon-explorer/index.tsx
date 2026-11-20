@@ -24,6 +24,10 @@ import {
   retestNote,
   riskAcceptanceText,
   legendLines,
+  scrollKey,
+  scrollWindow,
+  topTabs,
+  wrapDialogLines,
   maintenanceLines,
   pathKindCounts,
   profileValue,
@@ -966,23 +970,45 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
         setLegendDoc(Object.values(execDocs()).find((x) => x.doc?.legend)?.doc?.legend as Legend | undefined)
       }
     }
-    api.ui.dialog.replace(() => (
-      <api.ui.DialogAlert
-        title="Legend · Darkmoon vocabulary"
-        message={legendText()}
-        onConfirm={() => api.ui.dialog.clear()}
-      />
-    ))
+    api.ui.dialog.replace(() => <LegendDialog />)
     api.ui.dialog.setSize(legendSize())
   }
-  // the dialog cannot scroll: the full legend (with meanings) only when it fits, else the labels only
   const legendSize = () => (W() >= 120 ? "xlarge" : W() >= 92 ? "large" : "medium")
-  function legendText() {
-    const inner = ({ xlarge: 116, large: 88, medium: 60 } as const)[legendSize()] - 6
-    const tail = ["", "The same words on the dashboard, in the report and here."]
-    const full = [...legendLines(legendDoc(), G.mark === "■"), ...tail]
-    const rows = full.reduce((n, l) => n + Math.max(1, Math.ceil(l.length / inner)), 0)
-    return (rows <= dims().height - 9 ? full : [...legendLines(legendDoc(), G.mark === "■", true), ...tail]).join("\n")
+  // the full legend (with meanings), scrolled with ↑↓ PgUp PgDn Home End when taller than the terminal
+  const LegendDialog = () => {
+    const [off, setOff] = createSignal(0)
+    const inner = () => Math.min(({ xlarge: 116, large: 88, medium: 60 } as const)[legendSize()], W() - 2) - 4
+    const rows = createMemo(() =>
+      wrapDialogLines([...legendLines(legendDoc(), G.mark === "■"), "", "The same words on the dashboard, in the report and here."], inner()),
+    )
+    // the dialog opens a quarter down the screen; title, gap, hint and paddings take 6 rows
+    const height = () => Math.max(3, dims().height - Math.floor(dims().height / 4) - 6)
+    const win = createMemo(() => scrollWindow(rows().length, height(), off()))
+    useKeyboard((evt) => {
+      if (evt.ctrl || evt.meta) return
+      if (evt.name === "return") return evt.preventDefault(), evt.stopPropagation(), api.ui.dialog.clear()
+      const next = scrollKey(evt.name, rows().length, height(), win().offset)
+      if (next === undefined) return
+      evt.preventDefault()
+      evt.stopPropagation()
+      setOff(next)
+    })
+    const uni = G.mark === "■"
+    return (
+      <box paddingLeft={2} paddingRight={2} paddingBottom={1}>
+        <box flexDirection="row" justifyContent="space-between" height={1}>
+          <T bold>Legend · Darkmoon vocabulary</T>
+          <T fg={P().off}>esc</T>
+        </box>
+        <box height={1} />
+        <text fg={C(P().ink2)} wrapMode="none">{rows().slice(win().offset, win().offset + height()).join("\n")}</text>
+        <box flexDirection="row" height={1} marginTop={1}>
+          <T fg={P().jordy}>{win().below ? `more ${uni ? "↓" : "v"} (${win().below})` : win().above ? "end" : ""}</T>
+          <box flexGrow={1} />
+          <T fg={P().off}>{win().max ? `${uni ? "↑↓" : "up/down"} PgUp PgDn Home End · enter close` : "enter close"}</T>
+        </box>
+      </box>
+    )
   }
   function quick(target: "findings" | "report" | "paths") {
     const c = contextCampaign()
@@ -1168,28 +1194,22 @@ function Explorer(props: { api: TuiPluginApi; src: CachedSource; close: () => vo
   // ---- chrome: section bar, breadcrumb, key hints
 
   const TopBar = () => {
-    const short = () => W() < 130
-    const digitsOnly = () => W() < 100
+    // full labels ≥ 130, short 100–129, four-letter labels 80–99 (every tab readable at 80 columns), none below
+    const bar = createMemo(() => topTabs(TABS, W(), TABS.findIndex((t) => t.id === tab())))
     // the tabs never shrink: a long status (an error) is cut instead
-    const tabsW = () =>
-      view().k === "login" || W() < 80 ? 0 : TABS.reduce((n, t) => n + (digitsOnly() && tab() !== t.id ? 3 : 4 + (short() ? t.short : t.label).length), 0)
+    const tabsW = () => (view().k === "login" ? 0 : bar().total)
     return (
       <box flexDirection="row" height={1} backgroundColor={C(P().surface)} paddingLeft={2} paddingRight={2}>
         <T fg={P().alice} bold>DARKMOON</T>
         <box width={3} flexShrink={0} />
-        <Show when={view().k !== "login" && W() >= 80}>
-          <For each={TABS}>
-            {(t, i) => {
-              const active = () => tab() === t.id
-              return (
-                <box flexDirection="row" flexShrink={0} backgroundColor={active() ? C(P().hover) : undefined} paddingLeft={1} paddingRight={1}>
-                  <T fg={active() ? P().jordy : P().off}>{`${i() + 1}`}</T>
-                  <Show when={active() || !digitsOnly()}>
-                    <T fg={active() ? P().ink : P().ink3} bold={active()}>{` ${short() ? t.short : t.label}`}</T>
-                  </Show>
-                </box>
-              )
-            }}
+        <Show when={view().k !== "login" && bar().mode !== "none"}>
+          <For each={bar().tabs}>
+            {(t) => (
+              <box flexDirection="row" flexShrink={0} backgroundColor={t.active ? C(P().hover) : undefined} paddingLeft={t.padL} paddingRight={t.padR}>
+                <T fg={t.active ? P().jordy : P().off}>{t.text.slice(0, t.text.indexOf(" "))}</T>
+                <T fg={t.active ? P().ink : P().ink3} bold={t.active}>{t.text.slice(t.text.indexOf(" "))}</T>
+              </box>
+            )}
           </For>
         </Show>
         <box flexGrow={1} />
