@@ -7,7 +7,7 @@
 3. exec_core stays pure: standard library only, no file, network or process access.
 4. Community: the copy vendored for the terminal explorer matches the manifest too.
 5. The other modules both editions must ship identically (``SHARED_SHA256``: coverage recorder, score adapter,
-   fix triage, security log) match the hashes below, and so do the treatment-plan and framework-assessment parity fixtures and
+   fix triage, security log, run binding of the MCP writes) match the hashes below, and so do the treatment-plan and framework-assessment parity fixtures and
    their tests. This file itself is shipped identically, so a change in one edition only
    fails the other edition's run once the file is copied (no cross-repository access from a test).
 
@@ -39,6 +39,7 @@ SHARED_SHA256 = {
     "coverage_signals.py": "709bde05795a7b5f0ed83d0b700933542f14fa697c0dbba8755abf653e3bdb1f",
     "exec_score.py": "94e6bd24282becd2e382dc02556cd4ae90eea7ba5b898473516d112615b3bd94",
     "fix_triage.py": "97f3883ea3e754bbb92a72a1316ac22ff82aad96ff9195aefb0f4fcce74229f6",
+    "run_binding.py": "5f42b3675eb1afaecf53e16547ad0b8c58ac48a34349ea9ad9c29810dcd84fae",
     "security_log.py": "f0c55e93aded8461847a55039e61d0d4f24f907bf30f28b6320ae740d6702a52",
 }
 SHARED_TESTS_SHA256 = {
@@ -48,6 +49,7 @@ SHARED_TESTS_SHA256 = {
     "test_exec_core_taxonomy.py": "f55f8efaac308b2600c52c0bc8388bb0d89cf12ddc5565161a66cecdaf4eb35a",
     "test_exec_core_frameworks.py": "d4816a3bfa29a441309653a38687d5d40d13dd6d881988fa32a5002f198317b1",
     "test_exec_core_report_model.py": "7e6159864fa6bf72bf52bae866e1644c9c98ce53dd9750719671e1a81a6477d9",
+    "test_run_binding.py": "d5f937f95b77269ae9f33f782b081b8a8968d7ddfd229f0759e48ebe67863187",
 }
 TREATMENT_FIXTURES_SHA256 = "c0dec06c1da681d658206603a6347dc055d089013c74c7733805752b0612e750"
 FRAMEWORK_FIXTURES_SHA256 = "54797efc393278623b6cc26792e29ed354c0e2f5a71725564bbdef61bb0f41d6"

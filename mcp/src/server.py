@@ -682,7 +682,34 @@ def dashboard_init_campaign(
         project_name=project_name,
         methodology=methodology,
         campaign_kind=campaign_kind,
+        run_frag=_caller_run_key(),
     )
+
+
+def _caller_run_key() -> Optional[str]:
+    """The caller's run key (R4 S3, api/run_binding.py): the X-Darkmoon-Campaign-Frag header of this call, else the
+    DARKMOON_CAMPAIGN_FRAG env. Community hands no run key today (one local operator, the TUI runs several sessions
+    in one opencode process): None, and the campaigns stay unbound (behaviour unchanged)."""
+    from api import run_binding
+    header = None
+    try:
+        from fastmcp.server.dependencies import get_http_headers
+        header = (get_http_headers(include_all=True) or {}).get(run_binding.RUN_KEY_HEADER)
+    except Exception:  # noqa: BLE001 - stdio or no request context
+        header = None
+    return run_binding.caller_run_key(header, os.environ.get(run_binding.RUN_KEY_ENV))
+
+
+def _run_write_guard(tool: str, campaign_id: str) -> Optional[Dict[str, Any]]:
+    """R4 S3: a dashboard_* write lands only in a campaign the caller may write into (api/run_binding.py, shared with
+    Pro). None = proceed; else the refusal to return."""
+    from api import run_binding
+    from api.json_storage import load_campaign
+    try:
+        camp = load_campaign(campaign_id)
+    except Exception:  # noqa: BLE001
+        camp = None
+    return run_binding.guard(tool, campaign_id, camp, _caller_run_key())
 
 
 # Attack paths: earlier findings whose result this exploitation used. Stored as declared by the agent; the
@@ -789,6 +816,9 @@ def dashboard_push_finding(
             evidence_explanation="The login form passes unsanitized input to SQL query...",
         )
     """
+    refused = _run_write_guard("dashboard_push_finding", campaign_id)
+    if refused:
+        return refused
     from api.live_push import push_finding
 
     finding = {
@@ -873,6 +903,9 @@ def dashboard_push_infra_node(
             technology="Linux (Docker)",
         )
     """
+    refused = _run_write_guard("dashboard_push_infra_node", campaign_id)
+    if refused:
+        return refused
     from api.live_push import push_infra_node
 
     node = {
@@ -922,6 +955,9 @@ def dashboard_finalize_campaign(
             report_markdown="# Vulnerability Assessment Report\\n..."
         )
     """
+    refused = _run_write_guard("dashboard_finalize_campaign", campaign_id)
+    if refused:
+        return refused
     from api.live_push import finalize_campaign, _generate_report_from_db
     from api.json_storage import load_campaign, load_report_content
 

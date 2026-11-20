@@ -14,6 +14,7 @@ Each call writes JSON to disk immediately so the API serves fresh data.
 """
 
 import logging
+import os
 import re
 import sqlite3
 import uuid
@@ -157,6 +158,7 @@ from api.json_storage import (
     save_target,
     save_campaign,
     load_campaign,
+    load_campaigns,
     find_target_by_host_or_ip,
     find_project_by_target_id,
     _read_json,
@@ -430,14 +432,27 @@ def _init_live_campaign_unlocked(
     technologies: Optional[List[Dict[str, Any]]] = None,
     os_info: str = "",
     campaign_kind: Optional[str] = None,
+    run_frag: Optional[str] = None,
 ) -> Dict[str, str]:
     """
     Initialize a live campaign. Creates project + target + campaign skeleton.
     Rule: 1 project = 1 target.
     ``campaign_kind`` (optional): full | retest | short, recorded in the coverage signals.
+    ``run_frag`` (optional): the caller's run key (header or env, api/run_binding.py). None in Community today; when
+    present it names the campaign and binds it to the run (R4 S3, same rule as Pro).
     """
     if not is_safe_id(f"camp_x_{session_id}"):  # refused before anything is written (no orphan project/target)
         return {"error": f"invalid session_id {str(session_id)[:40]!r}"}
+    # R4 S3: a keyless init that would re-open a campaign a run key opened is refused before anything is written
+    from api import run_binding
+    caller_key = run_binding.caller_run_key(run_frag, os.environ.get(run_binding.RUN_KEY_ENV))
+    if not caller_key:
+        _key = _run_campaign_frag(session_id)
+        _bound = next((c for c in load_campaigns() if not c.get("is_subagent")
+                       and str(c.get("session_id", "")) == _key and c.get(run_binding.BOUND_FIELD)), None)
+        if _bound is not None:
+            run_binding.guard("dashboard_init_campaign", _bound.get("id"), _bound, None)
+            return run_binding.refusal(_bound.get("id"))
     now = _now_iso()
     today = _today_compact()
 
@@ -534,6 +549,10 @@ def _init_live_campaign_unlocked(
     parent_campaign_id = None
     if is_subagent:
         parent_campaign_id = _find_parent_campaign_id(session_id)
+        # R4 S3: the opencode-DB guess never puts nodes into a campaign the caller may not write into
+        if parent_campaign_id and not run_binding.write_decision(load_campaign(parent_campaign_id),
+                                                                 caller_key)["allowed"]:
+            parent_campaign_id = None
 
     if parent_campaign_id:
         # Sub-agent: push nodes into the PARENT campaign, don't create a new campaign
@@ -564,7 +583,7 @@ def _init_live_campaign_unlocked(
             "status": "subagent_merged_into_parent",
         }
 
-    run_frag = _run_campaign_frag(session_id)
+    run_frag = caller_key or _run_campaign_frag(session_id)
     campaign_id = f"camp_{today}_{run_frag}"
 
     campaign = {
@@ -597,6 +616,10 @@ def _init_live_campaign_unlocked(
     # coverage signals (exec_core score gate): a repeated init keeps the server start of the campaign
     from api import coverage_signals
     _prior = load_campaign(campaign_id)
+    if _prior and not run_binding.write_decision(_prior, caller_key)["allowed"]:
+        run_binding.guard("dashboard_init_campaign", campaign_id, _prior, caller_key)
+        return run_binding.refusal(campaign_id)
+    run_binding.mark_bound(campaign, caller_key)
     if _prior and isinstance(_prior.get("coverage_signals"), dict):
         campaign["coverage_signals"] = _prior["coverage_signals"]
         campaign["date"] = _prior.get("date") or campaign["date"]
