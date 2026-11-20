@@ -1,8 +1,9 @@
 """Prioritized Treatment Plan, Darkmoon Community (read-only).
 
 The plan is the same exec_core document as in Pro (``exec_core.actions.build_plan``), built from the local store.
-Community has no write path for statuses that a model could call: no MCP tool, no API. The owner declares treatment
-statuses in a file they edit themselves, read and validated here on every read:
+No MCP tool and no API writes treatment statuses. The owner declares them in a file they edit themselves, read and
+validated here on every read. The local agent has shell access in the same container, so this file is not
+tamper-evident: Community declarations are shown as declared in a local file, never as verified.
 
     <data dir>/treatments/<campaign_id>.json      (data dir = ~/.local/share/opencode unless DARKMOON_DATA_DIR)
 
@@ -13,9 +14,16 @@ statuses in a file they edit themselves, read and validated here on every read:
         {"action_id": "act_…", "at": "2026-11-20", "by_role": "web team lead", "status": "applied",
          "note": "patched in release 4.2"},
         {"action_id": "act_…", "at": "2026-11-21", "by_role": "CISO",
-         "declared": {"owner": "web team", "approval_required": true, "service_interruption_risk": "low"}}
+         "declared": {"owner": "web team", "approval_required": true, "service_interruption_risk": "low"}},
+        {"action_id": "act_…", "at": "2026-11-22", "by_role": "CISO", "status": "risk_accepted",
+         "declared": {"risk_owner": "Head of Payments", "risk_accepted_until": "2027-05-31"}}
       ]
     }
+
+One action = one weakness class on one asset (exec_core 1.5). Action ids of exec_core <= 1.4 (one per fix item)
+are still accepted: their entries follow their findings to the current action. A risk acceptance names the
+accountable risk owner and an expiry at most 12 months ahead; without them it reads « incomplete », and past its
+date « Risk acceptance expired ».
 
 Rules: entries are replayed in time order through the exec_core status machine; an invalid entry (unknown action,
 unknown field, bad date, a transition the machine refuses, a retest-only status) is reported in ``issues`` and
@@ -96,9 +104,16 @@ def plan_doc(campaign_id: str, finding_filter: Optional[Callable[[Dict[str, Any]
     vulns = [v for v in load_vulnerabilities(campaign_id) or [] if isinstance(v, dict)]
     if finding_filter is not None:
         vulns = [finding_filter(v) for v in vulns]
-    ids = {a["action_id"] for a in A.build_actions(campaign_id, doc, vulns)}
-    state, file_issues, file_status = load_declarations(campaign_id, ids)
-    plan = A.build_plan(campaign_id, doc, vulns, state, None, verification_available=False)
+    tid = str((load_campaign(campaign_id) or {}).get("target_id") or "")
+    ids = {a["action_id"] for a in A.build_actions(campaign_id, doc, vulns, tid)}
+    legacy = A.legacy_action_ids(campaign_id, doc)       # exec_core <= 1.4 ids: migrated by their findings
+    state, file_issues, file_status = load_declarations(campaign_id, ids | set(legacy))
+    for aid, rec in (state.get("actions") or {}).items():
+        if aid in legacy:
+            rec["finding_ids"] = legacy[aid]
+    from datetime import datetime, timezone
+    plan = A.build_plan(campaign_id, doc, vulns, state, None, verification_available=False, target_id=tid,
+                        today=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     for i in plan["issues"]:
         i.setdefault("kind", "declaration-refused")
     plan["issues"] = file_issues + plan["issues"]

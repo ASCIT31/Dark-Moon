@@ -1,7 +1,8 @@
 """Application profile, Darkmoon Community (read-only).
 
-Same document as in Pro (``exec_core.profile``). Community has no write path a model could call: no MCP tool, no API.
-The owner declares the profile in a file they edit themselves, read and validated here on every read:
+Same document as in Pro (``exec_core.profile``). No MCP tool and no API writes it. The owner declares the profile in a
+file they edit themselves, read and validated here on every read. The local agent has shell access in the same
+container, so this file is not tamper-evident: the report says « Declared in the local profile file », never who.
 
     <data dir>/profiles/<project_id>.json      (data dir = ~/.local/share/opencode unless DARKMOON_DATA_DIR)
 
@@ -92,6 +93,7 @@ def profile_doc(project_id: str) -> Optional[Dict[str, Any]]:
     return {"schema_version": P.PROFILE_VERSION, "project_id": project_id, "profile": view, "issues": issues,
             "declarations": {"file": f"profiles/{project_id}.json", "status": status,
                              "schema_version": P.FILE_VERSION,
-                             "note": ("Declared by the owner in this file (edited by hand, never by an agent). Only "
+                             "note": ("Declared by the owner in this file, edited by hand (no MCP tool writes it; the "
+                                      "local agent has shell access, so the file is not tamper-evident). Only "
                                       "declared or verified fields decide framework applicability.")},
             "can_edit": False}

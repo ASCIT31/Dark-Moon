@@ -1,7 +1,8 @@
 """Maintenance windows, Darkmoon Community (advisory: a warning, never a block).
 
-Same policy and evaluation as Pro (``exec_core.maintenance``). Community has no write path a model could call: no MCP
-tool, no API. The owner writes the policy in a file they edit themselves, read and validated here on every read:
+Same policy and evaluation as Pro (``exec_core.maintenance``). No MCP tool and no API writes it. The owner writes the
+policy in a file they edit themselves, read and validated here on every read (the local agent has shell access in the
+same container, so the file is not tamper-evident; Community only warns anyway):
 
     <data dir>/policies/<project_id>.json      (data dir = ~/.local/share/opencode unless DARKMOON_DATA_DIR)
 
@@ -85,7 +86,7 @@ def policy_doc(project_id: str) -> Optional[Dict[str, Any]]:
             ["The policy file could not be used: fix it (every launch gets a warning until then)."],
             "issues": issues, "evaluation_now": evaluate(project_id),
             "file": {"path": f"policies/{project_id}.json", "status": status,
-                     "note": "Written by the owner (edited by hand, never by an agent). Community warns outside the "
+                     "note": "Written by the owner, edited by hand (no MCP tool writes it; not tamper-evident). Community warns outside the "
                              "windows; it does not block a launch."},
             "enforced": False, "can_edit": False}
 

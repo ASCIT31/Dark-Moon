@@ -33,7 +33,11 @@ The names were chosen to map easily onto common SIEM schemas (category / action 
 - No log injection: new lines, ANSI escapes, C1 and bidi characters in any value (a user name typed at the login
   form included) are written as visible escapes; one event is always one line.
 - Bounded: text values are cut, at most 20 detail keys.
-- Failed sign-ins say « invalid credentials » whether the account exists or not.
+- Failed sign-ins say « invalid credentials » whether the account exists or not. The name typed at the login form is
+  logged only when it is an existing account; otherwise the event says `actor=unknown` and carries
+  `details.username_digest`, the first 12 hex characters of a SHA-256 salted with a value derived from the server
+  secret — enough to correlate repeated attempts, never the typed text (a password typed in the user name field never
+  reaches the log).
 
 ## Catalogue
 
@@ -66,3 +70,38 @@ The names were chosen to map easily onto common SIEM schemas (category / action 
 Community has no accounts or admin routes: its MCP server emits `campaign.launch` (`success` / `warning`, from the
 maintenance check at campaign start). The other events of the catalogue are emitted by Darkmoon Pro. Names are never
 renamed once shipped; a new meaning gets a new name. There is no account lockout in the product today, so no lockout event.
+
+## Personal data in logs and audit trails (retention and minimisation)
+
+Darkmoon is installed and operated by the customer, who is the controller of the personal data of its operators;
+when Darkmoon (ASC-IT) operates an installation for a customer, it acts as a processor for that data. The purpose of
+the records below is the security of the platform and the accountability of decisions (GDPR art. 6(1)(f), legitimate
+interest); none is used for anything else.
+
+| Record | Personal data it may hold | Where | Default retention |
+|---|---|---|---|
+| Security events (`darkmoon.audit`) | account name, role, source IP, ids; a salted digest of an unknown login name | stderr of the API / MCP process (the container log) | the log driver's (Darkmoon writes to stderr and does not rotate it) |
+| Treatment history and `treatments/audit.jsonl` (Pro) | account (`by`), role, date, free-text note (≤ 500 characters) | data directory | kept with the campaign (append-only) |
+| Risk acceptances | the named risk owner (free text chosen by the organisation), the recording account | treatment history | kept with the campaign |
+| `policies/audit.jsonl` (Pro) | account, maintenance override reason (10–500 characters) | data directory | kept with the project (append-only) |
+| `ebios/audit.jsonl` and the application profile (Pro) | account that declared each field, date | data directory | kept with the project |
+| Community declaration files (`treatments/`, `profiles/`, `policies/`) | the role written by the owner, notes | the local data directory | until the owner deletes them |
+
+Recommendations:
+
+- Configure the container log rotation and retention (for example Docker `--log-opt max-size=… --log-opt max-file=…`,
+  or the retention of the SIEM that collects the JSON events): **12 months** is a common default for security logs;
+  set the value your policy requires. Darkmoon has no retention setting of its own for stderr.
+- The audit files are append-only and are not pruned automatically. To apply a retention period, archive or truncate
+  them with the platform stopped (they are not needed to compute any rating or plan; the treatment history itself
+  lives in `treatments/<campaign_id>.json`).
+- Treatment notes, override reasons and declared owners must not contain personal data beyond what accountability
+  needs: write a role or a team rather than a person's name where possible (the risk owner of a risk acceptance is the
+  exception: it names the accountable person or role chosen by the organisation).
+- Access: security events and audit files are readable by whoever administers the host; the API never returns the
+  audit files to non-administrators.
+- Export or deletion requests from an operator: the records above are plain JSON lines and JSON files in the data
+  directory; search them by account name.
+
+Community: the data directory is shared with the local agent, which has shell access in the same container; these
+files are therefore not tamper-evident.
