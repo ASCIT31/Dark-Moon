@@ -248,6 +248,11 @@ def test_target_matching_forms():
     assert m("*.example.com", "app.example.com", "")
     for form in ("10.0.1.0/24", "10.0.0.6", "evil.com", "com", "ample.com", ""):
         assert not m(form, "app.example.com", "10.0.0.5"), form
+    # dotless host names (container names, localhost, intranet short names) match too (pass B live finding)
+    for form in ("dm-community-port-dvga", "http://DM-Community-Port-DVGA:8080/graphql", "x.dm-community-port-dvga"):
+        assert m(form, "dm-community-port-dvga", ""), form
+    assert m("localhost", "http://localhost:3000", "") and not m("other-host", "dm-community-port-dvga", "")
+    assert not m("dvga", "app.dvga.example.com", "")   # a bare label never acts as a parent domain
     assert M.parse_ip("::ffff:192.0.2.1") == M.parse_ip("192.0.2.1")
     assert M.parse_ip("999.1.1.1") is None and M.parse_network("10.0.0.0/99") is None
 

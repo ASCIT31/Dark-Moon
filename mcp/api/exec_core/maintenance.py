@@ -598,8 +598,14 @@ def parse_network(text: Any) -> Optional[Any]:
         return None
 
 
+def _is_host(h: str) -> bool:
+    """A host name, dotted or not (``dvga``, ``localhost``, an intranet short name): not an address, not a range."""
+    return bool(h) and parse_ip(h) is None and parse_network(h) is None
+
+
 def _is_name(h: str) -> bool:
-    return bool(h) and "." in h and parse_ip(h) is None and parse_network(h) is None
+    """A dotted host name: only these may act as a parent domain (a bare label such as ``com`` never does)."""
+    return _is_host(h) and "." in h
 
 
 def target_matches(launch_target: Any, stored_host: Any, stored_ip: Any = None) -> bool:
@@ -617,7 +623,7 @@ def target_matches(launch_target: Any, stored_host: Any, stored_ip: Any = None) 
     if ip is not None:
         return ip in stored_ips
     for h in (sh, si):
-        if not _is_name(h):
+        if not _is_host(h):
             continue
         if lh == h or lh.endswith("." + h) or (_is_name(lh) and h.endswith("." + lh)):
             return True

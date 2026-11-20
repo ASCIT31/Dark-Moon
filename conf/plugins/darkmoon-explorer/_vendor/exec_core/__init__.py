@@ -19,9 +19,12 @@ names and fields, secret and control-character hygiene of log values, failed-log
 per-fix-item ids, retest coverage gate, risk acceptance with a named owner and an expiry, launch restrictions and a
 digest of the coverage signals in the score gate, what holds the rating (next cap level, top classes), framework lines
 gated by the declared applicability, test references without ISO 27001, proof attributed to the testing agent.
+
+1.5.1: launch-target matching recognises host names without a dot (container names, ``localhost``, intranet short
+names); a bare label still never acts as a parent domain.
 """
 
-VERSION = "1.5.0"
+VERSION = "1.5.1"
 
 MANIFEST = {
     "actions.py": "9203d28185153ad3efa7cbf362d7be65be695b71e317f588e8eaad84886c8ff6",
@@ -30,7 +33,7 @@ MANIFEST = {
     "frameworks_assess.py": "c40adeeb6fc7d81ee3ecb091999f62359ad28a94d6858c5b13dd48b571f19e39",
     "identity.py": "a76e274fd1079c53b683543f98ef411b89f288f518cb38c4e59a787ada7f326f",
     "legend.py": "58ab3dc5afc87dbd0d6d98c52b279b099bc9311619e10733097cc9a188fbdad9",
-    "maintenance.py": "28a1fffca3c504a66652603c2da9353471dcb4e28141ef3fb6cc7c5a4cd21377",
+    "maintenance.py": "f29d8c578490ac480cd1abd4da7dae2ccf9fe301c6fb5f8a885c4665952f135c",
     "profile.py": "4d0152d460be573fd09aef0026b49c7150f4e90c12021fd62a5c28bf0a5c04bc",
     "project.py": "897ea6c825ad270ed3648cee4e452d74dae2d73b26b501ce58b8bf19bfe27b88",
     "report_markdown.py": "7509e63bb754f552d794e5aa43b4c2dee04d1ca5ed934fff40d2fd131e7bd2da",
