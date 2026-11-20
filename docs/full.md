@@ -15,13 +15,19 @@ A platform that allows you to conduct a complete penetration testing campaign
 # Summary
 
 - [I. Preview](#i-preview)
+  - [I.a Privacy gateway](#ia-privacy-gateway--reversible-local-tokenization)
   - [I.b Terminal Explorer](#ib-terminal-explorer--executive-views-in-the-console)
+  - [I.c Executive security](#ic-executive-security--cyber-score-treatment-plan-frameworks)
+  - [I.d Attack paths](#id-attack-paths--declared-evidence-backed-possible)
+  - [I.e Screenshots](#ie-screenshots)
 - [II. Installation](#ii-installation)
   - [II.1. Prerequisites](#ii1-prerequisites)
-  - [II.2. General project structure](#ii2-general-project-structure)
-  - [II.3. Configuration of environment variables in docker compose](#ii3-configuration-of-environment-variables-in-docker-compose)
-    - [II.3.a Example environment variable](#ii3a-example-environment-variable)
-    - [II.3.b Role of the variables](#ii3b-role-of-the-variables)
+    - [II.1.a General project structure](#ii1a-general-project-structure)
+  - [II.2. GPU Troubleshooting Guide](#ii2--darkmoon--gpu-troubleshooting-guide-official)
+  - [II.3. Configuration of environment variables](#ii3-configuration-of-environment-variables)
+    - [II.3.a Interactive configuration via install.sh](#ii3a-interactive-configuration-via-installsh)
+    - [II.3.b Generated .opencode.env file](#ii3b-generated-opencodeenv-file)
+    - [II.3.c Role of the variables](#ii3c-role-of-the-variables)
     - [II.3.d Compatible Models & Hardware](#ii3d-compatible-models--hardware)
   - [II.4. Automatic generation of OpenCode files](#ii4-automatic-generation-of-opencode-files)
   - [II.5. Volumes and persistence](#ii5-volumes-and-persistence)
@@ -34,7 +40,7 @@ A platform that allows you to conduct a complete penetration testing campaign
     - [II.7.a Make the wrapper executable](#ii7a-make-the-wrapper-executable)
     - [II.7.b Install globally (optional)](#ii7b-install-globally-optional)
     - [II.7.c Launch Darkmoon with TUI Console](#ii7c-launch-darkmoon-with-tui-console)
-    - [II.7.d View logs](#ii7d-view-logs)
+    - [II.7.d How to Use the Darkmoon Assessment Engine](#ii7d-how-to-use-the-darkmoon-assessment-engine)
   - [II.8. Direct access to the container (debug)](#ii8-direct-access-to-the-container-debug)
   - [II.9. Where to modify what (summary)](#ii9-where-to-modify-what-summary)
   - [II.10. Quick summary](#ii10-quick-summary)
@@ -55,6 +61,10 @@ A platform that allows you to conduct a complete penetration testing campaign
     - [IV.3.c Activity diagram — End-to-end penetration testing](#iv3c-activity-diagram--end-to-end-penetration-testing)
   - [IV.4. Security by Design](#iv4-security-by-design)
   - [IV.5. Why This Architecture Is Robust](#iv5-why-this-architecture-is-robust)
+  - [IV.6. Current architecture and data flow](#iv6-current-architecture-and-data-flow)
+  - [IV.7. MCP tools (13)](#iv7-mcp-tools-13)
+  - [IV.8. Findings, reports and security logging](#iv8-findings-reports-and-security-logging)
+  - [IV.9. Known limitations](#iv9-known-limitations)
 - [V. AI Agents](#v-ai-agents)
   - [V.1. What is a Darkmoon Agent?](#v1-what-is-a-darkmoon-agent)
   - [V.2. Agent Philosophy](#v2-agent-philosophy)
@@ -130,6 +140,7 @@ A platform that allows you to conduct a complete penetration testing campaign
   - [VII.10. Summary](#vii10-summary)
 - [VIII. Contributing](#viii-contributing)
 - [IX. License](#ix-license)
+- [X. Research, benchmarks and further reading](#x-research-benchmarks-and-further-reading)
 
 # I. Preview
 
@@ -217,12 +228,14 @@ The core is open-source; the Pro edition adds guard-sealed vault storage, an
 audit trail of rehydrations and a compliance-grade *no-data-left-the-perimeter*
 statement in the signed report.
 
-**Known limit.** The **initial campaign prompt** is still passed to the model as
-written: if you put a `TARGET`, `CREDS` or `TOKEN` on the command line, the model
-receives it verbatim. Pre-model tokenization of the prompt, sharing one session
-vault between the prompt layer and the MCP, is a planned trust-boundary change
-and is not shipped. Until it is, do not treat a secret passed in the launch
-prompt as masked from a cloud model provider.
+**The launch prompt too.** The console plugin `conf/plugins/darkmoon-privacy.ts` tokenizes each message you type
+(including `TARGET`, `CREDS`, `TOKEN`) **before** the model sees it, through a local socket of the same MCP process,
+so the placeholders it returns are the ones the gateway rehydrates during the run. It fails closed: if the tokenizer
+is unavailable after its retries, the text is replaced by a marker instead of being sent, unless
+`DARKMOON_PROMPT_TOKENIZE_FALLBACK=open`. `DARKMOON_PROMPT_TOKENIZE=0` disables it.
+
+**Known limit.** Only values the detectors recognise are replaced. A secret in a shape they do not recognise can still
+reach the model provider; use a local model when that matters.
 
 ## I.b Terminal Explorer — executive views in the console
 
@@ -236,6 +249,7 @@ evidence is masked before it reaches the screen.
 | `T` `X` `A` | Prioritized Treatment Plan, framework technical assessment, application profile of the campaign / project in context |
 | `L` | Legend: Evidence-Backed vs Possible Attack Path, evidence status (not severity), treatment statuses, score statuses |
 | `F` `R` `P` | Findings, report, attack paths of the campaign in context |
+| `W` | Maintenance windows of the project in context |
 | `?` | All keys |
 
 The same data from a shell: `python3 conf/plugins/darkmoon-explorer/darkmoon_explore.py --help` lists the commands
@@ -250,6 +264,80 @@ Declarations are made **by you, by editing two local files by hand**; no agent a
 Both are validated on every read; an invalid entry is listed and ignored. « Applied » always reads « not verified »:
 the Community edition runs no retest, so no status is ever verified, and a declaration never changes the findings,
 the counts or the Cyber Score.
+
+[Back to Summary](#summary)
+
+## I.c Executive security — Cyber Score, Treatment Plan, frameworks
+
+Since the executive-security release of 2026-11-20, every campaign gets a small set of executive documents, computed
+by the same shared core as Darkmoon Pro (`mcp/api/exec_core/`, shipped byte-identically in both editions) from the
+findings and the coverage signals the server recorded. No model call is involved, and the agents cannot write any of
+them.
+
+| Document | What it says | Where to read it |
+|---|---|---|
+| **Cyber Score v1** (`darkmoon-cyber-score/1`) | An exposure rating of what one campaign found in its tested scope, 0–100 and a grade A–E. It first gets a status: **Not rated** (incomplete campaign, retest, missing or modified coverage signals, severity filter at launch), **Limited test** (under a coverage floor, attack exclusions, stealth mode, focus list; capped) or **Rated**. Coverage floors (measured duration, specialised agents observed, assets, toolbox commands) are recorded by the server, never declared by the agents. | Explorer `1` (workspace) and `T`; report section "Cyber Score"; [methodology](cyber-score-methodology.md) |
+| **Prioritized Treatment Plan** | One action per asset × weakness class, with effort, owner, retest gate and treatment status. « Applied » always reads « not verified »: Community runs no retest, so no status is ever verified. | Explorer `5` / `T`; report section "Treatment plan" |
+| **Framework technical assessment** | ISO/IEC 27001 control ids, GDPR art. 32 (technical side only), NIS2 art. 21(2), AI Act art. 15. Each control is in exactly one of four states: *Weakness observed*, *No weakness observed in the tested scope*, *Not tested by this campaign*, *Not assessable by a technical test*. Counts only, no percentage and no compliance statement. | Explorer `X`; report section "Framework assessment" |
+| **Application profile** | Facts you declare about the application (criticality, exposure, data, declared RTO/RPO), each with its provenance; unknown fields read « Unknown / Not provided ». | Explorer `A`; report section "Application profile" |
+| **Maintenance windows** | When active testing may start on a project. Community uses the same model as Pro but **only warns**: a launch outside the policy writes a warning and a security event and records the evaluation on the campaign. | Explorer `W`; [maintenance windows](maintenance-windows.md) |
+| **Security events** | Stable event names on the `darkmoon.audit` logger (MCP server stderr), optional JSON lines with `DARKMOON_LOG_FORMAT=json`, secrets redacted. | [security events](security-events.md), [logging guideline](logging-findings-guideline.md) |
+
+The report is rendered from one model (`darkmoon-report/v2`) with stable sections: Cyber Score, method and coverage,
+executive summary, application profile, business impact, critical risks, framework assessment, resilience, treatment
+plan, attack paths, detailed findings, evidence and methodology, limitations. The only model-written prose in it is
+the agent's executive summary, quoted and labelled as « not verified by the server ».
+
+> [!IMPORTANT]
+> The Cyber Score is **not scientifically validated**: its weights, caps and coverage floors are expert-set product
+> rules, not calibrated against breach outcomes, and run-to-run variance on the same target has not been measured.
+> A score of 100 means « no weakness was found in the tested scope », never a proof of absence.
+
+[Back to Summary](#summary)
+
+## I.d Attack paths — declared, evidence-backed, possible
+
+Darkmoon links findings into attack paths with the attack-path engine shared with Pro (`mcp/api/attack_paths*.py`,
+`declared_links.py`, `edge_verifier.py`, schema `darkmoon-attack-paths/v1`). The current design is called
+**architecture D**:
+
+1. **Declare.** When an agent pushes a finding with `dashboard_push_finding`, it may list in the optional field
+   `enabled_by` the earlier findings of the campaign whose result it used (a token, a credential, an access).
+2. **Validate.** The server resolves each reference and classifies it: `rejected_declaration` (unknown, other
+   campaign, self, ambiguous, forward in time), `invalidated` (a finding of the link was withdrawn) or
+   `declared_by_agent`. A rejected declaration is never a path edge.
+3. **Qualify or abstain.** A declared link can only be promoted by an exact value attribution on the server's own
+   execution records (`observed_flow`, or `causal_necessity_demonstrated` with a recorded negative control).
+4. **Label by the weakest link.** An **Evidence-Backed Attack Path** needs every step supported by a server rule or
+   qualification. Everything else is a **Possible Attack Path**: a hypothesis, never ranked.
+
+**What this means in Community.** Community has no execution ledger (`DM_TOOL_PROVENANCE` is forced off) and the
+agent-written evidence text is withheld from the engine, so no link can be qualified: **`proven_paths = 0` by
+construction**. Every path you see is a Possible Attack Path, of one of two kinds: built from the agents'
+declarations (« declared by the agent, not verified »), or inferred by the server from the infrastructure topology
+and the confirmed findings (« inferred by the server, a hypothesis »). The Terminal Explorer shows them under `6`
+(or `P` on a campaign) and the report in its attack-path section, with a part on declared links when at least one
+finding carries `enabled_by`. A campaign whose findings carry no `enabled_by` loads, pushes and finalises as before.
+
+**Honest limits.** Agent declarations are useful leads, not proof. Measured against an independent oracle on three
+real campaigns, declaration quality was modest and unstable (between about 0.3 and 0.6). Even in Pro, where the
+server keeps an execution ledger, no declared link has been qualified on a real campaign measured so far. The full
+record, including the negative results, is public in
+[darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research).
+
+[Back to Summary](#summary)
+
+## I.e Screenshots
+
+Terminal Explorer captures from the Community edition (`/explore`, data from a campaign on a local DVGA lab):
+
+| Workspace | Prioritized Treatment Plan |
+|---|---|
+| ![Terminal Explorer workspace](pics/terminal-explorer/workspace.png) | ![Terminal Explorer treatment plan](pics/terminal-explorer/treatment-plan.png) |
+
+| Framework technical assessment | Attack paths |
+|---|---|
+| ![Terminal Explorer frameworks](pics/terminal-explorer/frameworks.png) | ![Terminal Explorer attack paths](pics/terminal-explorer/attack-paths.png) |
 
 [Back to Summary](#summary)
 
@@ -1737,6 +1825,98 @@ The architecture is robust because responsibilities are clearly separated and th
 
 [Back to Summary](#summary)
 
+## IV.6. Current architecture and data flow
+
+State of the `master` branch on 2026-11-20 (Darkmoon Community, after the executive-security release). Everything
+below runs on your machine; nothing is sent to Darkmoon.
+
+```mermaid
+flowchart LR
+  OP["Operator"] -->|"darkmoon CLI / console"| OC["OpenCode console<br/>pentest orchestrator + 50 specialists"]
+  OC -->|"each message, before the model<br/>conf/plugins/darkmoon-privacy.ts"| PS["prompt tokenizer<br/>(local socket of the MCP)"]
+  OC -->|"MCP over stdio, 13 tools"| MCP["MCP server<br/>mcp/src/server.py"]
+  PS --- PG
+  MCP --> PG["Privacy gateway<br/>vault + command gateway<br/>mcp/src/privacy/"]
+  PG -->|"docker exec, allow-listed tools"| TB["Toolbox container<br/>darkmoon"]
+  MCP -->|"dashboard_* writes"| ST[("Local JSON store<br/>~/.local/share/opencode")]
+  ST --> EC["exec_core<br/>Cyber Score, plan, frameworks,<br/>profile, report model"]
+  ST --> AP["Attack-path engine<br/>declared + inferred, never proven"]
+  EC --> RP["Markdown report<br/>darkmoon-report/v2"]
+  AP --> RP
+  ST --> TE["Terminal Explorer<br/>/explore, read-only, no model call"]
+  EC --> TE
+  AP --> TE
+```
+
+| Layer | Code | Role |
+|---|---|---|
+| Console and agents | Darkmoon fork of OpenCode; `conf/agents/*.md` (51 files: `pentest` + 50 specialists) | Reasoning, planning, dispatch of specialists |
+| Privacy | `conf/plugins/darkmoon-privacy.ts`, `mcp/src/privacy/`, `mcp/src/prompt_socket.py` | Placeholders instead of real values, both in the prompt and in tool calls and outputs ([I.a](#ia-privacy-gateway--reversible-local-tokenization)) |
+| MCP server | `mcp/src/server.py` | The only way for the model to act ([IV.7](#iv7-mcp-tools-13)) |
+| Toolbox | `Dockerfile`, image `ascit/darkmoon` | The real tools, isolated in Docker ([VI](#vi-toolbox)) |
+| Data layer | `mcp/api/json_storage.py`, `live_push.py`, `coverage_signals.py`, `run_binding.py` | Campaigns, findings, infrastructure nodes, coverage signals as JSON files |
+| Executive core | `mcp/api/exec_core/` (shared with Pro) + local adapters `*_local.py` | Cyber Score, treatment plan, frameworks, profile, maintenance, report model |
+| Attack paths | `mcp/api/attack_paths*.py`, `declared_links.py`, `edge_verifier.py` (shared with Pro) | Paths between findings ([I.d](#id-attack-paths--declared-evidence-backed-possible)) |
+| Interface | `conf/plugins/darkmoon-explorer/` | Terminal Explorer ([I.b](#ib-terminal-explorer--executive-views-in-the-console)) |
+
+What Community does **not** contain: no web dashboard, no REST API, no PDF export, no retest, no remediation agent,
+no licence check. These belong to Darkmoon Pro, a separate commercial product.
+
+[Back to Summary](#summary)
+
+## IV.7. MCP tools (13)
+
+The Community MCP server exposes exactly **13** tools (`@mcp.tool` in `mcp/src/server.py`; the list is also in
+[mcp.md](mcp.md)):
+
+| Group | Tools |
+|---|---|
+| Session and diagnostics | `get_session`, `health_check`, `check_tool`, `diagnose` |
+| Privacy | `tokenize_prompt` |
+| Execution | `execute_command`, `list_allowed_tools` |
+| Workflows | `list_workflows`, `run_workflow` |
+| Campaign data | `dashboard_init_campaign`, `dashboard_push_finding` (with the optional `enabled_by`), `dashboard_push_infra_node`, `dashboard_finalize_campaign` |
+
+`execute_command` only runs tools of the executor allow-list. Darkmoon Pro exposes 17 tools: the same 13 plus
+`record_evidence_annotations`, `dashboard_list_findings`, `dashboard_link_pr` and `remediation_run`.
+
+[Back to Summary](#summary)
+
+## IV.8. Findings, reports and security logging
+
+- **Findings** are pushed by the agents with their evidence (commands, requests, responses, logs). Their status is
+  one of `exploited`, `confirmed`, `unconfirmed`; any other word from an agent is stored as `unconfirmed`, with the
+  agent's word kept apart. The status is **agent-asserted, not machine-verified**.
+- **Finalisation** freezes a campaign: a later finalisation never changes its terminal status or its measured
+  duration, and an aborted or stopped campaign never becomes completed. A digest of the coverage signals is stored at
+  the first close; a mismatch later makes the campaign « Not rated ».
+- **Reports** are Markdown files rendered from the report model, with evidence masked by the redaction engine; if the
+  engine cannot load, evidence is withheld (fail closed). Where they are written: [VI.5bis.c](#vi5bisc-where-reports-are-written).
+- **Security events** go to the `darkmoon.audit` logger: see [security-events.md](security-events.md).
+
+[Back to Summary](#summary)
+
+## IV.9. Known limitations
+
+- Finding statuses are asserted by the agents; confirm severity and exploitability against the evidence.
+- The Cyber Score is not scientifically validated and rates the tested scope only ([I.c](#ic-executive-security--cyber-score-treatment-plan-frameworks)).
+- Attack paths are always Possible Attack Paths in Community (`proven_paths = 0` by construction); agent declarations
+  are leads, not proof ([I.d](#id-attack-paths--declared-evidence-backed-possible)).
+- Framework assessments are technical observations, not compliance statements; GDPR is covered for the technical side
+  of art. 32 only, and the national transpositions of NIS2 are not covered.
+- The local declaration files (application profile, treatments, maintenance policy) are edited by hand and are not
+  tamper-evident; the coverage-signal digest detects naive edits only, it is not a security boundary.
+- Maintenance windows only warn in Community, and Darkmoon never stops a running campaign at a window end.
+- The run-binding module of the `dashboard_*` writes ships but is inactive: Community hands no run key (one local
+  operator), so cross-run write protection is not active.
+- Community runs no retest: a treatment declared « applied » is never verified.
+- Prompt tokenization masks the values its detectors recognise; a secret in an unrecognised shape can still reach the
+  model provider. Use a local model if that matters.
+- Terminal Explorer: truecolor terminal recommended; no images; Markdown tables are drawn by the host component;
+  branching attack paths are listed path by path.
+
+[Back to Summary](#summary)
+
 # V. AI Agents
 
 This document describes **how AI agents work in Darkmoon**:
@@ -2706,7 +2886,7 @@ The agent:
 5.  Restart the MCP
 
 > [!TIP]
-> For detailed guide, see [WORKFLOW_GUIDE.md](/mcp/WORKFLOW_GUIDE.md)
+> For detailed guide, see [WORKFLOW_GUIDE.md](../mcp/WORKFLOW_GUIDE.md)
 
 [Back to Summary](#summary)
 
@@ -2728,18 +2908,32 @@ Workflows:
 - secure the execution of tools.
 
 > [!NOTE]
-> To understand the MCP itself, see [mcp.md](/mcp.md)
+> To understand the MCP itself, see [mcp.md](mcp.md)
 
 [Back to Summary](#summary)
 
 # VIII. Contributing
 
-If you to contribute to the project, you access to the coding guideline at [CONTRIBUTING.md](CONTRIBUTING.md)
+To contribute to the project, read the guidelines in [CONTRIBUTING.md](../CONTRIBUTING.md). Its section 8 explains how contributions are licensed and the contributor licence agreement.
 
 [Back to Summary](#summary)
 
 # IX. License
 
-Code licensed under the [GNU AGPL v3](LICENSE) (see [LICENSING.md](LICENSING.md))
+Darkmoon Community is licensed under the [GNU AGPL v3](../LICENSE) (AGPL-3.0-only) from 2026-10-27 onwards. Earlier
+releases (up to v1.6.0) and earlier outside contributions remain under the GNU GPL v3. See
+[LICENSING.md](../LICENSING.md) for the details. Darkmoon Pro is a separate commercial product.
+
+[Back to Summary](#summary)
+
+# X. Research, benchmarks and further reading
+
+| Resource | What you will find |
+|---|---|
+| [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | How Darkmoon links findings into attack paths: the history of approaches, architecture D, the evidence model, experiments and negative results |
+| [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) | Research on the Terminal Explorer (TUI) and the Pro dashboard visualisations |
+| [Darkmoon-Benchmarks](https://github.com/ASCIT31/Darkmoon-Benchmarks) | LLM pentest study on OWASP Juice Shop (methodology, scoring, limitations, per-configuration results) and individual runs |
+| [docs.dark-moon.org](https://docs.dark-moon.org) | Online documentation |
+| [cyber-score-methodology.md](cyber-score-methodology.md), [maintenance-windows.md](maintenance-windows.md), [security-events.md](security-events.md), [logging-findings-guideline.md](logging-findings-guideline.md), [mcp.md](mcp.md), [security-threat-model.md](security-threat-model.md) | Reference pages in this repository |
 
 [Back to Summary](#summary)
