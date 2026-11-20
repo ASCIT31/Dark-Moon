@@ -181,32 +181,42 @@ The screenshots below are the **paid Darkmoon Pro** web dashboard. They are **no
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/pics/dashboard.png" alt="Darkmoon Pro web dashboard showing projects, targets, campaigns and vulnerabilities by severity" />
-<p align="center"><b>Pro: live web dashboard.</b> Projects, targets and campaigns at a glance, with every finding bucketed by severity.</p>
+<img src="docs/pics/pro/dashboard.png" alt="Darkmoon Pro dashboard: projects, targets, campaigns and vulnerabilities counters, vulnerabilities by severity with percentages, and a security posture table with a Cyber Score grade, latest assessment and first action per project" />
+<p align="center"><b>Pro: live web dashboard.</b> Projects, targets, campaigns and vulnerabilities at a glance, findings split by severity, and a security posture table giving each project its Cyber Score grade, latest assessment and first treatment action.</p>
 </td>
 <td width="50%" valign="top">
-<img src="docs/pics/vulnerability-1.png" alt="Darkmoon Pro finding detail with CVSS, MITRE ATT&CK and ISO 27001 mapping and EXPLOITED status" />
-<p align="center"><b>Pro: findings with CVSS and ATT&CK mapping.</b> Each finding carries CVSS, MITRE ATT&CK and ISO 27001 mapping with an <code>EXPLOITED</code> status backed by a real exploit.</p>
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-<img src="docs/pics/markdown-report-1.png" alt="Darkmoon Pro structured web report with management summary, exportable to Markdown and PDF" />
-<p align="center"><b>Pro: exportable web reports.</b> A management summary in plain language plus full technical detail, exportable to Markdown and PDF.</p>
-</td>
-<td width="50%" valign="top">
-<img src="docs/pics/infra-orbital.gif" alt="Darkmoon Pro orbital attack-surface map: an animated infrastructure graph with exposure rings, per-node vulnerability badges and an exposure path, tagged with MITRE ATT&CK techniques, running from the internet-facing entry to the database" />
-<p align="center"><b>Pro: orbital attack-surface map.</b> A live 3D graph of nodes, connections and per-node vulnerabilities, with an exposure path (tagged with MITRE ATT&CK techniques; a reading of the inventory, not a proven attack chain) walked across the whole target, and **every finding linked to its proposed remediation as a reviewed pull request**. Renders in the browser and in VR.</p>
+<img src="docs/pics/pro/campaign-overview.png" alt="Darkmoon Pro campaign overview: campaign header with Map, Attack paths, Findings, Overview and Reports tabs, status chips, and an executive Cyber Score block with grade, what holds the grade, the weakness classes that weigh most, and the first three actions" />
+<p align="center"><b>Pro: campaign overview with an executive Cyber Score.</b> The campaign header (map, attack paths, findings, reports) above an executive block: grade out of 100, what holds the grade, which weakness classes weigh most, and the first actions to take.</p>
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/pics/scheduler.png" alt="Darkmoon Pro campaign scheduler for recurring automated pentest campaigns with focus, severity and recurrence" />
-<p align="center"><b>Pro: scheduled recurring runs.</b> Recurring automated campaigns with FOCUS, severity and recurrence built into the web dashboard.</p>
+<img src="docs/pics/pro/finding-detail.png" alt="Darkmoon Pro finding detail: asset tree rail with exploited findings, a critical SQL injection with Exploited status and CVSS 9.8, description, evidence and a details rail with CVSS vector, endpoint, asset and agent" />
+<p align="center"><b>Pro: findings with CVSS, proof and ATT&amp;CK mapping.</b> Each finding sits in its asset tree with severity, proof status (<code>Exploited</code>), CVSS score and vector, evidence, remediation, classification (MITRE ATT&amp;CK, ISO 27001) and a link to its attack path.</p>
 </td>
 <td width="50%" valign="top">
-<img src="docs/pics/campaign.png" alt="Darkmoon Pro campaign view listing the 57 vulnerabilities with severity and status" />
-<p align="center"><b>Pro: campaign view.</b> Every vulnerability in a campaign with its severity and confirmation status.</p>
+<img src="docs/pics/pro/treatment-plan.png" alt="Darkmoon Pro prioritized treatment plan: one action per weakness class and asset, status chips from proposed to reproduced at retest, and a table with findings, attack paths, controls, priority and verification status per action" />
+<p align="center"><b>Pro: prioritized treatment plan.</b> One action per weakness class and asset, ranked by priority, with the findings, attack paths and controls it addresses, and a tracked status from proposed through retest verification, risk accepted or deferred.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/pics/pro/report.png" alt="Darkmoon Pro Security Assessment Report in the browser: contents rail, report header with risk, target, date and finding count, Export PDF, Markdown and Frameworks buttons, and thirteen section tabs from Cyber Score to Limitations" />
+<p align="center"><b>Pro: exportable assessment reports.</b> A full Security Assessment Report in the browser (Cyber Score, executive summary, critical risks, framework assessment, treatment plan, attack paths, detailed findings, evidence and limitations), exportable to PDF and Markdown.</p>
+</td>
+<td width="50%" valign="top">
+<img src="docs/pics/pro/frameworks.png" alt="Darkmoon Pro frameworks technical assessment: ISO 27001 Annex A, GDPR Art. 32 and 25, NIS2 Art. 21(2) and EU AI Act cards with controls assessed, weakness observed, none observed, not tested and not assessable counts, plus ATT&CK techniques and Annex A controls tiles" />
+<p align="center"><b>Pro: frameworks technical assessment.</b> Findings mapped to ISO 27001 Annex A, GDPR, NIS2 and the EU AI Act, with per-framework counts of controls with a weakness observed, none observed, not tested and not assessable, plus ATT&amp;CK technique coverage. A technical reading of one tested scope, not an audit.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/pics/pro/infra-orbital.png" alt="Darkmoon Pro orbital infrastructure map: concentric Internet, Edge, Application and Data zones, an observed attack path from the web app choke point to the users database critical asset, and an attack surface mapped summary card" />
+<p align="center"><b>Pro: orbital attack-surface map.</b> Assets placed on Internet, Edge, Application and Data rings, with evidence-backed attack paths, the choke point to break and the critical asset they reach, and <b>every finding linked to its proposed remediation as a reviewed pull request</b>. Renders in the browser and in VR.</p>
+</td>
+<td width="50%" valign="top">
+<img src="docs/pics/pro/scheduler.png" alt="Darkmoon Pro campaign scheduler: target field with Schedule, Details, Attack Strategy, Settings and Remediation options, a schedule panel with date, time and recurrence, and the list of scheduled campaigns" />
+<p align="center"><b>Pro: scheduled recurring runs.</b> Pick a target, a date and a recurrence, set the attack strategy, settings and remediation, and Darkmoon runs the campaign automatically.</p>
 </td>
 </tr>
 </table>
