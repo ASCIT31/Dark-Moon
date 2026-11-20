@@ -40,32 +40,50 @@ The open source Darkmoon is a command line tool. This is what you get when you c
 
 </div>
 
+<div align="center">
+<img src="docs/pics/start-assesment.png" alt="Launching a DarkMoon assessment from the command line with a single TARGET line" width="60%" />
+<p><b>Kick off a run from the CLI.</b> One <code>TARGET</code> line and DarkMoon takes over the whole assessment.</p>
+</div>
+
+<p align="center"><b>Then explore the results in the Terminal Explorer</b> (type <code>/explore</code> in the console):</p>
+
 <table>
 <tr>
-<td width="50%" valign="top">
-<img src="docs/pics/start-assesment.png" alt="Launching a DarkMoon assessment from the command line with a single TARGET line" />
-<p align="center"><b>Kick off a run from the CLI.</b> One <code>TARGET</code> line and DarkMoon takes over the whole assessment.</p>
-</td>
+<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/workspace.png" alt="Terminal Explorer workspace view in the Darkmoon console: grade, coverage sentence, first actions and frameworks line" /><p align="center"><b>Workspace.</b> Executive block of a campaign.</p></td>
+<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/treatment-plan.png" alt="Terminal Explorer Prioritized Treatment Plan with one action per asset and weakness class" /><p align="center"><b>Prioritized Treatment Plan.</b></p></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/frameworks.png" alt="Terminal Explorer framework technical assessment for ISO 27001, GDPR, NIS2 and AI Act controls" /><p align="center"><b>Framework technical assessment.</b></p></td>
+<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/attack-paths.png" alt="Terminal Explorer attack-path view listing Possible Attack Paths" /><p align="center"><b>Attack paths</b> (Possible in Community).</p></td>
+</tr>
+</table>
+
+<p align="center"><sub>Community edition captures, data from a campaign on a local DVGA lab.</sub></p>
+
+<table>
+<tr>
 <td width="50%" valign="top">
 <img src="docs/pics/sub-agent-1.png" alt="A DarkMoon sub-agent state machine in the terminal detecting CVE-2019-9978 and moving straight to exploitation" />
 <p align="center"><b>Autonomous agents reason and exploit, live in your terminal.</b> Here a sub-agent flags CVE-2019-9978 and pivots straight to exploitation.</p>
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 <img src="docs/pics/enumeration.png" alt="DarkMoon recon and environment model summary printed in the terminal" />
 <p align="center"><b>Recon and environment model.</b> DarkMoon fingerprints the stack and confirms the attack surface before it strikes.</p>
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 <img src="docs/pics/log.png" alt="Live MCP output stream in the terminal with timestamped commands and raw responses" />
 <p align="center"><b>Live MCP stream.</b> Every command the agent runs and its raw output, timestamped, with <code>./darkmoon.sh --log &lt;session&gt;</code>.</p>
+</td>
+<td width="50%" valign="top">
+<img src="docs/pics/matrix.png" alt="Signal detection matrix in the terminal mapping detected technologies to the agents DarkMoon dispatches" />
+<p align="center"><b>Signal to agent dispatch.</b> DarkMoon decides which specialist agents to deploy from exactly what it detects on the target.</p>
 </td>
 </tr>
 </table>
 
 <div align="center">
-<img src="docs/pics/matrix.png" alt="Signal detection matrix in the terminal mapping detected technologies to the agents DarkMoon dispatches" width="80%" />
-<p><b>Signal to agent dispatch.</b> DarkMoon decides which specialist agents to deploy from exactly what it detects on the target.</p>
 
 **As featured in** [Help Net Security](https://www.helpnetsecurity.com/2026/06/29/darkmoon-open-source-ai-pentesting-platform/) · [Cyber Security News](https://cybersecuritynews.com/darkmoon-penetration-testing-platform/) · [DevOps.com](https://devops.com/why-ci-cd-security-testing-is-going-autonomous-and-why-it-should-stay-local/) · [SecurityBrief](https://securitybrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [LinuxLinks](https://www.linuxlinks.com/darkmoon-ai-powered-autonomous-penetration-testing-platform/) · [IT Brief](https://itbrief.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting) · [ChannelLife](https://channellife.co.uk/story/asc-it-launches-darkmoon-for-private-ai-pentesting)
 
@@ -126,18 +144,7 @@ Built for **security teams**, **DevSecOps engineers**, **red teamers** and **eth
 - **Markdown reports.** Every campaign gets a local Markdown report (`darkmoon-report/v2`): Cyber Score, coverage, treatment plan, framework assessment, attack paths, findings with their raw evidence, and limitations. The only model-written prose, the executive summary, is labelled « not verified by the server ». [Docs](docs/full.md#ic-executive-security--cyber-score-treatment-plan-frameworks)
 - **Privacy: prompt tokenization.** The console plugin `conf/plugins/darkmoon-privacy.ts` replaces real values in each message you type with the same placeholders the Privacy Gateway uses for tool calls and outputs, before the model sees it, and fails closed. Only values its detectors recognise are replaced. [Docs](docs/full.md#ia-privacy-gateway--reversible-local-tokenization)
 
-<table>
-<tr>
-<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/workspace.png" alt="Terminal Explorer workspace view in the Darkmoon console: grade, coverage sentence, first actions and frameworks line" /><p align="center"><b>Workspace.</b> Executive block of a campaign.</p></td>
-<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/treatment-plan.png" alt="Terminal Explorer Prioritized Treatment Plan with one action per asset and weakness class" /><p align="center"><b>Prioritized Treatment Plan.</b></p></td>
-</tr>
-<tr>
-<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/frameworks.png" alt="Terminal Explorer framework technical assessment for ISO 27001, GDPR, NIS2 and AI Act controls" /><p align="center"><b>Framework technical assessment.</b></p></td>
-<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/attack-paths.png" alt="Terminal Explorer attack-path view listing Possible Attack Paths" /><p align="center"><b>Attack paths</b> (Possible in Community).</p></td>
-</tr>
-</table>
-
-<p align="center"><sub>Community edition captures, data from a campaign on a local DVGA lab.</sub></p>
+<p align="center"><sub>Terminal Explorer captures: see <a href="#see-the-open-source-engine-cli">the open source engine</a> above.</sub></p>
 
 ---
 
