@@ -16,7 +16,7 @@
 <a href="https://github.com/ASCIT31/Dark-Moon"><img src="https://img.shields.io/badge/Autonomous%20AI-Pentesting-DCEAF4?style=for-the-badge&labelColor=0A2472" alt="Autonomous AI pentesting"></a>
 </p>
 
-[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**🚀 Quick Start**](#quick-start) · [**🧩 Integrations**](#-darkmoon-everywhere) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🔒 Darkmoon Pro**](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) · [**▶️ Install & Run (OSS)**](https://youtu.be/3Qv1luvW99E) · [**▶️ Demo (Pro)**](https://youtu.be/zQE95bVLZgM)
+[**⭐ Star DarkMoon**](https://github.com/ASCIT31/Dark-Moon) · [**🚀 Quick Start**](#quick-start) · [**🧩 Integrations**](#-darkmoon-everywhere) · [**📊 Benchmark**](#-benchmark-57-real-vulnerabilities-on-owasp-juice-shop) · [**🔬 Research**](#research-benchmarks--technical-publications) · [**🔒 Darkmoon Pro**](#-darkmoon-pro--paid-edition-web-dashboard-and-automated-remediation) · [**▶️ Install & Run (OSS)**](https://youtu.be/3Qv1luvW99E) · [**▶️ Demo (Pro)**](https://youtu.be/zQE95bVLZgM)
 
 </div>
 
@@ -116,6 +116,28 @@ Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local mode
 | 🔧 **Fix it (Pro)** | The paid Pro tier turns findings into human-reviewed pull requests, retested against the original exploit. |
 
 Built for **security teams**, **DevSecOps engineers**, **red teamers** and **ethical hacking** professionals.
+
+---
+
+## Terminal Explorer, attack paths and reports (Community)
+
+- **Terminal Explorer.** Type `/explore` in the Darkmoon console (or press `<leader>d`) for a read-only view of projects, campaigns, findings, the Prioritized Treatment Plan, the framework assessment, attack paths and reports. It reads the local store, makes no model call and masks evidence before display. [Docs](docs/full.md#ib-terminal-explorer--executive-views-in-the-console)
+- **Attack paths (architecture D).** Agents may *declare* that one finding enabled another; the server validates each declaration and labels a path by its weakest link: **Evidence-Backed** only when every step is supported by the server's own records, otherwise **Possible**. Community has no observation layer, so every path it shows is a **Possible Attack Path** (declared by an agent or inferred from the topology), a lead and never a proof. [Docs](docs/full.md#id-attack-paths--declared-evidence-backed-possible) · [Research](https://github.com/ASCIT31/darkmoon-attack-paths-research)
+- **Markdown reports.** Every campaign gets a local Markdown report (`darkmoon-report/v2`): Cyber Score, coverage, treatment plan, framework assessment, attack paths, findings with their raw evidence, and limitations. The only model-written prose, the executive summary, is labelled « not verified by the server ». [Docs](docs/full.md#ic-executive-security--cyber-score-treatment-plan-frameworks)
+- **Privacy: prompt tokenization.** The console plugin `conf/plugins/darkmoon-privacy.ts` replaces real values in each message you type with the same placeholders the Privacy Gateway uses for tool calls and outputs, before the model sees it, and fails closed. Only values its detectors recognise are replaced. [Docs](docs/full.md#ia-privacy-gateway--reversible-local-tokenization)
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/workspace.png" alt="Terminal Explorer workspace view in the Darkmoon console: grade, coverage sentence, first actions and frameworks line" /><p align="center"><b>Workspace.</b> Executive block of a campaign.</p></td>
+<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/treatment-plan.png" alt="Terminal Explorer Prioritized Treatment Plan with one action per asset and weakness class" /><p align="center"><b>Prioritized Treatment Plan.</b></p></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/frameworks.png" alt="Terminal Explorer framework technical assessment for ISO 27001, GDPR, NIS2 and AI Act controls" /><p align="center"><b>Framework technical assessment.</b></p></td>
+<td width="50%" valign="top"><img src="docs/pics/terminal-explorer/attack-paths.png" alt="Terminal Explorer attack-path view listing Possible Attack Paths" /><p align="center"><b>Attack paths</b> (Possible in Community).</p></td>
+</tr>
+</table>
+
+<p align="center"><sub>Community edition captures, data from a campaign on a local DVGA lab.</sub></p>
 
 ---
 
@@ -236,16 +258,16 @@ It does not replace the pentester. It clears the repetitive part of an assessmen
 
 ## 📊 Benchmark: 57 real vulnerabilities on OWASP Juice Shop
 
-Real, reproducible **black-box** run against OWASP Juice Shop with a **cloud frontier model (Anthropic Claude)**. DarkMoon also runs **fully local** (Ollama / llama.cpp) behind the Privacy Gateway — so nothing leaves your infrastructure; local-model coverage depends on the model you run.
+Real, reproducible **black-box** run against OWASP Juice Shop with **Claude Opus 4.6** (Anthropic, cloud frontier model). DarkMoon also runs **fully local** (Ollama / llama.cpp) behind the Privacy Gateway — so nothing leaves your infrastructure; local-model coverage depends on the model you run.
 
 | Metric | Result |
 |---|---|
 | Vulnerabilities found | **57** (8 critical / 24 high / 21 medium / 4 low) |
 | Wall-clock time | **28.5 min** |
 | Proof-of-exploitation | command + raw output per finding |
-| LLM | Anthropic Claude (cloud frontier); local models supported |
+| LLM | Claude Opus 4.6 (Anthropic, cloud); local models supported |
 
-Reproduce it and compare tools yourself: **[ASCIT31/Darkmoon-Benchmarks](https://github.com/ASCIT31/Darkmoon-Benchmarks)**.
+Source: the [run page](https://github.com/ASCIT31/Darkmoon-Benchmarks/blob/main/runs/juice-shop-2026-04-26.md) in **[ASCIT31/Darkmoon-Benchmarks](https://github.com/ASCIT31/Darkmoon-Benchmarks)**, where you can reproduce it and compare tools yourself.
 
 ## 🆚 How DarkMoon compares
 
@@ -388,7 +410,7 @@ DarkMoon's [Full Documentation](docs/full.md) covers everything you need to oper
 | Topic | What You'll Find | Link |
 |---|---|---|
 | **GPU & Driver Setup** | NVIDIA troubleshooting for Docker, WSL, and native Linux | [GPU Guide](docs/full.md#ii2--darkmoon--gpu-troubleshooting-guide-official) |
-| **Environment Variables** | LLM provider configuration, API keys, model selection | [Environment Config](docs/full.md#ii3-configuration-of-environment-variables-in-docker-compose) |
+| **Environment Variables** | LLM provider configuration, API keys, model selection | [Environment Config](docs/full.md#ii3-configuration-of-environment-variables) |
 | **Startup & Build** | install.sh behavior, docker compose build, stack management | [Build & Launch](docs/full.md#ii6-build-and-launch-darkmoon) |
 | **Scope & Flags** | TARGET syntax, bug bounty mode, FOCUS/EXCLUDE, credentials | [Scope Definition](docs/full.md#ii7c-launch-darkmoon-with-tui-console) |
 | **Assessment Workflow** | Step-by-step: discovery, fingerprinting, agents, reporting | [Assessment Engine](docs/full.md#ii7d-how-to-use-the-darkmoon-assessment-engine) |
@@ -398,9 +420,60 @@ DarkMoon's [Full Documentation](docs/full.md) covers everything you need to oper
 | **Toolbox** | Complete tool list, adding tools, Docker image internals | [Toolbox](docs/full.md#vi-toolbox) |
 | **MCP Workflows** | Workflow structure, creating custom workflows, best practices | [MCP Workflows](docs/full.md#vii-mcp-workflows) |
 | **Available Tools List** | Full table of 142 security tools with paths and sources | [Tools List](docs/full.md#vi10-toolbox-list) |
+| **Privacy Gateway** | Reversible local tokenization of tool calls, outputs and the prompt you type | [Privacy](docs/full.md#ia-privacy-gateway--reversible-local-tokenization) |
+| **Terminal Explorer** | `/explore` keys and views, the same data as JSON from a shell | [Terminal Explorer](docs/full.md#ib-terminal-explorer--executive-views-in-the-console) |
+| **Executive security** | Cyber Score, Prioritized Treatment Plan, framework assessment, report sections | [Executive security](docs/full.md#ic-executive-security--cyber-score-treatment-plan-frameworks) |
+| **Attack paths** | Declared, Evidence-Backed and Possible paths, and their limits | [Attack paths](docs/full.md#id-attack-paths--declared-evidence-backed-possible) |
 | **Training Labs** | Recommended vulnerable labs to train DarkMoon | [Pentester Labs](docs/full.md#vi11-bonus-pentester-lab-to-train-darkmoon) |
 | **Remediation Agent** (Pro) | Findings → sandbox-validated fix → pull request for human review (never merged) | [Remediation Agent](docs/remediation-agent.md) |
 | **n8n (Pro)** | Community node to trigger a pentest, pull findings and review fix PRs from an n8n workflow | [n8n Node](docs/n8n-integration.md) |
+
+---
+
+## Research, Benchmarks & Technical Publications
+
+Darkmoon's design choices are documented in the open, negative results included. Statements in the research repositories carry an evidence label (verified, observed, simulated, hypothesis).
+
+| Resource | Research area | Description | Links |
+|---|---|---|---|
+| [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | Attack paths, evidence and causality | How findings are linked into attack paths: architectures A to D, the evidence model, 61 experiments (failures included) and measured limits | [Repository](https://github.com/ASCIT31/darkmoon-attack-paths-research) · [Results](https://github.com/ASCIT31/darkmoon-attack-paths-research/blob/main/experiments/RESULTS.md) |
+| [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) | Data visualization, UX and terminal interfaces | Dashboard redesign, attack-path graph layouts, orbital map and the Terminal Explorer, with before/after captures and rejected attempts | [Repository](https://github.com/ASCIT31/darkmoon-visualization-research) · [Benchmarks](https://github.com/ASCIT31/darkmoon-visualization-research/tree/main/benchmarks) |
+| [Darkmoon-Benchmarks](https://github.com/ASCIT31/Darkmoon-Benchmarks) | Benchmarks | LLM pentest study on OWASP Juice Shop, per-configuration results and individual runs, including the 57-finding Claude Opus 4.6 run | [Repository](https://github.com/ASCIT31/Darkmoon-Benchmarks) · [Juice Shop run](https://github.com/ASCIT31/Darkmoon-Benchmarks/blob/main/runs/juice-shop-2026-04-26.md) |
+| [darkmoon-research](https://github.com/ASCIT31/darkmoon-research) | Evidence corpus | Lab reports across cloud, identity, CI/CD, IaC, databases and IoT firmware, validated on public labs | [Repository](https://github.com/ASCIT31/darkmoon-research) |
+| [darkmoon-attack-surface-research](https://github.com/ASCIT31/darkmoon-attack-surface-research) | Attack-surface visualization | Earlier research notes on spatial, progressive, WebXR-capable attack-surface views (no source code) | [Repository](https://github.com/ASCIT31/darkmoon-attack-surface-research) |
+| [darkmoon-integrations-docs](https://github.com/ASCIT31/darkmoon-integrations-docs) | Integrations | Integration guides across CI/CD, IDEs, automation and SecOps | [Guides](https://github.com/ASCIT31/darkmoon-integrations-docs) · [GitHub Action (OSS)](https://github.com/ASCIT31/darkmoon-scan-action) · [darkmoon-action](https://github.com/ASCIT31/darkmoon-action) · [Jenkins](https://github.com/ASCIT31/darkmoon-jenkins) · [GitLab](https://github.com/ASCIT31/darkmoon-gitlab) · [MCP server](https://github.com/ASCIT31/darkmoon-mcp-server) · [SDK](https://github.com/ASCIT31/darkmoon-client) |
+| [docs.dark-moon.org](https://docs.dark-moon.org) | Documentation | Online product documentation | [Docs](https://docs.dark-moon.org) |
+| [demo.dark-moon.org](https://demo.dark-moon.org) | Demo | Live demo of the Darkmoon Pro web interface on synthetic data | [Demo](https://demo.dark-moon.org) |
+
+## Technical Articles & Research Notes
+
+The research series on the [Darkmoon blog](https://dark-moon.org/blog/#research-series) (English): A architecture and attack paths (1–8), B data visualization and UX (9–13), C OpenCode and TUI (14–17), D open source and licence (18–20), E website and recognition (21–23).
+
+| Article | Research Topic | Related GitHub Repository | Benchmarks / Evidence | Read Article |
+|---|---|---|---|---|
+| 1. From Vulnerability Findings to Attack Paths: DarkMoon's Research Journey | Attack-path architectures A→D | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Experiment registry](https://github.com/ASCIT31/darkmoon-attack-paths-research/tree/main/experiments) | [Read](https://dark-moon.org/blog/from-vulnerability-findings-to-attack-paths/) |
+| 2. Agent-Native Attack Graphs: Why We Let AI Agents Declare Dependencies | Agent-declared dependencies | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Agent-native graphs](https://github.com/ASCIT31/darkmoon-attack-paths-research/tree/main/docs/agent-native) | [Read](https://dark-moon.org/blog/agent-native-attack-graphs/) |
+| 3. Attack Graphs, Knowledge Graphs and Causal Reasoning: What Is Actually Different? | Attack graphs vs knowledge graphs vs causality | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Scientific positioning](https://github.com/ASCIT31/darkmoon-attack-paths-research/tree/main/research/scientific-positioning) | [Read](https://dark-moon.org/blog/attack-graphs-knowledge-graphs-causal-reasoning/) |
+| 4. Building an Expert-System-Inspired Architecture with LLM Agents | Expert systems and LLM agents | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Expert-system notes](https://github.com/ASCIT31/darkmoon-attack-paths-research/tree/main/docs/expert-systems) | [Read](https://dark-moon.org/blog/expert-system-inspired-architecture-llm-agents/) |
+| 5. Why Our First Attack-Path Architectures Failed | Negative results | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Failed experiments](https://github.com/ASCIT31/darkmoon-attack-paths-research/tree/main/experiments/failed) | [Read](https://dark-moon.org/blog/why-first-attack-path-architectures-failed/) |
+| 6. Declared vs Proven Attack Paths: A Practical Evidence Model | Evidence model: declared vs proven | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Evidence model](https://github.com/ASCIT31/darkmoon-attack-paths-research/tree/main/docs/causal-model) | [Read](https://dark-moon.org/blog/declared-vs-proven-attack-paths-evidence-model/) |
+| 7. Measuring Attack-Path Reliability: Benchmarks, False Positives and Limitations | Reliability, false positives, limits | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Measured results](https://github.com/ASCIT31/darkmoon-attack-paths-research/blob/main/experiments/RESULTS.md) | [Read](https://dark-moon.org/blog/measuring-attack-path-reliability/) |
+| 8. Cross-Agent Dependencies and the Common-Root-Cause Problem | Cross-agent links, common root cause | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Measured results](https://github.com/ASCIT31/darkmoon-attack-paths-research/blob/main/experiments/RESULTS.md) | [Read](https://dark-moon.org/blog/cross-agent-dependencies-common-root-cause/) |
+| 9. Redesigning a Cybersecurity Dashboard Around Attack Paths | Dashboard redesign around attack paths | [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) · [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Angular evolution](https://github.com/ASCIT31/darkmoon-visualization-research/tree/main/angular/evolution) | [Read](https://dark-moon.org/blog/redesigning-cybersecurity-dashboard-around-attack-paths/) |
+| 10. Visualizing Cyber Attack Paths: From Node-Link Diagrams to Orbital Graphs | Attack-path graph layouts (2D to orbital) | [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) · [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Graph layouts](https://github.com/ASCIT31/darkmoon-visualization-research/tree/main/research/graph-layouts) | [Read](https://dark-moon.org/blog/visualizing-cyber-attack-paths-node-link-to-orbital/) |
+| 11. Progressive Disclosure in Vulnerability Management Interfaces | Progressive disclosure (HCI) | [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) | [HCI notes](https://github.com/ASCIT31/darkmoon-visualization-research/tree/main/research/human-computer-interaction) | [Read](https://dark-moon.org/blog/progressive-disclosure-in-vulnerability-management-interfaces/) |
+| 12. Designing Explainable Security Graphs Without Misrepresenting Evidence | Explainable graphs, evidence labels | [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) · [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Data visualization](https://github.com/ASCIT31/darkmoon-visualization-research/tree/main/research/data-visualization) | [Read](https://dark-moon.org/blog/designing-explainable-security-graphs-without-misrepresenting-evidence/) |
+| 13. Our UI Experiments: What Worked, What Failed and Why | UI experiments and rejections | [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) | [Failed UI experiments](https://github.com/ASCIT31/darkmoon-visualization-research/tree/main/experiments/failures) | [Read](https://dark-moon.org/blog/our-ui-experiments-what-worked-what-failed-and-why/) |
+| 14. Bringing DarkMoon to the Terminal: Building an OpenCode Explorer | Terminal Explorer (OpenCode plugin) | [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) · [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [TUI architecture](https://github.com/ASCIT31/darkmoon-visualization-research/tree/main/tui/architecture) | [Read](https://dark-moon.org/blog/bringing-darkmoon-to-the-terminal-building-an-opencode-explorer/) |
+| 15. From Angular to TUI: Designing Two Interfaces Around the Same Security Data | One data model, two interfaces | [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) | [Terminal interfaces](https://github.com/ASCIT31/darkmoon-visualization-research/tree/main/research/terminal-interfaces) | [Read](https://dark-moon.org/blog/from-angular-to-tui-designing-two-interfaces-around-the-same-security-data/) |
+| 16. Designing a Premium Terminal Interface with OpenTUI | Terminal UI design (OpenTUI) | [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) | [TUI iterations](https://github.com/ASCIT31/darkmoon-visualization-research/tree/main/tui/iterations) | [Read](https://dark-moon.org/blog/designing-a-premium-terminal-interface-with-opentui/) |
+| 17. Visualizing Attack Paths in ASCII and Unicode | Attack paths in ASCII / Unicode | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) · [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) | [TUI rendering](https://github.com/ASCIT31/darkmoon-visualization-research/tree/main/tui/rendering) | [Read](https://dark-moon.org/blog/visualizing-attack-paths-in-ascii-and-unicode/) |
+| 18. Why DarkMoon Community Is Moving from GPLv3 to AGPLv3 | Licensing: GPLv3 to AGPLv3 | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) · [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) | [LICENSING.md](https://github.com/ASCIT31/Dark-Moon/blob/master/LICENSING.md) | [Read](https://dark-moon.org/blog/why-darkmoon-community-is-moving-from-gplv3-to-agplv3/) |
+| 19. AGPLv3, Open Source and Commercial Editions: Understanding the Tradeoffs | Open source and commercial editions | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [LICENSING.md](https://github.com/ASCIT31/Dark-Moon/blob/master/LICENSING.md) | [Read](https://dark-moon.org/blog/agplv3-open-source-and-commercial-editions-understanding-the-tradeoffs/) |
+| 20. Building DarkMoon in the Open: Research, Benchmarks, Failures and Reproducibility | Open research and reproducibility | [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) · [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) | [Darkmoon-Benchmarks](https://github.com/ASCIT31/Darkmoon-Benchmarks) | [Read](https://dark-moon.org/blog/building-darkmoon-in-the-open-research-benchmarks-failures-and-reproducibility/) |
+| 21. Our Website dark-moon.org Receives an Awwwards Honorable Mention | Website recognition (Awwwards) | [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) · [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | — | [Read](https://dark-moon.org/blog/darkmoon-site-awwwards-honorable-mention/) |
+| 22. Behind the Honorable Mention: the Design and Engineering of dark-moon.org | Website design and engineering | [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) · [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | — | [Read](https://dark-moon.org/blog/design-and-engineering-behind-dark-moon-org/) |
+| 23. From an Award-Winning Website to the Product: How dark-moon.org's Visual Research Shapes the DarkMoon Dashboard and Terminal Explorer | From website to product interfaces | [darkmoon-visualization-research](https://github.com/ASCIT31/darkmoon-visualization-research) · [darkmoon-attack-paths-research](https://github.com/ASCIT31/darkmoon-attack-paths-research) | [Before/after captures](https://github.com/ASCIT31/darkmoon-visualization-research/tree/main/screenshots/comparisons) | [Read](https://dark-moon.org/blog/from-website-to-product-interfaces/) |
 
 ---
 
