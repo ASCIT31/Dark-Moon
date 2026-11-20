@@ -19,7 +19,8 @@ def test_campaign_block_from_the_local_documents(monkeypatch, tmp_path):
     assert (doc["score"]["score"], doc["score"]["grade"], doc["score"]["score_status"]) == (sc["score"], sc["grade"], sc["score_status"])
     assert doc["treatment_plan"]["actions_total"] == 2
     assert [a["priority"] for a in doc["treatment_plan"]["top_actions"]] == [1, 2]
-    assert doc["frameworks"]["summary_line"].startswith("Technical findings relevant to")
+    # R2 B-1: no profile -> applicability to confirm: frameworks named without counts
+    assert doc["frameworks"]["summary_line"].startswith("Findings may also be relevant to")
     assert doc["attack_paths"]["evidence_backed"] == 0
     assert doc["legend"] == L.legend()
     assert doc["links"]["treatment_plan"] == "plan c1"

@@ -12,6 +12,7 @@ Pure data, no I/O.
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, Optional
 
 LEGEND_VERSION = "darkmoon-legend/1"
@@ -25,8 +26,12 @@ SEVERITY = {
 }
 
 EVIDENCE_STATUS = {
-    "exploited": {"label": "Exploited", "meaning": "The weakness was used during the test; proof is on file."},
-    "confirmed": {"label": "Confirmed", "meaning": "The weakness was observed; it was not used further."},
+    "exploited": {"label": "Exploited",
+                  "meaning": "Reported by the testing agent as used during the test, with evidence on file (the server "
+                             "does not re-verify it)."},
+    "confirmed": {"label": "Confirmed",
+                  "meaning": "Reported by the testing agent as observed without being used further, with evidence on "
+                             "file."},
     "unconfirmed": {"label": "To confirm", "meaning": "Reported by an agent without enough proof yet."},
 }
 
@@ -47,9 +52,38 @@ TREATMENT = {
     "in_progress": {"label": "Treatment in Progress",
                     "meaning": "A fix is planned, under way or declared applied; not verified."},
     "not_reproduced": {"label": "Not reproduced at retest",
-                       "meaning": "A completed retest did not reproduce it; this is not a proof of resolution."},
-    "risk_accepted": {"label": "Risk accepted", "meaning": "Accepted by its owner until a stated date."},
+                       "meaning": "A completed retest that met its coverage gate did not reproduce it; this is not a "
+                                  "proof of resolution."},
+    "risk_accepted": {"label": "Risk accepted",
+                      "meaning": "Accepted by a named risk owner until a stated date (at most 12 months)."},
 }
+
+# weakness classes of exec_core.identity in plain words (a class without a label shows its key in words)
+WEAKNESS_CLASS = {
+    "sql_injection": "SQL injection", "nosql_injection": "NoSQL injection", "xss": "Cross-site scripting (XSS)",
+    "csrf": "Cross-site request forgery (CSRF)", "ssrf": "Server-side request forgery (SSRF)",
+    "xxe": "XML external entity (XXE)", "code_execution": "Code execution", "file_access": "File access",
+    "file_upload": "Unrestricted file upload", "access_control": "Access control", "authentication": "Authentication",
+    "session": "Session management", "information_disclosure": "Information disclosure",
+    "configuration": "Security configuration", "cryptography": "Cryptography",
+    "vulnerable_component": "Vulnerable component", "open_redirect": "Open redirect",
+    "business_logic": "Business logic", "availability": "Availability", "input_validation": "Input validation",
+    "unclassified": "Unclassified",
+}
+
+# target status keys of the stored record (API keys kept) -> words that never read as a breach
+TARGET_STATUS = {
+    "vulnerable": {"label": "Findings reported",
+                   "meaning": "The testing agents reported weaknesses on this target; none was reported as exploited."},
+    "compromised": {"label": "Exploitation reported",
+                    "meaning": "A testing agent reported exploiting at least one weakness during the authorised test, "
+                               "with evidence on file; this is a test result, not a statement that a breach occurred."},
+    "unknown": {"label": "Not assessed", "meaning": "No campaign result recorded for this target yet."},
+}
+
+# test references Darkmoon may name for a campaign; ISO/IEC 27001 is a management-system standard, never a test method
+TEST_REFERENCES = ("NIST SP 800-115", "MITRE ATT&CK", "OWASP WSTG", "PTES")
+TEST_REFERENCES_DEFAULT = "Darkmoon automated security assessment"
 
 SCORE_STATUS = {
     "rated": {"label": "Rated", "meaning": "The campaign met the coverage floor; the rating applies to its scope."},
@@ -109,6 +143,49 @@ def path_kind_of(path: Any) -> str:
     return "possible"
 
 
+def weakness_class_label(cls: Any) -> str:
+    key = str(cls or "").strip().lower()
+    return WEAKNESS_CLASS.get(key) or (key.replace("_", " ").capitalize() if key else WEAKNESS_CLASS["unclassified"])
+
+
+def target_status_label(status: Any) -> str:
+    s = str(status or "").strip().lower()
+    return TARGET_STATUS.get(s, TARGET_STATUS["unknown"])["label"]
+
+
+_ISO_27001 = re.compile(r"(?i)\bISO(?:\s*/\s*IEC)?\s*27001(?::\s*20\d\d)?\b")
+_SEP = re.compile(r"\s*[/,;·|]\s*")
+
+
+def _known_reference(part: str) -> Optional[str]:
+    p = re.sub(r"\s+", " ", part).strip().lower()
+    if "800-115" in p:
+        return "NIST SP 800-115"
+    if re.fullmatch(r"(mitre\s*)?att&(amp;)?ck|mitre", p):
+        return "MITRE ATT&CK"
+    if re.fullmatch(r"owasp( wstg| testing guide)?", p):
+        return "OWASP WSTG"
+    if p == "ptes":
+        return "PTES"
+    return None
+
+
+def methodology_label(raw: Any) -> str:
+    """How a campaign's declared methodology is shown everywhere (report, model, API). ISO/IEC 27001 is a
+    management-system standard, never a test method: it is removed (old campaigns are rewritten on render). When what
+    remains names only known test references -> « Test references: NIST SP 800-115, MITRE ATT&CK »; other declared
+    text (a synthetic or partial run says so) is kept as declared; nothing left -> « Darkmoon automated security
+    assessment »."""
+    text = re.sub(r"\s+", " ", _ISO_27001.sub("", str(raw or ""))).strip()
+    parts = [p for p in _SEP.split(text) if p.strip()]
+    if not parts:
+        return TEST_REFERENCES_DEFAULT
+    known = [_known_reference(p) for p in parts]
+    if all(known):
+        return "Test references: " + ", ".join(r for r in TEST_REFERENCES if r in known)
+    return " · ".join(p.strip() for p in parts)
+
+
 def evidence_label(status: Any) -> str:
     s = str(status or "").strip().lower()
     return EVIDENCE_STATUS.get(s, EVIDENCE_STATUS["unconfirmed"])["label"]
@@ -127,5 +204,7 @@ def legend() -> Dict[str, Any]:
         "declaration": {k: dict(v) for k, v in DECLARATION.items()},
         "treatment": {k: dict(v) for k, v in TREATMENT.items()},
         "score_status": {k: dict(v) for k, v in SCORE_STATUS.items()},
+        "target_status": {k: dict(v) for k, v in TARGET_STATUS.items()},
         "grade": dict(GRADE),
+        "weakness_class": dict(WEAKNESS_CLASS),
     }

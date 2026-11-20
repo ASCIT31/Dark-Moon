@@ -1,10 +1,12 @@
 """Prioritized Treatment Plan (exec_core.actions + exec_core.retest), shared by Community and Pro (same file in both
 editions, same fixture, same expected output).
 
-Covers: one action / many findings, many actions / one finding, partial fix, failed retest, interrupted retest,
-deferred and back, applied != verified, append-only history with invalid entries skipped, cyclic paths, old campaigns
-without a treatment file, state reattached when the fix list changes, the plan never touching findings or the score,
-and the parity fixture run through each edition's own attack-path engine.
+Covers: one action per (asset, weakness class) = the score's penalty unit, many findings / one action, partial fix,
+failed retest, interrupted retest, a retest without coverage (verifies nothing), deferred and back, applied !=
+verified, risk acceptance (named owner, expiry <= 12 months, expired), append-only history with invalid entries
+skipped, cyclic paths, old campaigns without a treatment file, migration of the per-fix-item ids of exec_core <= 1.4
+(merged states keep the least advanced status), the plan never touching findings or the score, and the parity fixture
+run through each edition's own attack-path engine.
 """
 from __future__ import annotations
 
@@ -43,9 +45,18 @@ def _g(fix_id, ids, rank=1, **kw):
             **kw}
 
 
-def _retest(verdicts, outcome="complete", at="2026-11-10T00:00:00Z", scope=None):
-    return {"retest_id": "rt1", "at": at, "outcome": outcome, "finding_ids": scope,
+COV = {"present": True, "campaign_kind": "retest", "measured_duration_seconds": 900, "agents_dispatched": ["web"],
+       "specialised_agents": ["web"], "agents_source": "opencode_sessions", "assets_registered": 1,
+       "commands_executed": 12, "workflows_executed": 0}
+
+
+def _retest(verdicts, outcome="complete", at="2026-11-10T00:00:00Z", scope=None, coverage=COV):
+    return {"retest_id": "rt1", "at": at, "outcome": outcome, "finding_ids": scope, "coverage": coverage,
             "verdicts": [{"finding_id": k, "verdict": v} for k, v in verdicts.items()]}
+
+
+def _uid(cls="sql_injection", asset="tg"):
+    return A.unit_action_id(CID, f"{asset}|{cls}")
 
 
 def _state(aid, *entries, finding_ids=None):
@@ -68,8 +79,12 @@ def test_one_action_many_findings_and_stable_ids():
     assert len(p1["actions"]) == 1
     a = p1["actions"][0]
     assert a["finding_ids"] == ["a", "b", "c"] and a["expected_impact"]["findings_covered"] == 3
-    assert a["action_id"] == p2["actions"][0]["action_id"] == A.action_id(CID, "fx1")
-    assert A.action_id("other_campaign", "fx1") != a["action_id"]
+    assert a["action_id"] == p2["actions"][0]["action_id"] == _uid()
+    assert A.unit_action_id("other_campaign", "tg|sql_injection") != a["action_id"]
+    assert a["unit"] == "tg|sql_injection" and a["weakness_class_label"] == "SQL injection"
+    assert a["title"] == "SQL injection — t a (+2 related findings)"
+    assert a["effort"]["band"] == "M" and "indicative" in a["effort"]["provenance"]
+    assert [f["finding_id"] for f in a["findings"]] == ["a", "b", "c"] and a["fix_ids"] == ["fx1"]
     # the head has no text: the member's text is quoted as the agent's, never generated
     assert a["recommended_treatment"]["text"] == "Use prepared statements."
     assert a["recommended_treatment"]["source"] == "testing_agent"
@@ -87,15 +102,43 @@ def test_no_remediation_text_is_said_not_invented():
     assert a["recommended_treatment"]["text"] is None and "No remediation text" in a["recommended_treatment"]["label"]
 
 
-def test_never_merges_items_with_similar_titles():
-    vs = [_v("a", title="SQL injection"), _v("b", title="SQL injection", ep="http://h/b")]
+def test_one_action_per_weakness_class_and_asset():
+    """R1 H-3 / R3 D1: the same root cause on the same asset is one action whatever the fix items; another class or
+    another asset is another action; the unit is the score's penalty unit."""
+    vs = [_v("a", title="SQLi in search"), _v("b", title="SQLi in login", ep="http://h/b", sev="critical",
+                                                st="exploited"),
+          _v("c", cat="xss_stored", title="Stored XSS"), _v("d", title="SQLi on API", target_id="tg2")]
+    plan = A.build_plan(CID, _doc([_g("f1", ["a"]), _g("f2", ["b"], rank=2), _g("f3", ["c"], rank=3),
+                                   _g("f4", ["d"], rank=4)]), vs)
+    got = [(x["unit"], x["finding_ids"]) for x in plan["actions"]]
+    assert got == [("tg|sql_injection", ["a", "b"]), ("tg|xss", ["c"]), ("tg2|sql_injection", ["d"])]
+    first = plan["actions"][0]
+    assert first["head_finding_id"] == "b" and first["severity"] == "critical" and first["proof"] == "exploited"
+    assert first["title"] == "SQL injection — SQLi in login (+1 related finding)"
+    assert first["fix_ids"] == ["f1", "f2"]
+    units = {u["unit"] for c in score.cyber_score({"campaign": {"id": CID, "status": "completed", "target_id": "tg"},
+                                                   "findings": vs})["components"] for u in c["units"]}
+    assert units == {x["unit"] for x in plan["actions"]}
+
+
+def test_titles_keep_the_agent_casing():
+    """R1 H-3 / R3 D9: no « Fix remote Code Execution… »: the class in words, then the agent's title as written."""
+    vs = [_v("a", cat="rce", title="Remote Code Execution via systemDiagnostics"),
+          _v("b", cat="jwt", title="graphQL Users Query exposes JWT")]
     plan = A.build_plan(CID, _doc([_g("f1", ["a"]), _g("f2", ["b"], rank=2)]), vs)
-    assert [x["finding_ids"] for x in plan["actions"]] == [["a"], ["b"]]
-    assert [x["priority"] for x in plan["actions"]] == [1, 2]
+    assert [x["title"] for x in plan["actions"]] == ["Code execution — Remote Code Execution via systemDiagnostics",
+                                                     "Authentication — graphQL Users Query exposes JWT"]
 
 
-def test_many_actions_one_finding_verified_in_each():
-    vs = [_v("a"), _v("b"), _v("c")]
+def test_ties_share_a_rank():
+    vs = [_v("a", cat="xss"), _v("b", cat="csrf"), _v("c", cat="ssrf", sev="critical")]
+    plan = A.build_plan(CID, _doc([_g("f1", ["a"]), _g("f2", ["b"], rank=2), _g("f3", ["c"], rank=3)]), vs)
+    assert [(x["weakness_class"], x["priority"], x["rank"], x["tie_size"]) for x in plan["actions"]] == [
+        ("ssrf", 1, 1, 1), ("xss", 2, 2, 2), ("csrf", 3, 2, 2)]
+
+
+def test_attack_path_actions_and_verification_per_unit():
+    vs = [_v("a"), _v("b", cat="xss"), _v("c", cat="csrf")]
     items = [{"fix_id": "g1", "finding_ids": ["a", "b"], "rank": 1, "of_total": 2, "breaks": 1},
              {"fix_id": "g2", "finding_ids": ["a", "c"], "rank": 2, "of_total": 2, "breaks": 1}]
     ranking = {"fixes": [{"fix_id": "g1", "interrupts": ["p1"]}, {"fix_id": "g2", "interrupts": ["p2"]}]}
@@ -104,21 +147,24 @@ def test_many_actions_one_finding_verified_in_each():
              {"id": "p2", "finding_ids": ["a", "c"], "hypothesis": False}]
     doc = _doc([], source="attack-paths", paths=paths, ranking=ranking, items=items)
     rt = [_retest({"a": "fixed", "b": "fixed", "c": "still_present"})]
-    st = {"actions": {A.action_id(CID, g): {"history": [_e("2026-11-02", "applied")]} for g in ("g1", "g2")}}
+    st = {"actions": {_uid(c): {"history": [_e("2026-11-02", "applied")]} for c in ("sql_injection", "xss", "csrf")}}
     plan = A.build_plan(CID, doc, vs, st, rt)
-    g1, g2 = plan["actions"]
-    assert g1["interrupts_attack_paths"] == ["p1"] and g2["interrupts_attack_paths"] == ["p2"]
+    by = {a["weakness_class"]: a for a in plan["actions"]}
+    sq, xs, cs = by["sql_injection"], by["xss"], by["csrf"]
+    # « a » sits on both fix items: its unit takes both simulations (2 paths), the other units one each
+    assert sq["interrupts_attack_paths"] == ["p1", "p2"] and sq["priority"] == 1 and sq["fix_ids"] == ["g1", "g2"]
+    assert xs["interrupts_attack_paths"] == ["p1"] and cs["interrupts_attack_paths"] == ["p2"]
     # the impact text counts Evidence-Backed Attack Paths only (legend vocabulary), the rest is said apart (L9)
-    assert g1["expected_impact"]["text"] == "Findings covered: 2 · Evidence-Backed Attack Paths interrupted: 1 of 1"
-    assert g2["expected_impact"]["text"] == ("Findings covered: 2 · Evidence-Backed Attack Paths interrupted: 0 of 1"
+    assert xs["expected_impact"]["text"] == "Findings covered: 1 · Evidence-Backed Attack Paths interrupted: 1 of 1"
+    assert cs["expected_impact"]["text"] == ("Findings covered: 1 · Evidence-Backed Attack Paths interrupted: 0 of 1"
                                              " · other attack paths interrupted (not evidence-backed): 1")
-    assert g1["expected_impact"]["evidence_backed_paths_interrupted"] == 1
-    assert g2["expected_impact"]["attack_paths_interrupted"] == 1 and g2["proven_attack_paths"] == ["p1"]  # via « a »
-    assert g1["proven_attack_paths"] == ["p1"]
+    assert sq["expected_impact"]["evidence_backed_paths_interrupted"] == 1
+    assert cs["proven_attack_paths"] == [] and xs["proven_attack_paths"] == ["p1"]
     assert all("Proven" not in a["expected_impact"]["text"] and "proven" not in a["explanation"]
                for a in plan["actions"])
-    assert g1["status"] == "verified_resolved" and g1["status_text"] == "Not reproduced at retest (2026-11-10)"
-    assert g2["status"] == "partially_resolved"
+    assert sq["status"] == xs["status"] == "verified_resolved"
+    assert xs["status_text"] == "Not reproduced at retest (2026-11-10)"
+    assert cs["status"] == "failed_verification"
 
 
 def test_path_mode_then_open_findings_off_paths():
@@ -127,8 +173,11 @@ def test_path_mode_then_open_findings_off_paths():
     doc = _doc([_g("t1", ["a", "b"]), _g("t2", ["c"], rank=2)], source="attack-paths", items=items,
                ranking={"fixes": [{"fix_id": "g1", "interrupts": ["p1"]}]})
     plan = A.build_plan(CID, doc, vs)
+    # « a » and « b » are one root cause (same class, same asset): one action, on a path; « c » follows
+    vs[2]["category"] = "xss"
+    plan = A.build_plan(CID, doc, vs)
     assert [(x["basis"], x["finding_ids"]) for x in plan["actions"]] == [
-        ("attack-paths", ["a"]), ("reported-severity-x-proof", ["b"]), ("reported-severity-x-proof", ["c"])]
+        ("attack-paths", ["a", "b"]), ("reported-severity-x-proof", ["c"])]
 
 
 def test_cyclic_paths_are_listed_once():
@@ -147,10 +196,10 @@ def test_empty_plan_when_nothing_is_open():
 
 # ── status machine and history ──
 
-def _one(entries, retests=(), finding_ids=("a",)):
+def _one(entries, retests=(), finding_ids=("a",), today=None):
     vs = [_v(i) for i in finding_ids]
-    aid = A.action_id(CID, "f")
-    return A.build_plan(CID, _doc([_g("f", list(finding_ids))]), vs, _state(aid, *entries), list(retests))
+    return A.build_plan(CID, _doc([_g("f", list(finding_ids))]), vs, _state(_uid(), *entries), list(retests),
+                        today=today)
 
 
 def test_applied_is_not_verified():
@@ -208,9 +257,13 @@ def test_failed_verification_then_reapplied_then_verified():
 def test_deferred_and_back_and_risk_accepted():
     a = _one([_e("2026-11-02", "deferred", note="next quarter"), _e("2026-11-03", "proposed")])["actions"][0]
     assert a["status"] == "proposed" and [h["to"] for h in a["history"]] == ["deferred", "proposed"]
-    r = _one([_e("2026-11-02", "risk_accepted", declared={"risk_accepted_until": "2027-01-31"})])["actions"][0]
-    assert r["status_text"] == "Risk accepted by admin, 2026-11-02 (until 2027-01-31)"
+    r = _one([_e("2026-11-02", "risk_accepted", by="alice",
+                 declared={"risk_accepted_until": "2027-01-31", "risk_owner": "Head of Payments"})])["actions"][0]
+    assert r["status_text"] == ("Risk accepted by Head of Payments, recorded by alice on 2026-11-02, "
+                                "until 2027-01-31")
     assert r["risk_accepted_until"]["value"] == "2027-01-31" and r["risk_accepted_until"]["provenance"] == "declared"
+    assert r["risk_acceptance"] == {"risk_owner": "Head of Payments", "until": "2027-01-31", "recorded_by": "alice",
+                                    "recorded_at": "2026-11-02", "expired": False, "complete": True}
 
 
 def test_history_is_append_only_and_invalid_entries_are_skipped():
@@ -240,11 +293,120 @@ def test_every_manual_transition_target_is_a_status_and_never_retest_only():
     assert set(A.TRANSITIONS) == set(A.STATUSES)
 
 
+# ── retest coverage gate (R1 H-4, R4 S2) ──
+
+def test_hollow_retest_verifies_nothing():
+    """R4 probe p2: a retest that pushed nothing and recorded no coverage is « complete » but verifies nothing: the
+    action stays « Applied — not verified » and the retest is an observation « Retest without coverage »."""
+    base = [{"id": "v1", "title": "SQL injection in login", "severity": "critical", "status": "exploited",
+             "category": "sqli", "endpoint": "/login", "target_id": "tg"},
+            {"id": "v2", "title": "Stored XSS", "severity": "high", "status": "confirmed", "category": "xss",
+             "endpoint": "/comment", "target_id": "tg"}]
+    hollow = {"retest_id": "rt1", "retest_campaign_id": "c2", "at": "2026-11-19T12:00:00Z", "outcome": "complete",
+              "finding_ids": None, "verdicts": R.compute_verdicts(base, [])}
+    v = A.verification(["v1", "v2"], hollow)
+    assert v["status"] == "inconclusive" and v["coverage_ok"] is False and "coverage not recorded" in v["coverage_missing"]
+    empty_cov = dict(hollow, coverage={**COV, "assets_registered": 0, "commands_executed": 0, "workflows_executed": 0,
+                                       "agents_dispatched": [], "specialised_agents": []})
+    v = A.verification(["v1", "v2"], empty_cov)
+    assert v["status"] == "inconclusive"
+    assert set(v["coverage_missing"]) == {"no asset registered", "no toolbox command executed",
+                                          "no specialised agent dispatched"}
+    doc = _doc([_g("f1", ["v1"]), _g("f2", ["v2"], rank=2)])
+    st = {"actions": {_uid("sql_injection"): {"history": [_e("2026-11-02", "applied")]}}}
+    plan = A.build_plan(CID, doc, base, st, [empty_cov])
+    a = plan["actions"][0]
+    assert a["status"] == "applied" and a["status_label"] == "Applied — not verified" and a["status_verified"] is False
+    assert a["last_retest"]["result"] == "inconclusive"
+    assert a["last_retest"]["label"] == "Retest without coverage — not verified"
+    assert a["last_retest"]["coverage_ok"] is False
+    assert a["history"][-1]["observation"] == "inconclusive"
+
+
+def test_retest_must_dispatch_an_agent_of_the_findings():
+    vs = [_v("a", discovered_by_agent="sqli-agent")]
+    other = {**COV, "agents_dispatched": ["xss-agent"], "specialised_agents": ["xss-agent"]}
+    a = A.build_plan(CID, _doc([_g("f", ["a"])]), vs, _state(_uid(), _e("2026-11-02", "applied")),
+                     [_retest({"a": "fixed"}, coverage=other)])["actions"][0]
+    assert a["status"] == "applied" and "no agent of these findings dispatched (sqli-agent)" in a["last_retest"]["text"]
+    same = {**COV, "agents_dispatched": ["sqli-agent"], "specialised_agents": ["sqli-agent"]}
+    a = A.build_plan(CID, _doc([_g("f", ["a"])]), vs, _state(_uid(), _e("2026-11-02", "applied")),
+                     [_retest({"a": "fixed"}, coverage=same)])["actions"][0]
+    assert a["status"] == "verified_resolved"
+
+
+# ── risk acceptance (R2 H-4) ──
+
+def test_risk_acceptance_needs_a_named_owner_and_an_expiry_within_12_months():
+    ok = {"at": "2026-11-20T10:00:00Z", "by_role": "admin", "status": "risk_accepted",
+          "declared": {"risk_owner": "Head of Payments", "risk_accepted_until": "2027-05-31"}}
+    assert A.validate_new_entry(ok, "2026-11-20")[1] == []
+    no_owner = {**ok, "declared": {"risk_accepted_until": "2027-05-31"}}
+    assert any("risk_owner" in p for p in A.validate_new_entry(no_owner, "2026-11-20")[1])
+    no_until = {**ok, "declared": {"risk_owner": "CISO"}}
+    assert any("risk_accepted_until" in p for p in A.validate_new_entry(no_until, "2026-11-20")[1])
+    too_far = {**ok, "declared": {"risk_owner": "CISO", "risk_accepted_until": "2027-12-01"}}
+    assert any("12 months" in p for p in A.validate_new_entry(too_far, "2026-11-20")[1])
+    past = {**ok, "declared": {"risk_owner": "CISO", "risk_accepted_until": "2026-11-01"}}
+    assert A.validate_new_entry(past, "2026-11-20")[1]
+    # a stored legacy acceptance without owner/expiry is replayed (never dropped) and said incomplete
+    p = _one([_e("2026-11-02", "risk_accepted")])
+    a = p["actions"][0]
+    assert a["status"] == "risk_accepted" and "incomplete" in a["status_text"]
+    assert any(i.get("kind") == "risk-acceptance-incomplete" for i in p["issues"])
+
+
+def test_expired_risk_acceptance():
+    entries = [_e("2026-01-02", "risk_accepted", declared={"risk_owner": "CISO", "risk_accepted_until": "2026-06-30"})]
+    a = _one(entries, today="2026-11-20")["actions"][0]
+    assert a["status"] == "risk_accepted" and a["status_label"] == "Risk acceptance expired"
+    assert a["status_text"].startswith("Risk acceptance expired on 2026-06-30")
+    assert a["risk_acceptance"]["expired"] is True
+    assert _one(entries, today="2026-03-01")["actions"][0]["status_label"] == "Risk accepted"
+
+
+# ── migration of the exec_core <= 1.4 ids (one action per fix item) ──
+
+def test_legacy_ids_follow_their_findings_and_merge_to_the_least_advanced_status():
+    vs = [_v("a"), _v("b", ep="http://h/b"), _v("c", cat="xss")]
+    doc = _doc([_g("f1", ["a"]), _g("f2", ["b"], rank=2), _g("f3", ["c"], rank=3)])
+    legacy = A.legacy_action_ids(CID, doc)
+    assert legacy == {A.action_id(CID, "f1"): ["a"], A.action_id(CID, "f2"): ["b"], A.action_id(CID, "f3"): ["c"]}
+    st = {"actions": {
+        A.action_id(CID, "f1"): {"finding_ids": ["a"], "history": [_e("2026-11-02T00:00:00Z", "applied")]},
+        A.action_id(CID, "f2"): {"finding_ids": ["b"], "history": [_e("2026-11-03T00:00:00Z", "approved")]},
+        A.action_id(CID, "f3"): {"finding_ids": ["c"], "history": [_e("2026-11-04T00:00:00Z", "in_progress")]},
+        _uid(): {"finding_ids": ["a", "b"], "history": [_e("2026-11-05T00:00:00Z", "scheduled")]},
+    }}
+    plan = A.build_plan(CID, doc, vs, st)
+    sq = next(a for a in plan["actions"] if a["weakness_class"] == "sql_injection")
+    xs = next(a for a in plan["actions"] if a["weakness_class"] == "xss")
+    # applied + approved -> least advanced « approved », then the action's own entry (approved -> scheduled)
+    assert sq["status"] == "scheduled"
+    merged = [h for h in sq["history"] if h.get("merged")]
+    assert len(merged) == 1 and merged[0]["to"] == "approved"
+    assert {m["status"] for m in merged[0]["merged_from"]} == {"applied", "approved"}
+    assert sum(1 for h in sq["history"] if h.get("carried_from")) == 2      # no former entry dropped
+    assert sq["state_carried_from"] == sorted([A.action_id(CID, "f1"), A.action_id(CID, "f2")])
+    assert xs["status"] == "in_progress" and xs["state_carried_from"] == [A.action_id(CID, "f3")]
+    assert plan["orphaned_states"] == []
+
+
+def test_same_status_former_states_are_replayed_together():
+    vs = [_v("a"), _v("b", ep="http://h/b")]
+    doc = _doc([_g("f1", ["a"]), _g("f2", ["b"], rank=2)])
+    st = {"actions": {A.action_id(CID, "f1"): {"finding_ids": ["a"], "history": [_e("2026-11-02", "approved")]},
+                      A.action_id(CID, "f2"): {"finding_ids": ["b"], "history": [_e("2026-11-03", "approved")]}}}
+    a = A.build_plan(CID, doc, vs, st)["actions"][0]
+    assert a["status"] == "approved" and not any(h.get("merged") for h in a["history"])
+
+
 # ── old campaigns, reattachment, historical truth ──
 
 def test_old_campaign_without_treatment_file():
     p = A.build_plan(CID, _doc([_g("f", ["a"])]), [_v("a")], None, None)
     assert p["actions"][0]["status"] == "proposed" and p["actions"][0]["history"] == [] and p["issues"] == []
+    assert p["schema_version"] == "darkmoon-treatment-plan/2"
 
 
 def test_state_follows_its_findings_when_the_fix_list_changes():
@@ -261,7 +423,7 @@ def test_plan_never_touches_findings_stats_or_score():
     before = copy.deepcopy(vs)
     inp = {"campaign": {"id": CID, "status": "completed"}, "findings": vs}
     s0 = score.cyber_score(copy.deepcopy(inp))
-    A.build_plan(CID, _doc([_g("f", ["a", "b"])]), vs, _state(A.action_id(CID, "f"), _e("2026-11-02", "applied")),
+    A.build_plan(CID, _doc([_g("f", ["a", "b"])]), vs, _state(_uid(), _e("2026-11-02", "applied")),
                  [_retest({"a": "fixed", "b": "fixed"})])
     assert vs == before and stats.compute_stats(vs) == stats.compute_stats(before)
     assert score.cyber_score(copy.deepcopy(inp)) == s0

@@ -19,12 +19,18 @@ only outside input is the host's time-zone database, read through ``zoneinfo``).
 or ``blocked`` with the reasons in plain words, the matched window, the local time and the next window start.
 Enforcement is the edition's: Pro blocks its launch paths, Community only warns (``as_advisory``).
 
+Which projects a launch touches (``target_matches``): the launch target and the stored target are normalised the same
+way — URL forms (scheme, user info, port, path, trailing dot, case), IP literals in any form ``inet_aton`` accepts
+(decimal, hexadecimal, octal or short dotted forms) and IPv4-mapped IPv6 addresses; a CIDR range matches every stored
+address it contains; a host name matches its subdomains and its parent domains in both directions.
+
 Daylight-saving rules: a local wall time that does not exist (spring forward) starts at the first instant after the
 gap; a wall time that happens twice (fall back) starts at its first occurrence; « inside a window » compares the local
 wall-clock time of the instant, so both occurrences of a repeated hour are treated alike.
 """
 from __future__ import annotations
 
+import ipaddress
 import re
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -514,3 +520,105 @@ def summary_line(evaluation: Dict[str, Any]) -> str:
     tail = " ".join(msgs)
     nxt = evaluation.get("next_window_start_utc")
     return " ".join(x for x in (head, tail, f"Next allowed start: {nxt} (UTC)." if nxt else "") if x)
+
+
+# ── which stored targets a launch target touches ─────────────────────────────────────────────────────────────────
+
+IPAddr = Any
+
+
+def launch_host(target: Any) -> str:
+    """Bare host of a target that may be a URL / host:port / [IPv6]:port: lower-case, no trailing dot, no ``*.``."""
+    v = str(target or "").strip()
+    if "://" in v:
+        v = v.split("://", 1)[1]
+    v = v.split("/", 1)[0] if not re.match(r"^[0-9a-fA-F:.]+/\d{1,3}$", v) else v   # keep a CIDR suffix
+    v = v.split("?", 1)[0].split("#", 1)[0]
+    v = v.rsplit("@", 1)[-1]
+    if v.startswith("["):
+        v = v[1:].split("]", 1)[0]
+    elif v.count(":") == 1:
+        v = v.split(":", 1)[0]
+    v = v.strip().lower().rstrip(".")
+    return v[2:] if v.startswith("*.") else v
+
+
+def _inet_aton(text: str) -> Optional[IPAddr]:
+    """IPv4 forms ``inet_aton`` accepts: 1 to 4 parts, each decimal, 0x-hexadecimal or 0-octal (10.0.0.05, 0x0a000005,
+    167772165, 10.5)."""
+    parts = text.split(".")
+    if not 1 <= len(parts) <= 4 or any(p == "" for p in parts):
+        return None
+    nums = []
+    for p in parts:
+        try:
+            if p.lower().startswith("0x"):
+                n = int(p[2:], 16)
+            elif len(p) > 1 and p.startswith("0"):
+                n = int(p, 8)
+            else:
+                n = int(p, 10)
+        except ValueError:
+            return None
+        nums.append(n)
+    limits = {1: [2 ** 32], 2: [256, 2 ** 24], 3: [256, 256, 2 ** 16], 4: [256, 256, 256, 256]}[len(nums)]
+    if any(n < 0 or n >= lim for n, lim in zip(nums, limits)):
+        return None
+    value = 0
+    for n, lim in zip(nums, limits):
+        value = value * lim + n
+    return ipaddress.ip_address(value)
+
+
+def parse_ip(text: Any) -> Optional[IPAddr]:
+    """An IP address in any accepted form (IPv4-mapped IPv6 -> its IPv4), else None."""
+    t = str(text or "").strip().lower().strip("[]")
+    if not t:
+        return None
+    try:
+        ip = ipaddress.ip_address(t.split("%", 1)[0])
+    except ValueError:
+        ip = _inet_aton(t) if re.match(r"^[0-9a-fx.]+$", t) else None
+    if ip is not None and ip.version == 6 and ip.ipv4_mapped is not None:
+        return ip.ipv4_mapped
+    return ip
+
+
+def parse_network(text: Any) -> Optional[Any]:
+    t = str(text or "").strip().lower()
+    if "/" not in t:
+        return None
+    base, _, bits = t.partition("/")
+    ip = parse_ip(base)
+    if ip is None or not bits.isdigit():
+        return None
+    try:
+        return ipaddress.ip_network(f"{ip}/{bits}", strict=False)
+    except ValueError:
+        return None
+
+
+def _is_name(h: str) -> bool:
+    return bool(h) and "." in h and parse_ip(h) is None and parse_network(h) is None
+
+
+def target_matches(launch_target: Any, stored_host: Any, stored_ip: Any = None) -> bool:
+    """True when a launch target touches a stored target (``host``, ``ip``): same address in any form, a CIDR range
+    containing a stored address, the same host name, a subdomain of it or a parent domain of it."""
+    lh = launch_host(launch_target)
+    if not lh:
+        return False
+    sh, si = launch_host(stored_host), launch_host(stored_ip)
+    stored_ips = {x for x in (parse_ip(sh), parse_ip(si)) if x is not None}
+    net = parse_network(lh)
+    if net is not None:
+        return any(ip.version == net.version and ip in net for ip in stored_ips)
+    ip = parse_ip(lh)
+    if ip is not None:
+        return ip in stored_ips
+    for h in (sh, si):
+        if not _is_name(h):
+            continue
+        if lh == h or lh.endswith("." + h) or (_is_name(lh) and h.endswith("." + lh)):
+            return True
+    return False

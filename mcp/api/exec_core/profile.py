@@ -2,7 +2,8 @@
 
 Pure functions, standard library only, no I/O. The same document shape in both editions: Pro stores the declared
 fields in the project's owner-input store (the EBIOS context file, revisioned and audited, admin-only writes);
-Community reads a file the owner edits by hand (``profiles/<project_id>.json``). Neither edition lets a model write it.
+Community reads a file the owner edits by hand (``profiles/<project_id>.json``). No MCP tool writes it in either edition;
+in Community the local agent has shell access in the same container, so that file is not tamper-evident.
 
 Provenance of every field: ``detected`` (seen by a campaign, never confirmed), ``inferred`` (derived by Darkmoon;
 no field is inferred in v1), ``declared_by_customer``, ``verified`` (declared and checked by the organisation),
@@ -165,7 +166,7 @@ def validate_declared(fields: Any, allow_stamps: bool = True) -> Tuple[Dict[str,
         if name not in FIELDS:
             issues.append({"kind": "profile-field-unknown", "field": str(name)[:64]})
             continue
-        allowed = {"value", "provenance"} | ({"at", "by_role"} if allow_stamps else set())
+        allowed = {"value", "provenance"} | ({"at", "by_role", "by"} if allow_stamps else set())
         extra = sorted(set(entry) - allowed)
         if extra:
             problems.append(f"unknown keys {extra}")
@@ -193,6 +194,12 @@ def validate_declared(fields: Any, allow_stamps: bool = True) -> Tuple[Dict[str,
                     problems.append(f"by_role: {err}")
                 else:
                     out["by_role"] = r
+            by = entry.get("by")
+            if by is not None:
+                if isinstance(by, str) and by.strip() and len(by.strip()) <= _ROLE_MAX and not _CTRL.search(by):
+                    out["by"] = by.strip()
+                else:
+                    problems.append(f"by: the declaring account, 1 to {_ROLE_MAX} printable characters")
         if problems:
             issues.append({"kind": "profile-field-invalid", "field": name, "problems": problems})
             continue
@@ -254,7 +261,8 @@ def view(declared: Optional[Dict[str, Any]] = None, detected: Optional[Dict[str,
     for name, (kind, group, extra) in FIELDS.items():
         d = declared.get(name)
         if d is not None:
-            f = {"value": d["value"], "provenance": d["provenance"], "at": d.get("at"), "by_role": d.get("by_role")}
+            f = {"value": d["value"], "provenance": d["provenance"], "at": d.get("at"), "by_role": d.get("by_role"),
+                 "by": d.get("by")}
         elif name in STACK_FIELDS and any(i["field"] == name for i in det["items"]):
             f = {"value": [i["name"] + (f" {i['version']}" if i["version"] else "") for i in det["items"]
                            if i["field"] == name],
@@ -273,6 +281,21 @@ def view(declared: Optional[Dict[str, Any]] = None, detected: Optional[Dict[str,
             "provenance_counts": counts,
             "reading": ("Business facts come only from the organisation. Detected technologies are what the agents "
                         "reported, not confirmed. Resilience figures (RTO, RPO, SLA) are declared, never assessed.")}
+
+
+def declared_by_text(f: Dict[str, Any], local_file: bool = False) -> str:
+    """Who declared a field and when, as the report shows it: « Declared by <account> on <date> », or for the
+    Community local file « Declared in the local profile file on <date> » (the file has no account)."""
+    prov = f.get("provenance") if f.get("provenance") in PROVENANCES else "unknown"
+    if prov not in DECLARABLE:
+        return PROVENANCE_LABEL[prov]
+    date = str(f.get("at") or "")[:10]
+    verb = "Declared and verified" if prov == "verified" else "Declared"
+    if local_file:
+        return f"{verb} in the local profile file" + (f" on {date}" if date else "")
+    who = f.get("by") or f.get("by_role")
+    return f"{verb} by {who}" + (f" on {date}" if date else "") if who else PROVENANCE_LABEL[prov] + (
+        f" on {date}" if date else "")
 
 
 def declared_value(profile_view: Optional[Dict[str, Any]], name: str) -> Tuple[Optional[Any], str]:

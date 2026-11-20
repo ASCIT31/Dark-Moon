@@ -1,16 +1,23 @@
 {
  "actions": [
   {
-   "action_id": "act_7d281598351ae41b",
+   "action_id": "act_cc700c726f505667",
    "approval_required": {
     "provenance": null,
     "value": "unknown"
    },
+   "asset": "tgt_fx",
    "basis": "reported-severity-x-proof",
    "dependencies": [],
    "due_date": {
     "provenance": null,
     "value": "unknown"
+   },
+   "effort": {
+    "band": "M",
+    "label": "Medium",
+    "provenance": "indicative, by weakness class — to confirm by the system owner",
+    "version": "darkmoon-effort-band/1"
    },
    "expected_impact": {
     "attack_paths_interrupted": 0,
@@ -20,12 +27,31 @@
     "findings_covered": 2,
     "text": "Findings covered: 2"
    },
-   "explanation": "Ordered by reported severity, then proof: critical (reported); exploited. Addresses 2 findings. 2 reports grouped by the server (same injection parameter).",
+   "explanation": "Ordered by reported severity, then proof: worst critical (exploited). Addresses 2 findings of the class SQL injection on tgt_fx.",
    "finding_ids": [
     "vuln_sq1",
     "vuln_sq2"
    ],
+   "findings": [
+    {
+     "endpoint": "http://app.local/search?q=1",
+     "finding_id": "vuln_sq1",
+     "proof": "exploited",
+     "severity": "critical",
+     "title": "SQL injection in search"
+    },
+    {
+     "endpoint": "http://app.local/search?q=2",
+     "finding_id": "vuln_sq2",
+     "proof": "confirmed",
+     "severity": "high",
+     "title": "Blind SQL injection in search"
+    }
+   ],
    "fix_id": "fp_8dcd42ef5caccdf4",
+   "fix_ids": [
+    "fp_8dcd42ef5caccdf4"
+   ],
    "head_finding_id": "vuln_sq1",
    "history": [
     {
@@ -43,6 +69,9 @@
      "to": "failed_verification",
      "verification": {
       "at": "2026-11-05T12:00:00Z",
+      "coverage_missing": [],
+      "coverage_ok": true,
+      "coverage_text": "retest coverage met",
       "not_checked": [],
       "not_reproduced": [],
       "reproduced": [
@@ -58,6 +87,8 @@
    "interrupts_attack_paths": [],
    "last_retest": {
     "at": "2026-11-05T12:00:00Z",
+    "coverage_ok": true,
+    "coverage_text": "retest coverage met",
     "label": "Reproduced at retest",
     "result": "failed_verification",
     "retest_campaign_id": "camp_fx_retest",
@@ -91,6 +122,10 @@
     "provenance": null,
     "value": "unknown"
    },
+   "risk_owner": {
+    "provenance": null,
+    "value": "unknown"
+   },
    "service_interruption_risk": {
     "provenance": null,
     "value": "unknown"
@@ -101,25 +136,35 @@
    "status_text": "Reproduced at retest (2026-11-05)",
    "status_verified": true,
    "tie_size": 1,
-   "title": "Fix SQL injection in search",
+   "title": "SQL injection — SQL injection in search (+1 related finding)",
    "treatment_type": {
     "basis": "derived from the weakness class; to confirm by the system owner",
     "label": "Code change",
     "value": "code_change",
     "weakness_class": "sql_injection"
-   }
+   },
+   "unit": "tgt_fx|sql_injection",
+   "weakness_class": "sql_injection",
+   "weakness_class_label": "SQL injection"
   },
   {
-   "action_id": "act_964ec336409f740d",
+   "action_id": "act_476abc3f762895ed",
    "approval_required": {
     "provenance": null,
     "value": "unknown"
    },
+   "asset": "tgt_fx",
    "basis": "reported-severity-x-proof",
    "dependencies": [],
    "due_date": {
     "provenance": null,
     "value": "unknown"
+   },
+   "effort": {
+    "band": "M",
+    "label": "Medium",
+    "provenance": "indicative, by weakness class — to confirm by the system owner",
+    "version": "darkmoon-effort-band/1"
    },
    "expected_impact": {
     "attack_paths_interrupted": 0,
@@ -129,11 +174,23 @@
     "findings_covered": 1,
     "text": "Findings covered: 1"
    },
-   "explanation": "Ordered by reported severity, then proof: high (reported); exploited. Addresses 1 finding.",
+   "explanation": "Ordered by reported severity, then proof: worst high (exploited). Addresses 1 finding of the class Cross-site scripting (XSS) on tgt_fx.",
    "finding_ids": [
     "vuln_xs1"
    ],
+   "findings": [
+    {
+     "endpoint": "http://app.local/comments",
+     "finding_id": "vuln_xs1",
+     "proof": "exploited",
+     "severity": "high",
+     "title": "Stored XSS in comments"
+    }
+   ],
    "fix_id": "fp_82bcfa0f6d75a3d3",
+   "fix_ids": [
+    "fp_82bcfa0f6d75a3d3"
+   ],
    "head_finding_id": "vuln_xs1",
    "history": [
     {
@@ -162,6 +219,9 @@
      "to": "verified_resolved",
      "verification": {
       "at": "2026-11-05T12:00:00Z",
+      "coverage_missing": [],
+      "coverage_ok": true,
+      "coverage_text": "retest coverage met",
       "not_checked": [],
       "not_reproduced": [
        "vuln_xs1"
@@ -176,6 +236,8 @@
    "interrupts_attack_paths": [],
    "last_retest": {
     "at": "2026-11-05T12:00:00Z",
+    "coverage_ok": true,
+    "coverage_text": "retest coverage met",
     "label": "Not reproduced at retest",
     "result": "verified_resolved",
     "retest_campaign_id": "camp_fx_retest",
@@ -211,6 +273,10 @@
     "provenance": null,
     "value": "unknown"
    },
+   "risk_owner": {
+    "provenance": null,
+    "value": "unknown"
+   },
    "service_interruption_risk": {
     "provenance": null,
     "value": "unknown"
@@ -221,25 +287,35 @@
    "status_text": "Not reproduced at retest (2026-11-05)",
    "status_verified": true,
    "tie_size": 1,
-   "title": "Fix stored XSS in comments",
+   "title": "Cross-site scripting (XSS) — Stored XSS in comments",
    "treatment_type": {
     "basis": "derived from the weakness class; to confirm by the system owner",
     "label": "Code change",
     "value": "code_change",
     "weakness_class": "xss"
-   }
+   },
+   "unit": "tgt_fx|xss",
+   "weakness_class": "xss",
+   "weakness_class_label": "Cross-site scripting (XSS)"
   },
   {
-   "action_id": "act_22113fe0ab731b95",
+   "action_id": "act_7b6471c911cdf8e0",
    "approval_required": {
     "provenance": null,
     "value": "unknown"
    },
+   "asset": "tgt_fx",
    "basis": "reported-severity-x-proof",
    "dependencies": [],
    "due_date": {
     "provenance": null,
     "value": "unknown"
+   },
+   "effort": {
+    "band": "M",
+    "label": "Medium",
+    "provenance": "indicative, by weakness class — to confirm by the system owner",
+    "version": "darkmoon-effort-band/1"
    },
    "expected_impact": {
     "attack_paths_interrupted": 0,
@@ -249,11 +325,23 @@
     "findings_covered": 1,
     "text": "Findings covered: 1"
    },
-   "explanation": "Ordered by reported severity, then proof: medium (reported); confirmed. Addresses 1 finding.",
+   "explanation": "Ordered by reported severity, then proof: worst medium (confirmed). Addresses 1 finding of the class Vulnerable component on tgt_fx.",
    "finding_ids": [
     "vuln_cmp"
    ],
+   "findings": [
+    {
+     "endpoint": "http://app.local/static/jquery.js",
+     "finding_id": "vuln_cmp",
+     "proof": "confirmed",
+     "severity": "medium",
+     "title": "Outdated jQuery 1.8"
+    }
+   ],
    "fix_id": "fp_926ce0ec49b4aa74",
+   "fix_ids": [
+    "fp_926ce0ec49b4aa74"
+   ],
    "head_finding_id": "vuln_cmp",
    "history": [
     {
@@ -263,6 +351,9 @@
      "source": "retest",
      "verification": {
       "at": "2026-11-05T12:00:00Z",
+      "coverage_missing": [],
+      "coverage_ok": true,
+      "coverage_text": "retest coverage met",
       "not_checked": [],
       "not_reproduced": [],
       "reproduced": [
@@ -277,6 +368,8 @@
    "interrupts_attack_paths": [],
    "last_retest": {
     "at": "2026-11-05T12:00:00Z",
+    "coverage_ok": true,
+    "coverage_text": "retest coverage met",
     "label": "Reproduced at retest",
     "result": "failed_verification",
     "retest_campaign_id": "camp_fx_retest",
@@ -308,6 +401,10 @@
     "provenance": null,
     "value": "unknown"
    },
+   "risk_owner": {
+    "provenance": null,
+    "value": "unknown"
+   },
    "service_interruption_risk": {
     "provenance": null,
     "value": "unknown"
@@ -318,25 +415,35 @@
    "status_text": "Proposed",
    "status_verified": false,
    "tie_size": 1,
-   "title": "Fix outdated jQuery 1.8",
+   "title": "Vulnerable component — Outdated jQuery 1.8",
    "treatment_type": {
     "basis": "derived from the weakness class; to confirm by the system owner",
     "label": "Update or replace the component",
     "value": "update_component",
     "weakness_class": "vulnerable_component"
-   }
+   },
+   "unit": "tgt_fx|vulnerable_component",
+   "weakness_class": "vulnerable_component",
+   "weakness_class_label": "Vulnerable component"
   },
   {
-   "action_id": "act_8939c43d22667576",
+   "action_id": "act_3a96fc8c80d24fb7",
    "approval_required": {
     "provenance": null,
     "value": "unknown"
    },
+   "asset": "tgt_fx",
    "basis": "reported-severity-x-proof",
    "dependencies": [],
    "due_date": {
     "provenance": null,
     "value": "unknown"
+   },
+   "effort": {
+    "band": "S",
+    "label": "Small",
+    "provenance": "indicative, by weakness class — to confirm by the system owner",
+    "version": "darkmoon-effort-band/1"
    },
    "expected_impact": {
     "attack_paths_interrupted": 0,
@@ -346,18 +453,31 @@
     "findings_covered": 1,
     "text": "Findings covered: 1"
    },
-   "explanation": "Ordered by reported severity, then proof: low (reported); confirmed. Addresses 1 finding.",
+   "explanation": "Ordered by reported severity, then proof: worst low (confirmed). Addresses 1 finding of the class Security configuration on tgt_fx.",
    "finding_ids": [
     "vuln_hdr"
    ],
+   "findings": [
+    {
+     "endpoint": "http://app.local/admin/settings",
+     "finding_id": "vuln_hdr",
+     "proof": "confirmed",
+     "severity": "low",
+     "title": "Missing security headers"
+    }
+   ],
    "fix_id": "fp_d195864a067eb64a",
+   "fix_ids": [
+    "fp_d195864a067eb64a"
+   ],
    "head_finding_id": "vuln_hdr",
    "history": [
     {
      "at": "2026-11-03T11:00:00Z",
      "by_role": "admin",
      "declared": {
-      "risk_accepted_until": "2027-03-31"
+      "risk_accepted_until": "2027-03-31",
+      "risk_owner": "Head of Digital"
      },
      "from": "proposed",
      "source": "declaration",
@@ -370,6 +490,9 @@
      "source": "retest",
      "verification": {
       "at": "2026-11-05T12:00:00Z",
+      "coverage_missing": [],
+      "coverage_ok": true,
+      "coverage_text": "retest coverage met",
       "not_checked": [],
       "not_reproduced": [
        "vuln_hdr"
@@ -384,6 +507,8 @@
    "interrupts_attack_paths": [],
    "last_retest": {
     "at": "2026-11-05T12:00:00Z",
+    "coverage_ok": true,
+    "coverage_text": "retest coverage met",
     "label": "Not reproduced at retest",
     "result": "verified_resolved",
     "retest_campaign_id": "camp_fx_retest",
@@ -411,11 +536,25 @@
     "nis2:Art.21(2)(e)"
    ],
    "related_controls_note": "Framework controls these findings are technical evidence for (relevance only, not an audit opinion).",
+   "risk_acceptance": {
+    "complete": true,
+    "expired": false,
+    "recorded_at": "2026-11-03T11:00:00Z",
+    "recorded_by": "admin",
+    "risk_owner": "Head of Digital",
+    "until": "2027-03-31"
+   },
    "risk_accepted_until": {
     "at": "2026-11-03T11:00:00Z",
     "by_role": "admin",
     "provenance": "declared",
     "value": "2027-03-31"
+   },
+   "risk_owner": {
+    "at": "2026-11-03T11:00:00Z",
+    "by_role": "admin",
+    "provenance": "declared",
+    "value": "Head of Digital"
    },
    "service_interruption_risk": {
     "provenance": null,
@@ -424,26 +563,30 @@
    "severity": "low",
    "status": "risk_accepted",
    "status_label": "Risk accepted",
-   "status_text": "Risk accepted by admin, 2026-11-03 (until 2027-03-31)",
+   "status_text": "Risk accepted by Head of Digital, recorded by admin on 2026-11-03, until 2027-03-31",
    "status_verified": false,
    "tie_size": 1,
-   "title": "Add the security headers",
+   "title": "Security configuration — Missing security headers",
    "treatment_type": {
     "basis": "derived from the weakness class; to confirm by the system owner",
     "label": "Configuration change",
     "value": "configuration_change",
     "weakness_class": "configuration"
-   }
+   },
+   "unit": "tgt_fx|configuration",
+   "weakness_class": "configuration",
+   "weakness_class_label": "Security configuration"
   }
  ],
  "basis": "reported-severity-x-proof",
  "basis_label": "By reported severity × proof",
- "basis_note": "Not an attack-path ranking. Order: severity reported by the agent, then proof level (exploited, confirmed, unconfirmed), then proven attack chains of several findings broken, then regression after a retest, then the CVSS score computed from the finding's vector. Equal keys share the same rank. Severity is the agent's rating, not an impact on your business assets.",
+ "basis_note": "Not an attack-path ranking. Order: severity reported by the agent, then proof level (exploited, confirmed, unconfirmed), then Evidence-Backed attack chains of several findings broken, then regression after a retest, then the CVSS score computed from the finding's vector. Equal keys share the same rank. Severity is the agent's rating, not an impact on your business assets.",
  "campaign_id": "camp_fx_plan",
  "definition": "Actions recommended in priority order to reduce security exposure, address related findings and interrupt relevant attack paths.",
+ "effort_note": "Effort bands (Small / Medium / Large) are indicative, by weakness class, to confirm by the system owner; they are not a cost or a duration.",
  "issues": [
   {
-   "action_id": "act_8939c43d22667576",
+   "action_id": "act_3a96fc8c80d24fb7",
    "index": 1,
    "problems": [
     "status: verified_resolved is set only by a completed retest"
@@ -453,7 +596,7 @@
  "label": "Prioritized Treatment Plan",
  "orphaned_states": [],
  "plain": "Start at the top: each action lists the findings it addresses and the attack paths it interrupts. Recording a treatment does not change the rating: only a new campaign or a completed retest shows its effect.",
- "schema_version": "darkmoon-treatment-plan/1",
+ "schema_version": "darkmoon-treatment-plan/2",
  "score_effect": "none",
  "score_note": "Treatment statuses never change the findings, the counts or the rating of this campaign.",
  "summary": {
@@ -472,8 +615,10 @@
    "verified_resolved": 1
   },
   "findings_covered": 5,
-  "open_findings": 6
+  "open_findings": 6,
+  "risk_acceptance_expired": 0
  },
+ "unit": "One action per weakness class and asset (the unit of the Cyber Score): the findings it lists share one root cause to fix.",
  "verification": "retest",
- "verification_note": "Verified statuses come only from a completed retest: « Not reproduced at retest » is not a proof of resolution."
+ "verification_note": "Verified statuses come only from a completed retest that met its coverage gate (assets registered, toolbox commands executed and an agent of the findings dispatched): « Not reproduced at retest » is not a proof of resolution."
 }

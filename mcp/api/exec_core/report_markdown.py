@@ -169,7 +169,7 @@ def render(model: Dict[str, Any]) -> str:
             ("Campaign", c.get("id") or "unknown")]
     if c.get("project_name"):
         meta.append(("Project", c["project_name"]))
-    meta.append(("Methodology", c.get("methodology") or "not declared"))
+    meta.append(("Method", _rm._legend.methodology_label(c.get("methodology"))))
     st = str(c.get("status") or "unknown")
     if st not in ("completed", "complete", "done", "finished"):
         meta.append(("Status", f"{st} — partial results: the run did not complete"))

@@ -34,29 +34,30 @@ CORE = MCP / "api" / "exec_core"
 FIXTURES = MCP / "tests" / "fixtures" / "exec_core"
 VENDORED = MCP.parent / "conf" / "plugins" / "darkmoon-explorer" / "_vendor" / "exec_core"
 
-INIT_SHA256 = "d2e66e788874996d411272afa9cded467f81c561ed05145d27ad444e7063e1b1"
+INIT_SHA256 = "3d3bfe377da395ed4524cd6fd9fe470e22b990409b39b4c1b26faa2697cbc883"
 SHARED_SHA256 = {
-    "coverage_signals.py": "c800cf3d5ba6f3c873ec01b9991a35b4e43d9219b13da79d655f17366017ac64",
+    "coverage_signals.py": "709bde05795a7b5f0ed83d0b700933542f14fa697c0dbba8755abf653e3bdb1f",
     "exec_score.py": "94e6bd24282becd2e382dc02556cd4ae90eea7ba5b898473516d112615b3bd94",
-    "fix_triage.py": "341b8dda61b3dd080f8dcbbae9366e204e53f9211475d610cc3041e19a6a38bb",
+    "fix_triage.py": "97f3883ea3e754bbb92a72a1316ac22ff82aad96ff9195aefb0f4fcce74229f6",
     "security_log.py": "f0c55e93aded8461847a55039e61d0d4f24f907bf30f28b6320ae740d6702a52",
 }
 SHARED_TESTS_SHA256 = {
-    "test_exec_core_actions.py": "214a20a11c04412d5ea82c15ba331bac706551163eb363b58ce843ce934ec0ee",
+    "test_exec_core_actions.py": "dddf9d25e8c1b1d88c1dc00e266e81438239ce894598ba57ae771131c7fd58ee",
     "test_exec_core_executive.py": "017bbfa4b8c33b5ff3782346047c392080183bfc4da7177ee01cd2c1e1d82650",
-    "test_exec_core_maintenance.py": "acf24b4263c9de6ce00f66dd28196449b78d11b72ead10ab689a20daa3fa284a",
+    "test_exec_core_maintenance.py": "4feabdf4dc21fb13a8bd69301c57f998a49921d3a988e3bb75b355789592b21b",
     "test_exec_core_taxonomy.py": "f55f8efaac308b2600c52c0bc8388bb0d89cf12ddc5565161a66cecdaf4eb35a",
-    "test_exec_core_frameworks.py": "ba9b0ba3d5dffb8cdca8d00693a18479804bb85afeae0ceedde59afa6a1a8730",
-    "test_exec_core_report_model.py": "1a671d67afee0fd8cefd7e03f774fe38c8bacf7296fb380bb46741d86e05e910",
+    "test_exec_core_frameworks.py": "d4816a3bfa29a441309653a38687d5d40d13dd6d881988fa32a5002f198317b1",
+    "test_exec_core_report_model.py": "7e6159864fa6bf72bf52bae866e1644c9c98ce53dd9750719671e1a81a6477d9",
 }
-TREATMENT_FIXTURES_SHA256 = "13ab9a0be32456d24efd3707ef0e05fbe9e13684f7c3b127f0194f9c55647140"
-FRAMEWORK_FIXTURES_SHA256 = "fee0eaeca54d097a7f2cfc5f51193a13fd00e1b2ae8df23cb81d1f66eec3bf0a"
+TREATMENT_FIXTURES_SHA256 = "c0dec06c1da681d658206603a6347dc055d089013c74c7733805752b0612e750"
+FRAMEWORK_FIXTURES_SHA256 = "54797efc393278623b6cc26792e29ed354c0e2f5a71725564bbdef61bb0f41d6"
 MAINTENANCE_FIXTURES_SHA256 = "0b2b564c884671b8bf75db474e4a6b88d853b448dab412ef9fdfb6a42cf31c1f"
-REPORT_FIXTURES_SHA256 = "cacd1bff96dd003b63dac18e5da23a60a2cc29d570a57d7a9e42370674559f9a"
-FIXTURES_SHA256 = "40443c8253d7900390de4abf34167f6d8ae35c8c032e4fa4ca01760111c55a8d"
+REPORT_FIXTURES_SHA256 = "e05b8f88c8dd83b3b31a23a68316784e3e5399a1768df6c40ea6d3229a807b19"
+FIXTURES_SHA256 = "9a5944cce69bb4e86a4eae2f8bf4a452feb09a42b23d0de172ffe7c93b413597"
 
 # zoneinfo (maintenance windows) reads the host's time-zone database: the only outside input exec_core accepts
-STDLIB_ALLOWED = {"__future__", "datetime", "hashlib", "json", "math", "re", "typing", "urllib.parse", "zoneinfo"}
+STDLIB_ALLOWED = {"__future__", "datetime", "hashlib", "ipaddress", "json", "math", "re", "typing", "urllib.parse",
+                  "zoneinfo"}
 FORBIDDEN_CALLS = {"open", "exec", "eval", "compile", "__import__", "input"}
 FORBIDDEN_NAMES = {"os", "sys", "subprocess", "socket", "pathlib", "shutil", "sqlite3", "io", "tempfile"}
 

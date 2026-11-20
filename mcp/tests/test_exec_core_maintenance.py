@@ -237,6 +237,21 @@ def test_deterministic_and_pure():
     assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
 
 
+def test_target_matching_forms():
+    """R4 S1: IP forms, CIDR ranges, URL forms, subdomains and parent domains (both directions)."""
+    m = M.target_matches
+    assert m("https://APP.example.com.:443/x", "app.example.com", "")
+    for form in ("10.0.0.5", "167772165", "0x0a000005", "10.0.0.05", "10.5", "http://[::ffff:10.0.0.5]/",
+                 "10.0.0.0/24", "10.0.0.0/8", "http://u@10.0.0.5:8080/a"):
+        assert m(form, "db.example.com", "10.0.0.5"), form
+    assert m("example.com", "app.example.com", "") and m("x.app.example.com", "app.example.com", "")
+    assert m("*.example.com", "app.example.com", "")
+    for form in ("10.0.1.0/24", "10.0.0.6", "evil.com", "com", "ample.com", ""):
+        assert not m(form, "app.example.com", "10.0.0.5"), form
+    assert M.parse_ip("::ffff:192.0.2.1") == M.parse_ip("192.0.2.1")
+    assert M.parse_ip("999.1.1.1") is None and M.parse_network("10.0.0.0/99") is None
+
+
 if __name__ == "__main__":
     (FIX / "expected.json").write_text(json.dumps(_run_all(), indent=1, sort_keys=True, ensure_ascii=False) + "\n",
                                        encoding="utf-8")

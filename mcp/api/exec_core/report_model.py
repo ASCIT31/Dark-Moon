@@ -23,7 +23,7 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from . import frameworks_assess as _fa
-from . import identity, legend as _legend, profile as _profile, stats as _stats
+from . import identity, legend as _legend, profile as _profile, score as _score, stats as _stats
 
 SCHEMA_VERSION = "darkmoon-report/v2"
 LANGUAGE = "en"
@@ -56,6 +56,9 @@ EDITION_SPECIFIC = (
     "blocks with id verification-note / masking-note",   # the sentences stating the two edition differences above
     "attack-path counts quoted outside attack_paths",     # executive_summary sentence, business_impact evidence_backed_paths,
                                                           # treatment_plan related paths: each edition's own path engine
+    "profile provenance cells",                           # « Declared by <account> on <date> » (Pro) or « Declared in
+                                                          # the local profile file » (Community)
+    "sections.limitations COMMUNITY_LIMITS",              # Community: declarations and signals not tamper-evident
 )
 
 SEV_ORDER = ("critical", "high", "medium", "low", "info")
@@ -67,8 +70,21 @@ _MAX_ITEMS = 40
 
 AGENT_SUMMARY_LABEL = "Written by the testing agent (quoted as written, not verified by the server)."
 AGENT_TEXT_NOTE = ("Titles, descriptions, technical analyses and remediation texts of the findings are written by the "
-                   "testing agents and quoted as written; severities, proof levels, counts and CVSS scores are the "
-                   "server's.")
+                   "testing agents and quoted as written. Severities and proof levels are reported by the testing "
+                   "agent, with evidence on file, and normalised by the server; counts and the CVSS scores recomputed "
+                   "from the vectors are the server's.")
+METHODOLOGY_DOC = "docs/cyber-score-methodology.md"
+COMMUNITY_LIMITS = [
+    "Community edition: no MCP tool writes the declarations, treatment statuses or coverage signals, but the local "
+    "agent has shell access in the same container; Community declarations and coverage signals are therefore not "
+    "tamper-evident. A digest of the coverage signals taken at finalisation detects naive edits only.",
+]
+DURATION_NOTE = ("Two durations can differ: the duration stored on the campaign record (on older campaigns, the value the "
+                 "agent declared when it finalised; the dashboard header shows it) and the measured activity (server "
+                 "clock, from the campaign start to its finalisation). The rating uses the measured activity only.")
+COUNTS_NOTE = ("Findings are counted per finding reported in this campaign. Elsewhere in Darkmoon, « open "
+               "vulnerabilities » of a target counts distinct open weaknesses (the same weakness reported twice counts "
+               "once), and the treatment plan counts actions (one per weakness class and asset): three different units.")
 NO_IMPACT_NOTE = ("Darkmoon does not estimate business impact, financial loss or return on investment. This section "
                   "lists only the facts the organisation declared and the counts measured by this campaign; relating "
                   "them is the system owner's decision.")
@@ -79,6 +95,8 @@ REPORT_LIMITS = [
     "finding does not prove the absence of a weakness.",
     "It describes the target at the time of the campaign and only its tested scope.",
     "Recommendations quoted from the testing agents must be validated by the system owner before being applied.",
+    "Findings, their texts and the executive summary are produced by AI testing agents; this report is not legal advice "
+    "and not a compliance assessment, and it is governed by the terms under which Darkmoon is provided.",
 ]
 
 
@@ -189,6 +207,17 @@ def _cyber_score(score: Dict[str, Any]) -> Dict[str, Any]:
             f"Sum of the penalties of the weakness classes: {score.get('penalty_total')} (rating = 100 minus this sum, "
             f"bounded 0 to 100, then the caps by worst evidence"
             + (" and the cap of a limited test" if st == "limited" else "") + ").")})
+    ncl = score.get("next_cap_level") if rated else None
+    if isinstance(ncl, dict) and ncl.get("text"):
+        blocks.append({"type": "paragraph", "id": "next-cap-level", "text": "What holds the rating: " + text(ncl["text"])})
+        if ncl.get("score_without") is not None:
+            numbers["score_without_binding_cap"] = _num(ncl.get("score_without"), "exec_core.score")
+    top = [c for c in score.get("top_classes") or [] if isinstance(c, dict)] if rated else []
+    if top:
+        blocks.append({"type": "table", "id": "score-top-classes", "columns": ["Weakness class", "Penalty",
+                                                                              "Share of the penalty sum"],
+                       "rows": [[_legend.weakness_class_label(c.get("weakness_class")), str(c.get("class_penalty")),
+                                 text(c.get("share_text"))] for c in top], "source": "exec_core.score"})
     lim = [text(x) for x in score.get("limitations") or [] if x]
     if lim:
         blocks.append({"type": "subsection", "id": "cyber-score-limitations", "title": "Limitations of the rating",
@@ -204,7 +233,8 @@ def _cyber_score(score: Dict[str, Any]) -> Dict[str, Any]:
     elif isinstance(tr, dict) and tr.get("reason"):
         blocks.append({"type": "paragraph", "text": "Trend: not available (" + text(tr.get("reason")) + ")."})
     blocks.append({"type": "note", "text": "An exposure rating of what this campaign found in its tested scope "
-                                           f"(methodology {text(score.get('methodology_version')) or 'darkmoon-cyber-score/1'}); "
+                                           f"(methodology {text(score.get('methodology_version')) or 'darkmoon-cyber-score/1'}, "
+                                           f"published in {METHODOLOGY_DOC}); "
                                            "not a security level, a compliance statement or a probability."})
     return _section("cyber_score", blocks, numbers, ["exec_core.score"],
                     status=st, score=score.get("score") if rated else None, grade=score.get("grade") if rated else None)
@@ -224,14 +254,17 @@ def _method_coverage(campaign: Dict[str, Any], score: Dict[str, Any], stats: Dic
         ["Campaign kind", text(cov.get("campaign_kind")) or "unknown"],
         ["Started", text(cov.get("started_at") or campaign.get("date")) or "unknown"],
         ["Finalised", text(cov.get("finalized_at")) or "not recorded"],
-        ["Measured duration", (f"{_human_duration(cov.get('measured_duration_seconds'))} "
-                               f"({_n(cov.get('measured_duration_seconds'))} s)")
+        ["Measured activity (server clock, used by the rating)",
+         (f"{_human_duration(cov.get('measured_duration_seconds'))} ({_n(cov.get('measured_duration_seconds'))} s)")
          if _human_duration(cov.get("measured_duration_seconds")) else "not recorded"],
+        ["Duration on the campaign record (agent-declared on older campaigns)",
+         _human_duration(campaign.get("duration_seconds")) or "not recorded"],
         ["Test agents dispatched", ", ".join(text(a) for a in cov.get("specialised_agents") or cov.get("agents_dispatched") or [])
          or "not recorded"],
         ["Assets registered", str(cov.get("assets_registered")) if cov.get("present") else "not recorded"],
         ["Toolbox commands executed", str(cov.get("commands_executed")) if cov.get("present") else "not recorded"],
-        ["Declared methodology", text(campaign.get("methodology")) or "not declared"],
+        ["Test references", _legend.methodology_label(campaign.get("methodology"))],
+        ["Launch restrictions", _restrictions_text(cov.get("launch_restrictions"), cov.get("present"))],
     ]
     numbers: Dict[str, Any] = {}
     if cov.get("present"):
@@ -259,6 +292,22 @@ def _method_coverage(campaign: Dict[str, Any], score: Dict[str, Any], stats: Dic
             "Coverage floor of the rating: "
             f"{_human_duration(fl.get('min_duration_seconds')) or '-'} measured, {fl.get('min_agents')} specialised agents, "
             f"{fl.get('min_assets')} asset registered, {fl.get('min_commands')} toolbox commands.")})
+    blocks.append({"type": "paragraph", "id": "duration-note", "text": DURATION_NOTE})
+    if cov.get("campaign_kind") in (None, "unknown") and not cov.get("present"):
+        blocks.append({"type": "paragraph", "text": "Campaign kind unknown: the campaign was recorded before coverage "
+                                                    "signals existed."})
+    not_tested = sorted({ct.get("control") or f"{fw.get('framework')}:{ct.get('control_id')}"
+                         for fw in (assessment or {}).get("frameworks") or [] for ct in fw.get("controls") or []
+                         if isinstance(ct, dict) and ct.get("state") == "not_tested"})
+    nc = [f"Launch restrictions: {_restrictions_text(cov.get('launch_restrictions'), cov.get('present'))}."]
+    if not_tested:
+        nc.append(f"Framework controls not exercised by a dispatched agent: {len(not_tested)} (listed in the framework "
+                  "assessment as « Not tested by this campaign »).")
+    nc.append("Assets outside the target and the tested scope are not covered.")
+    blocks.append({"type": "subsection", "id": "not-covered", "title": "Not covered by this campaign",
+                   "blocks": [{"type": "list", "items": nc}]})
+    blocks.append({"type": "subsection", "id": "rating-method", "title": "Rating method (summary)",
+                   "blocks": [{"type": "list", "items": method_summary()}]})
     fcov = (assessment or {}).get("coverage") or {}
     if fcov.get("sentence"):
         blocks.append({"type": "paragraph", "text": "Framework coverage: " + text(fcov.get("sentence"))})
@@ -267,6 +316,46 @@ def _method_coverage(campaign: Dict[str, Any], score: Dict[str, Any], stats: Dic
             {"type": "markdown", "source": "report_annex.infrastructure_section", "markdown": annex["infrastructure"]}]})
     return _section("method_coverage", blocks, numbers, ["campaign record", "coverage_signals", "exec_core.stats",
                                                          *(["report_annex.infrastructure_section"] if annex.get("infrastructure") else [])])
+
+
+def _restrictions_text(lr: Any, present: Any) -> str:
+    if not present:
+        return "not recorded (campaign recorded before coverage signals existed)"
+    r = lr if isinstance(lr, dict) else {}
+    if not r.get("recorded"):
+        return "none recorded"
+    parts = []
+    if r.get("severity"):
+        parts.append(f"severity filter {text(r.get('severity'), 16)}")
+    if r.get("noise"):
+        parts.append(f"noise level {text(r.get('noise'), 16)}")
+    for k, word in (("exclude", "attack exclusion"), ("out_of_scope", "out-of-scope asset"), ("rules", "custom rule"),
+                    ("focus", "focus item")):
+        if _n(r.get(k)):
+            parts.append(_plural(_n(r.get(k)), word))
+    return ", ".join(parts) or "none"
+
+
+def method_summary() -> List[str]:
+    """The rating method in a few lines, from the code constants (the full text: ``METHODOLOGY_DOC``)."""
+    w = _score.SEVERITY_WEIGHT
+    pf = _score.PROOF_FACTOR
+    caps = "; ".join(f"{rule.replace('_', ' ')} ≤ {cap}" for rule, _s, _p, cap in _score.CAPS)
+    grades = ", ".join(f"{g} ≥ {floor}" if floor else f"{g} < {prev}" for (g, floor), prev in
+                       zip(_score.GRADES, [None] + [f for _, f in _score.GRADES[:-1]]))
+    return [
+        f"Method {_score.METHODOLOGY_VERSION}, published in {METHODOLOGY_DOC}.",
+        f"Penalty unit: one asset and one weakness class. Severity weights: critical {w['critical']:g}, high "
+        f"{w['high']:g}, medium {w['medium']:g}, low {w['low']:g}, informational {w['info']:g}. Proof factors: "
+        f"exploited {pf['exploited']:g}, confirmed {pf['confirmed']:g}, to confirm {pf['unconfirmed']:g}.",
+        f"Each further distinct weakness in a unit adds {round(_score.UNIT_INCREMENT * 100)} % (at most "
+        f"{round(_score.UNIT_INCREMENT_CAP * 100)} %); each further asset of a class adds "
+        f"{round(_score.CLASS_SPREAD * 100)} % of its penalty (at most {round(_score.CLASS_SPREAD_CAP * 100)} %).",
+        f"Rating = 100 minus the penalty sum, bounded 0 to 100, then the caps by worst evidence ({caps}) and "
+        f"{_score.LIMITED_CAP} for a limited test.",
+        f"Coverage floor: {_score.MIN_DURATION_SECONDS // 60} min measured, {_score.MIN_AGENTS} specialised agents, "
+        f"{_score.MIN_ASSETS} asset, {_score.MIN_COMMANDS} toolbox commands. Grades: {grades}.",
+    ]
 
 
 # ── 3. Executive summary ─────────────────────────────────────────────────────────────────────────────────────────
@@ -293,6 +382,11 @@ def _executive_summary(campaign: Dict[str, Any], stats: Dict[str, Any], score: D
               if st in ("rated", "limited") and score.get("score") is not None else "Cyber Score: not rated.")
     blocks: List[Dict[str, Any]] = [{"type": "paragraph", "text": rating},
                                     {"type": "paragraph", "text": _severity_sentence(stats)}]
+    if st == "not_rated":
+        reasons = [text(r.get("text")) for r in score.get("status_reasons") or [] if isinstance(r, dict) and r.get("text")]
+        if reasons:
+            blocks.append({"type": "paragraph", "id": "not-rated-reason", "text": "Why not rated: " + reasons[0]})
+    blocks.append({"type": "note", "id": "counts-note", "text": COUNTS_NOTE})
     numbers: Dict[str, Any] = {"findings_counted": _num(_n(stats.get("total_findings")), "exec_core.stats")}
     for k in SEV_ORDER:
         numbers[k] = _num(_n(stats.get(k)), "exec_core.stats")
@@ -310,7 +404,8 @@ def _executive_summary(campaign: Dict[str, Any], stats: Dict[str, Any], score: D
     if actions:
         top = actions[:3]
         blocks.append({"type": "subsection", "id": "top-actions", "title": "First actions of the treatment plan", "blocks": [
-            {"type": "list", "items": [f"{a.get('priority')}. {text(a.get('title'), 160)} ({text((a.get('expected_impact') or {}).get('text'))})"
+            {"type": "list", "items": [f"{a.get('priority')}. {text(a.get('title'), 160)} ({text((a.get('expected_impact') or {}).get('text'))}"
+                                       f"; effort {text((a.get('effort') or {}).get('label')) or 'not determined'}, indicative)"
                                        for a in top],
              "links": [action_anchor(a.get("action_id")) for a in top]}]})
         numbers["actions"] = _num(len(actions), "exec_core.actions")
@@ -350,17 +445,20 @@ def _field_value(f: Dict[str, Any]) -> str:
     return text(v, 300)
 
 
-def _field_rows(profile: Optional[Dict[str, Any]], names: Iterable[str]) -> List[List[str]]:
+def _field_rows(profile: Optional[Dict[str, Any]], names: Iterable[str], local_file: bool = False) -> List[List[str]]:
     fields = (profile or {}).get("fields") or {}
     rows = []
     for name in names:
         f = fields.get(name) if isinstance(fields.get(name), dict) else {"value": None, "provenance": "unknown"}
-        prov = f.get("provenance") if f.get("provenance") in _profile.PROVENANCES else "unknown"
-        rows.append([FIELD_LABEL.get(name, name), _field_value(f), _profile.PROVENANCE_LABEL[prov]])
+        rows.append([FIELD_LABEL.get(name, name), _field_value(f), _profile.declared_by_text(f, local_file)])
     return rows
 
 
-def _application_profile(profile: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def _is_declared(row: List[str]) -> bool:
+    return row[2].startswith("Declared")
+
+
+def _application_profile(profile: Optional[Dict[str, Any]], local_file: bool = False) -> Dict[str, Any]:
     names = list(_profile.FIELDS)
     counts = dict((profile or {}).get("provenance_counts") or {p: 0 for p in _profile.PROVENANCES})
     if not profile:
@@ -369,7 +467,7 @@ def _application_profile(profile: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         {"type": "paragraph", "text": ("Business facts come only from the organisation; detected technologies are what the "
                                        "agents reported, not confirmed. A field nobody provided is shown as Unknown.")},
         {"type": "table", "id": "profile-fields", "columns": ["Field", "Value", "Provenance"],
-         "rows": _field_rows(profile, names), "source": "exec_core.profile"},
+         "rows": _field_rows(profile, names, local_file), "source": "exec_core.profile"},
     ]
     blocks.append({"type": "table", "id": "profile-provenance", "columns": ["Provenance", "Fields"],
                    "rows": [[_profile.PROVENANCE_LABEL[p], str(_n(counts.get(p)))] for p in _profile.PROVENANCES],
@@ -384,11 +482,11 @@ def _application_profile(profile: Optional[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def _business_impact(profile: Optional[Dict[str, Any]], stats: Dict[str, Any], score: Dict[str, Any],
-                     path_counts: Dict[str, int], plan: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+                     path_counts: Dict[str, int], plan: Optional[Dict[str, Any]], local_file: bool = False) -> Dict[str, Any]:
     names = ("business_purpose", "business_processes", "user_categories", "data_categories", "personal_data",
              "criticality")
-    rows = _field_rows(profile, names)
-    declared = [r for r in rows if r[2] in (_profile.PROVENANCE_LABEL["declared_by_customer"], _profile.PROVENANCE_LABEL["verified"])]
+    rows = _field_rows(profile, names, local_file)
+    declared = [r for r in rows if _is_declared(r)]
     ev = score.get("evidence_summary") or {}
     xs = stats.get("exploited_by_severity") or {}
     measured = [
@@ -475,8 +573,11 @@ def _framework_assessment(assessment: Optional[Dict[str, Any]], annex: Dict[str,
     for fw in assessment.get("frameworks") or []:
         c = fw.get("counts") or {}
         app = fw.get("applicability") or {}
+        hidden = _fa.shown_in_summary(fw) == "hidden"
         rows.append([text(fw.get("label")), text(app.get("label") or _fa.APPLICABILITY_LABEL.get(app.get("status"), "")),
-                     *[str(_n(c.get(s))) for s in states]])
+                     *[("not assessed" if hidden else str(_n(c.get(s)))) for s in states]])
+        if hidden:
+            continue
         for s in states:
             numbers[f"{fw.get('framework')}_{s}"] = _num(_n(c.get(s)), "exec_core.frameworks_assess")
     blocks.append({"type": "table", "id": "framework-states", "columns": ["Framework", "Applicability",
@@ -484,6 +585,15 @@ def _framework_assessment(assessment: Optional[Dict[str, Any]], annex: Dict[str,
                    "rows": rows, "source": "exec_core.frameworks_assess"})
     blocks.append({"type": "paragraph", "text": text(_fa.summary_line(assessment))})
     for fw in assessment.get("frameworks") or []:
+        if _fa.shown_in_summary(fw) == "hidden":
+            app = fw.get("applicability") or {}
+            why = ("Declared not applicable by the organisation" if app.get("status") == "not_applicable_declared"
+                   else "No high-risk AI system is declared")
+            blocks.append({"type": "subsection", "id": f"framework-{fw.get('framework')}", "title": text(fw.get("label")),
+                           "blocks": [{"type": "paragraph", "text": text(app.get("text"))},
+                                      {"type": "paragraph", "text": f"{why}: its controls are listed for reference "
+                                                                    "only and not assessed in this report."}]})
+            continue
         ctrl_rows, links = [], []
         for ct in fw.get("controls") or []:
             if ct.get("state") == "not_technically_assessable":
@@ -522,8 +632,9 @@ def _framework_assessment(assessment: Optional[Dict[str, Any]], annex: Dict[str,
 # ── 8. Resilience ────────────────────────────────────────────────────────────────────────────────────────────────
 
 
-def _resilience(profile: Optional[Dict[str, Any]], assessment: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    rows = _field_rows(profile, ("criticality", "availability_requirement", "rto", "rpo", "sla"))
+def _resilience(profile: Optional[Dict[str, Any]], assessment: Optional[Dict[str, Any]],
+                local_file: bool = False) -> Dict[str, Any]:
+    rows = _field_rows(profile, ("criticality", "availability_requirement", "rto", "rpo", "sla"), local_file)
     declared = sum(1 for r in rows if r[1] != "Unknown")
     blocks: List[Dict[str, Any]] = [
         {"type": "note", "text": RESILIENCE_NOTE},
@@ -554,6 +665,10 @@ def _declared(d: Any) -> str:
     return text(v, 80) + (" (declared)" if d.get("provenance") else "")
 
 
+def _priority_cell(a: Dict[str, Any]) -> str:
+    return f"{a.get('rank')}=" if _n(a.get("tie_size")) > 1 and a.get("rank") is not None else str(a.get("priority"))
+
+
 def _treatment_plan(plan: Optional[Dict[str, Any]], titles: Dict[str, str], paths: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     if not plan:
         return _section("treatment_plan", [{"type": "note", "text": "The treatment plan is not available for this "
@@ -564,7 +679,13 @@ def _treatment_plan(plan: Optional[Dict[str, Any]], titles: Dict[str, str], path
     blocks: List[Dict[str, Any]] = [
         {"type": "paragraph", "text": text(plan.get("definition"))},
         {"type": "paragraph", "text": text(plan.get("plain"))},
-        {"type": "paragraph", "text": f"Order: {text(plan.get('basis_label'))}. {text(plan.get('basis_note'), 600)}".strip()},
+        {"type": "paragraph", "text": text(plan.get("unit")) or "One action per weakness class and asset."},
+        {"type": "paragraph", "text": ("Order: actions holding a fix on an attack path first (most paths interrupted "
+                                       "first), then worst reported severity, then proof; within equal keys, the order "
+                                       f"of the fix list ({text(plan.get('basis_label')) or 'none'}). Equal keys share "
+                                       "a rank, shown as « n= ».")},
+        {"type": "note", "id": "effort-note", "text": text(plan.get("effort_note")) or
+         "Effort bands are indicative, by weakness class, to confirm by the system owner."},
         {"type": "note", "id": "verification-note",
          "text": text(plan.get("verification_note")) or "Verified statuses come only from a completed retest."},
     ]
@@ -577,13 +698,18 @@ def _treatment_plan(plan: Optional[Dict[str, Any]], titles: Dict[str, str], path
                        "source": "exec_core.actions"})
     rows, links = [], []
     for a in actions:
-        rows.append([str(a.get("priority")), text(a.get("title"), 120), _sev_label(a.get("severity")),
-                     str(len(a.get("finding_ids") or [])), str(len(a.get("related_attack_paths") or [])),
-                     text(a.get("status_label") or a.get("status")), _declared(a.get("owner"))])
+        rel = [str(p) for p in a.get("related_attack_paths") or []]
+        eb = sum(1 for p in rel if _legend.path_kind_of(paths.get(p) or {}) == "evidence_backed")
+        rows.append([_priority_cell(a), text(a.get("title"), 120), _sev_label(a.get("severity")),
+                     text((a.get("effort") or {}).get("band")) or "-",
+                     str(len(a.get("finding_ids") or [])), f"{eb} / {len(rel) - eb}",
+                     text(a.get("status_label") or a.get("status")), _declared(a.get("owner")),
+                     _declared(a.get("due_date"))])
         links.append(action_anchor(a.get("action_id")))
     if rows:
         blocks.append({"type": "table", "id": "treatment-actions",
-                       "columns": ["Priority", "Action", "Severity", "Findings", "Attack paths", "Status", "Owner"],
+                       "columns": ["Priority", "Action", "Severity", "Effort", "Findings",
+                                   "Attack paths (evidence-backed / possible)", "Status", "Owner", "Due date"],
                        "rows": rows, "row_links": links, "source": "exec_core.actions"})
     else:
         blocks.append({"type": "paragraph", "text": "No open finding to treat in the tested scope."})
@@ -593,21 +719,37 @@ def _treatment_plan(plan: Optional[Dict[str, Any]], titles: Dict[str, str], path
         rel = [str(p) for p in a.get("related_attack_paths") or []]
         verified = bool(a.get("status_verified"))
         rt = a.get("recommended_treatment") or {}
+        lr = a.get("last_retest") or {}
+        ra = a.get("risk_acceptance") or {}
         facts = [
             {"label": "Priority", "value": str(a.get("priority"))
-             + (f" (tie of {a.get('tie_size')})" if _n(a.get("tie_size")) > 1 else "")},
+             + (f" (rank {a.get('rank')}=, tie of {a.get('tie_size')})" if _n(a.get("tie_size")) > 1 else "")},
+            {"label": "Weakness class and asset", "value": f"{text(a.get('weakness_class_label') or a.get('weakness_class'))}"
+                                                           f" on {text(a.get('asset'))}"},
             {"label": "Objective", "value": text(a.get("explanation"), 600) or "-"},
             {"label": "Findings covered", "value": str(len(fids))},
             {"label": "Attack paths concerned", "value": str(len(rel))},
             {"label": "Expected impact", "value": text(imp.get("text")) or "-"},
             {"label": "Status", "value": text(a.get("status_text") or a.get("status_label") or a.get("status"))},
             {"label": "Owner", "value": _declared(a.get("owner"))},
+            {"label": "Due date", "value": _declared(a.get("due_date"))},
             {"label": "Service interruption risk", "value": _declared(a.get("service_interruption_risk"))},
             {"label": "Treatment type", "value": text((a.get("treatment_type") or {}).get("label")) or "unknown"},
+            {"label": "Effort (indicative)", "value": (f"{text((a.get('effort') or {}).get('label'))} — "
+                                                      f"{text((a.get('effort') or {}).get('provenance'))}")
+             if a.get("effort") else "not determined"},
             {"label": "Verification required", "value": (
-                "No: verified by a completed retest" if verified and a.get("status") == "verified_resolved"
-                else "Yes: a completed retest or a new campaign must show the effect")},
+                f"Not reproduced at retest {text(lr.get('retest_id')) or ''} ({text(lr.get('at'))[:10]}), a retest that "
+                "met its coverage gate; not a proof of resolution: a new full campaign confirms it"
+                if verified and a.get("status") == "verified_resolved"
+                else "Yes: a completed retest that meets its coverage gate, or a new campaign, must show the effect")},
         ]
+        if a.get("status") == "risk_accepted":
+            facts.append({"label": "Risk acceptance", "value": text(a.get("status_text"))})
+            facts.append({"label": "Risk owner", "value": text(ra.get("risk_owner")) or "unknown"})
+            facts.append({"label": "Accepted until", "value": text(ra.get("until")) or "unknown"})
+        if lr and lr.get("coverage_ok") is False:
+            facts.append({"label": "Last retest", "value": text(lr.get("text"))})
         sub: List[Dict[str, Any]] = [{"type": "facts", "rows": facts, "source": "exec_core.actions"}]
         if fids:
             sub.append({"type": "list", "title": "Findings",
@@ -617,7 +759,9 @@ def _treatment_plan(plan: Optional[Dict[str, Any]], titles: Dict[str, str], path
                 sub.append({"type": "paragraph", "text": f"{len(fids) - _MAX_ITEMS} further findings are covered."})
         if rel:
             sub.append({"type": "list", "title": "Attack paths concerned",
-                        "items": [text((paths.get(p) or {}).get("title") or p, 140) for p in rel[:_MAX_ITEMS]],
+                        "items": [text((paths.get(p) or {}).get("title") or p, 140) + " · "
+                                  + _legend.PATH_KIND[_legend.path_kind_of(paths.get(p) or {})]["label"]
+                                  for p in rel[:_MAX_ITEMS]],
                         "links": [path_anchor(p) for p in rel[:_MAX_ITEMS]]})
         if rt.get("text"):
             sub.append({"type": "quote", "label": text(rt.get("label")) or "Recommended by the testing agent",
@@ -922,7 +1066,8 @@ def _evidence_methodology(stats: Dict[str, Any], listed: List[Dict[str, Any]], p
 # ── 13. Limitations ──────────────────────────────────────────────────────────────────────────────────────────────
 
 
-def _limitations(score: Dict[str, Any], assessment: Optional[Dict[str, Any]], campaign: Dict[str, Any]) -> Dict[str, Any]:
+def _limitations(score: Dict[str, Any], assessment: Optional[Dict[str, Any]], campaign: Dict[str, Any],
+                 edition: str = "") -> Dict[str, Any]:
     items: List[str] = []
     st = str(campaign.get("status") or "").lower()
     if st and st not in ("completed", "complete", "done", "finished"):
@@ -937,6 +1082,8 @@ def _limitations(score: Dict[str, Any], assessment: Optional[Dict[str, Any]], ca
     if fcov and not fcov.get("coverage_ok") and fcov.get("sentence"):
         items.append("Framework assessment: " + text(fcov.get("sentence")))
     items += REPORT_LIMITS
+    if edition == "community":
+        items += COMMUNITY_LIMITS
     seen, out = set(), []
     for x in items:
         if x and x not in seen:
@@ -990,23 +1137,25 @@ def build(inp: Dict[str, Any]) -> Dict[str, Any]:
     for fid, nav in (((assessment or {}).get("navigation") or {}).get("findings") or {}).items():
         finding_controls[str(fid)] = [str(k) for k in (nav or {}).get("control_keys") or []]
 
+    edition = text(inp.get("edition")) or "unknown"
+    local_file = edition == "community"
     attack = _attack_paths(ap, titles, annex)
     path_counts = attack.pop("path_counts")
     sections = [
         _cyber_score(score),
         _method_coverage(campaign, score, stats, assessment, annex, host),
         _executive_summary(campaign, stats, score, plan, assessment, path_counts),
-        _application_profile(profile),
-        _business_impact(profile, stats, score, path_counts, plan),
+        _application_profile(profile, local_file),
+        _business_impact(profile, stats, score, path_counts, plan, local_file),
         _critical_risks(score, titles),
         _framework_assessment(assessment, annex),
-        _resilience(profile, assessment),
+        _resilience(profile, assessment, local_file),
         _treatment_plan(plan, titles, paths),
         attack,
         _detailed_findings(listed, cvss, finding_actions, finding_controls, stats),
         _evidence_methodology(stats, listed, str(inp.get("privacy_legend") or ""),
                               text(inp.get("masking")) or "Evidence is reproduced as stored."),
-        _limitations(score, assessment, campaign),
+        _limitations(score, assessment, campaign, edition),
     ]
     status = str(campaign.get("status") or "").lower()
     return {
@@ -1019,7 +1168,8 @@ def build(inp: Dict[str, Any]) -> Dict[str, Any]:
                      "target": host, "project_id": text(campaign.get("project_id")) or None,
                      "project_name": text((inp.get("project") or {}).get("name")) or None,
                      "date": text(campaign.get("date")) or None,
-                     "methodology": text(campaign.get("methodology")) or None},
+                     "methodology": _legend.methodology_label(campaign.get("methodology")),
+                     "duration_seconds": _n(campaign.get("duration_seconds")) or None},
         "classification": "CONFIDENTIAL",
         "title": f"Security Assessment Report — {host}",
         "counts": {k: _n(stats.get(k)) for k in ("total_findings", *SEV_ORDER, *PROOF_ORDER)},

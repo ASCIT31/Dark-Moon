@@ -101,7 +101,22 @@
   "finding_ids": null,
   "outcome": "complete",
   "retest_campaign_id": "camp_fx_retest",
-  "retest_id": "retest_fx01"
+  "retest_id": "retest_fx01",
+  "coverage": {
+   "present": true,
+   "campaign_kind": "retest",
+   "measured_duration_seconds": 900,
+   "agents_dispatched": [
+    "web-app"
+   ],
+   "specialised_agents": [
+    "web-app"
+   ],
+   "agents_source": "opencode_sessions",
+   "assets_registered": 1,
+   "commands_executed": 12,
+   "workflows_executed": 0
+  }
  },
  "retest_findings": [
   {
@@ -161,7 +176,8 @@
    "at": "2026-11-03T11:00:00Z",
    "by_role": "admin",
    "declared": {
-    "risk_accepted_until": "2027-03-31"
+    "risk_accepted_until": "2027-03-31",
+    "risk_owner": "Head of Digital"
    },
    "select": {
     "head_finding_id": "vuln_hdr"

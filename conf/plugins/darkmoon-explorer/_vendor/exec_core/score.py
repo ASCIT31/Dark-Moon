@@ -62,9 +62,22 @@ GRADES = (("A", 90), ("B", 75), ("C", 60), ("D", 40), ("E", 0))
 BASE_LIMITATIONS = (
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server "
+    "does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
 )
+SATURATION_TEXT = ("The penalties exceed the scale (sum {total}, {ratio}x the scale): the rating is at 0 and does not "
+                   "distinguish further exposure.")
+# launch restrictions recorded by the server at launch (coverage_signals.launch_restrictions)
+NO_SEVERITY_FILTER = frozenset({"", "none", "critical"})   # a cap at critical filters nothing
+REDUCED_NOISE = frozenset({"stealth"})
+SIGNALS_DIGEST_FIELDS = ("schema", "campaign_kind", "campaign_kind_source", "started_at", "finalized_at",
+                         "measured_duration_seconds", "agents_dispatched", "agents_source", "assets_registered",
+                         "commands_executed", "workflows_executed", "launch_restrictions")
+SIGNALS_DIGEST_KEY = "coverage_signals_digest"   # on the campaign record, written at the first close
+TOP_CLASSES = 3
 
 
 def _r(x: float) -> float:
@@ -153,6 +166,28 @@ def _agent_names(value: Any) -> List[str]:
     return sorted(out)
 
 
+def signals_digest(sig: Any) -> Optional[str]:
+    """SHA-256 of the gate fields of the coverage signals (``SIGNALS_DIGEST_FIELDS``), or None without signals.
+    Stored once at the first close; a later mismatch flags signals modified after finalisation (detects naive edits of
+    the record, not a security boundary: whoever can rewrite the record can rewrite the digest)."""
+    if not isinstance(sig, dict) or sig.get("schema") != SIGNALS_SCHEMA:
+        return None
+    basis = json.dumps({k: sig.get(k) for k in SIGNALS_DIGEST_FIELDS}, sort_keys=True, default=str)
+    return "sha256:" + hashlib.sha256(basis.encode()).hexdigest()
+
+
+def launch_restrictions_of(value: Any) -> Dict[str, Any]:
+    """Normalised launch restrictions: severity filter, attack exclusions, noise level, out-of-scope assets, custom
+    rules and focus list as recorded by the server at launch (counts for lists, never their content)."""
+    r = value if isinstance(value, dict) else {}
+    sev = str(r.get("severity") or "").strip().lower()[:16]
+    noise = str(r.get("noise") or "").strip().lower()[:16]
+    return {"severity": sev or None, "noise": noise or None,
+            "exclude": _int(r.get("exclude")) or 0, "out_of_scope": _int(r.get("out_of_scope")) or 0,
+            "rules": _int(r.get("rules")) or 0, "focus": _int(r.get("focus")) or 0,
+            "recorded": bool(r)}
+
+
 def coverage_of(campaign: Dict[str, Any]) -> Dict[str, Any]:
     """Normalised coverage signals, or ``{"present": False}`` for a campaign recorded without them."""
     sig = campaign.get("coverage_signals")
@@ -173,19 +208,31 @@ def coverage_of(campaign: Dict[str, Any]) -> Dict[str, Any]:
         "assets_registered": _int(sig.get("assets_registered")) or 0,
         "commands_executed": _int(sig.get("commands_executed")) or 0,
         "workflows_executed": _int(sig.get("workflows_executed")) or 0,
+        "launch_restrictions": launch_restrictions_of(sig.get("launch_restrictions")),
+        "signals_intact": _intact(campaign, sig),
     }
+
+
+def _intact(campaign: Dict[str, Any], sig: Dict[str, Any]) -> Optional[bool]:
+    """True/False when a digest was recorded at the first close, None when none was (older record)."""
+    stored = campaign.get(SIGNALS_DIGEST_KEY)
+    if not isinstance(stored, str) or not stored:
+        return None
+    return stored == signals_digest(sig)
 
 
 def _coverage_sentence(cov: Dict[str, Any]) -> str:
     if not cov.get("present"):
         return "Coverage not recorded for this campaign."
     mins = cov.get("measured_duration_seconds")
+    def n(k: int, word: str) -> str:
+        return f"{k} {word}{'' if k == 1 else 's'}"
     parts = [
         f"{cov['campaign_kind']} campaign",
-        f"{len(cov['specialised_agents'])} test agent(s)",
-        f"{round(mins / 60)} min measured" if mins else "duration not measured",
-        f"{cov['assets_registered']} asset(s) registered",
-        f"{cov['commands_executed'] + cov['workflows_executed']} toolbox command(s) executed",
+        n(len(cov['specialised_agents']), "test agent"),
+        f"{round(mins / 60)} min of server-measured activity" if mins else "duration not measured",
+        n(cov['assets_registered'], "asset") + " registered",
+        n(cov['commands_executed'] + cov['workflows_executed'], "toolbox command") + " executed",
     ]
     return ", ".join(parts) + "."
 
@@ -215,6 +262,24 @@ def gate(campaign: Dict[str, Any]) -> Dict[str, Any]:
         if not cov["agents_dispatched"] and cov["commands_executed"] + cov["workflows_executed"] == 0:
             not_rated.append({"code": "no_activity_observed",
                               "text": "No dispatched agent and no toolbox command were observed by the server."})
+        if cov.get("signals_intact") is False:
+            not_rated.append({"code": "signals_modified",
+                              "text": "The coverage signals were modified after the campaign was finalised (their "
+                                      "recorded digest no longer matches): no rating. This check detects naive edits "
+                                      "of the record only; it is not a security boundary."})
+        lr = cov.get("launch_restrictions") or {}
+        if (lr.get("severity") or "") not in NO_SEVERITY_FILTER:
+            not_rated.append({"code": "severity_filter",
+                              "text": f"Severity filter applied at launch (SEVERITY={lr['severity']}): the agents "
+                                      "were told to cap the severities they report, so no rating is given."})
+        if lr.get("exclude"):
+            limited.append({"code": "attack_exclusions",
+                            "text": f"{lr['exclude']} attack exclusion(s) applied at launch: excluded attacks are not "
+                                    "reported as findings."})
+        if (lr.get("noise") or "") in REDUCED_NOISE:
+            limited.append({"code": "reduced_mode",
+                            "text": f"Reduced test mode applied at launch (NOISE={lr['noise']}): only passive tools "
+                                    "were allowed."})
         if cov["campaign_kind"] == "short":
             limited.append({"code": "short_campaign", "text": "Declared as a short campaign."})
         if dur and 0 < dur < MIN_DURATION_SECONDS:
@@ -302,6 +367,74 @@ def _caps(open_findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return out
 
 
+def _capped(open_findings: List[Dict[str, Any]], target_id: str, st: str) -> int:
+    """The number the rules give for these findings (status not ``not_rated``): 100 - penalties, then the caps."""
+    comps = _components(_units(open_findings, target_id))
+    sc = max(0, min(100, _half_up(100 - sum(c["class_penalty"] for c in comps))))
+    for c in _caps(open_findings):
+        sc = min(sc, c["cap"])
+    return min(sc, LIMITED_CAP) if st == "limited" else sc
+
+
+_CAP_WORDS = {"exploited_critical": "exploited critical", "confirmed_critical": "confirmed critical",
+              "exploited_high": "exploited high"}
+
+
+def _cap_phrase(c: Dict[str, Any]) -> str:
+    return (f"capped at {c['cap']} while {len(c['finding_ids'])} {_CAP_WORDS.get(c['rule'], c['rule'])} "
+            f"finding(s) remain open")
+
+
+def next_cap_level(open_findings: List[Dict[str, Any]], target_id: str, st: str, score: Optional[int],
+                   caps: List[Dict[str, Any]], raw: int) -> Optional[Dict[str, Any]]:
+    """What holds the rating where it is and what would move it: the cap that binds now, what removes it and the
+    rating the same rules would give without those findings (indicative: if a new campaign no longer reported them
+    and nothing else changed); or, when the penalty sum alone sets the number, that sum and the caps behind it.
+    None when the campaign is not rated or nothing holds the rating below 100."""
+    if st == "not_rated" or score is None:
+        return None
+    ordered = sorted(caps, key=lambda c: (c["cap"], c["rule"]))
+    binding = [c for c in ordered if c["cap"] == score and c["cap"] < raw]
+    if binding:
+        gone = sorted({f for c in binding for f in c["finding_ids"]})
+        rest = [v for v in open_findings if str(v.get("id")) not in set(gone)]
+        after = _capped(rest, target_id, st)
+        rest_caps = sorted(_caps(rest), key=lambda c: (c["cap"], c["rule"]))
+        text = _cap_phrase(binding[0]).capitalize()
+        if rest_caps:
+            text += "; then " + _cap_phrase(rest_caps[0])
+        text += (f". Without them (no longer reported by a new campaign, nothing else changed) the same rules would "
+                 f"give {after}.")
+        return {"rule": binding[0]["rule"], "cap": binding[0]["cap"], "finding_ids": gone, "text": text,
+                "score_without": after}
+    if st == "limited" and score == LIMITED_CAP and raw > LIMITED_CAP:
+        return {"rule": "limited_coverage", "cap": LIMITED_CAP, "finding_ids": [], "score_without": None,
+                "text": f"Capped at {LIMITED_CAP} because the test was limited: a completed full campaign that meets "
+                        "the coverage floor removes this cap."}
+    if score >= 100:
+        return None
+    penalty = 100 - raw if raw > 0 else None
+    text = ("The penalty sum of the weakness classes sets the rating"
+            + ("" if penalty is not None else " at 0 (the penalties exceed the scale)"))
+    if ordered:
+        text += "; the caps by worst evidence would also hold it: " + _cap_phrase(ordered[0])
+    text += ". The weakness classes that weigh most are listed with their share of the penalty sum."
+    return {"rule": "penalties", "cap": None, "finding_ids": [], "text": text, "score_without": None}
+
+
+def class_shares(comps: List[Dict[str, Any]], penalty: float, top: int = TOP_CLASSES) -> List[Dict[str, Any]]:
+    """The weakness classes that weigh most, with their share of the penalty sum (deterministic, from the
+    components; the share is of the penalty sum, not of a risk)."""
+    if penalty <= 0:
+        return []
+    out = []
+    for c in comps[:top]:
+        out.append({"weakness_class": c["weakness_class"], "class_penalty": c["class_penalty"],
+                    "share_of_penalty": _r(c["class_penalty"] / penalty),
+                    "share_text": f"{round(100 * c['class_penalty'] / penalty)} % of the penalty sum"})
+    return out
+
+
 def _digest(campaign: Dict[str, Any], findings: List[Any]) -> str:
     keys = ("id", "severity", "status", "category", "type", "endpoint", "target_id", "cve", "cwe", "dedup_key",
             "quarantined", "quarantine_reviewed_by", "title")
@@ -386,6 +519,12 @@ def cyber_score(bundle: Dict[str, Any], previous: Optional[Dict[str, Any]] = Non
                            f"than proven ones and never set a cap.")
     if st != "not_rated" and score == 100:
         limitations.append("100 means no weakness was found in the tested scope; it is not a proof of absence.")
+    if st != "not_rated" and penalty > 100:
+        limitations.append(SATURATION_TEXT.format(total=_r(penalty), ratio=_r(penalty / 100)))
+    lr = cov.get("launch_restrictions") or {} if cov.get("present") else {}
+    if lr.get("out_of_scope") or lr.get("rules"):
+        limitations.append(f"Launch restrictions recorded: {lr.get('out_of_scope', 0)} out-of-scope asset(s), "
+                           f"{lr.get('rules', 0)} custom rule(s); the rating covers what was tested under them.")
 
     doc: Dict[str, Any] = {
         "methodology_version": METHODOLOGY_VERSION,
@@ -411,6 +550,9 @@ def cyber_score(bundle: Dict[str, Any], previous: Optional[Dict[str, Any]] = Non
         "caps": caps,
         "caps_applied": applied,
         "penalty_total": _r(penalty) if st != "not_rated" else None,
+        "penalty_over_scale": _r(penalty / 100) if st != "not_rated" else None,
+        "next_cap_level": next_cap_level(open_f, target_id, st, score, caps, raw),
+        "top_classes": class_shares(comps, penalty) if st != "not_rated" else [],
         "limitations": limitations,
         "trend": None,
         "source_campaign_ids": [campaign.get("id")] if campaign.get("id") else [],

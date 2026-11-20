@@ -44,7 +44,24 @@ def score_block(doc: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "campaign_kind": cov.get("campaign_kind"),
         "trend": doc.get("trend"),
         "limitations": list(doc.get("limitations") or []),
+        # what holds the rating and what would move it; the classes that weigh most (score.next_cap_level, top_classes)
+        "next_cap_level": doc.get("next_cap_level"),
+        "top_classes": list(doc.get("top_classes") or []),
+        "penalty_over_scale": doc.get("penalty_over_scale"),
     }
+
+
+def headline(score_doc: Optional[Dict[str, Any]]) -> Optional[str]:
+    """When the campaign is not rated: the evidence first, then the specific reason (never a bare non-answer)."""
+    doc = score_doc or {}
+    if str(doc.get("score_status") or "not_rated") != "not_rated":
+        return None
+    ev = doc.get("evidence_summary") or {}
+    sev, proof = ev.get("by_severity") or {}, ev.get("by_proof") or {}
+    parts = [f"{sev.get('critical', 0)} critical", f"{sev.get('high', 0)} high",
+             f"{proof.get('exploited', 0)} reported as exploited"]
+    reasons = [r.get("text") for r in doc.get("status_reasons") or [] if isinstance(r, dict) and r.get("text")]
+    return (f"{', '.join(parts)} — not rated: " + (reasons[0] if reasons else "the coverage is unknown.")).strip()
 
 
 def action_row(a: Dict[str, Any]) -> Dict[str, Any]:
@@ -58,7 +75,13 @@ def action_row(a: Dict[str, Any]) -> Dict[str, Any]:
         "last_retest": a.get("last_retest"),
         "findings_covered": imp.get("findings_covered", len(a.get("finding_ids") or [])),
         "attack_paths_interrupted": imp.get("attack_paths_interrupted"),
+        "evidence_backed_paths_interrupted": imp.get("evidence_backed_paths_interrupted"),
         "impact_text": imp.get("text"),
+        "rank": a.get("rank"), "tie_size": a.get("tie_size"),
+        "weakness_class": a.get("weakness_class"), "weakness_class_label": a.get("weakness_class_label"),
+        "asset": a.get("asset"),
+        "effort": a.get("effort"),
+        "owner": a.get("owner"), "due_date": a.get("due_date"),
     }
 
 
@@ -70,8 +93,22 @@ def plan_summary(plan: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     for a in actions:
         by_status[str(a.get("status"))] = by_status.get(str(a.get("status")), 0) + 1
     labels = {s.get("value"): s.get("label") for s in plan.get("statuses") or [] if isinstance(s, dict)}
+    top = actions[:TOP_ACTIONS]
+    bands: Dict[str, int] = {}
+    for a in top:
+        b = ((a.get("effort") or {}).get("label")) or "Not determined"
+        bands[b] = bands.get(b, 0) + 1
+    covered = sum(len(a.get("finding_ids") or []) for a in top)
+    first_line = (f"First {len(top)} action{'s' if len(top) != 1 else ''}: "
+                  + ", ".join(f"{n} {b.lower()}" for b, n in sorted(bands.items()))
+                  + f" effort (indicative); {covered} finding{'s' if covered != 1 else ''} addressed."
+                  if top else None)
     return {
         "label": plan.get("label"), "definition": plan.get("definition"), "plain": plan.get("plain"),
+        "unit": plan.get("unit"),
+        "first_actions_line": first_line,
+        "effort_note": plan.get("effort_note"),
+        "risk_acceptance_expired": int(((plan.get("summary") or {}).get("risk_acceptance_expired")) or 0),
         "actions_total": len(actions),
         "by_status": [{"status": k, "label": labels.get(k, k), "count": v} for k, v in by_status.items()],
         "top_actions": [action_row(a) for a in actions[:TOP_ACTIONS]],
@@ -119,6 +156,7 @@ def campaign_block(campaign: Dict[str, Any], score: Optional[Dict[str, Any]], pl
         "campaign_status": campaign.get("status"),
         "date": campaign.get("date"),
         "score": score_block(score),
+        "headline": headline(score),
         "evidence": {"by_severity": ev.get("by_severity") or {}, "by_proof": ev.get("by_proof") or {},
                      "counted_findings": ev.get("counted_findings"), "to_confirm": len(ev.get("to_confirm") or [])},
         "attack_paths": paths_summary(paths_doc),

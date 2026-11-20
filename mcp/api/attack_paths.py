@@ -492,7 +492,7 @@ def _ranking(a: Dict[str, Any]) -> Dict[str, Any]:
     empty = {"allowed": False, "provenance": label, "note": None, "fixes": [], "pivots": [], "off_path": [], "gate_reason": None,
              "multi_fix_path_ids": [], "merged_paths": []}
     if not source:
-        return {**empty, "note": "No proven attack path: nothing to rank.", "gate_reason": "status-not-ok"}
+        return {**empty, "note": "No Evidence-Backed Attack Path: nothing to rank.", "gate_reason": "status-not-ok"}
     # P7 fix 8: the cap is raisable by DM_MAX_RANKED_PATHS (default 200, engine limit 10 000; 05b §4: ~0.2 s at 1 000)
     if len(source) > feature_flags.int_value("DM_MAX_RANKED_PATHS", MAX_RANKED_PATHS, 1, 10000):
         return {**empty, "note": "too-large", "gate_reason": "too-large"}

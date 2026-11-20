@@ -427,17 +427,42 @@ def assess(bundle: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def shown_in_summary(fw: Dict[str, Any]) -> str:
+    """How one framework may appear in the executive / regulatory line: ``counts`` (applicability declared by the
+    organisation), ``to_confirm`` (named without counts: the organisation has not declared it), ``hidden`` (declared
+    not applicable, or the AI Act without a declared high-risk AI system: never named)."""
+    st = (fw.get("applicability") or {}).get("status")
+    if st == "declared_by_customer":
+        return "counts"
+    if st == "not_applicable_declared" or fw.get("framework") == "ai_act":
+        return "hidden"
+    return "to_confirm"
+
+
 def summary_line(doc: Dict[str, Any]) -> str:
     """One collapsed regulatory line for the executive block, e.g. « Technical findings relevant to: GDPR art. 32
-    (2 controls with a weakness observed), … »."""
-    parts = []
+    (2 controls with a weakness observed), … ». Only frameworks the organisation declared applicable carry counts; a
+    framework whose applicability is to confirm is named without counts (« applicability to confirm »); a framework
+    declared not applicable, and the AI Act unless a high-risk AI system is declared, are never named."""
+    parts, pending = [], []
     for fw in doc.get("frameworks") or []:
         n = fw["counts"]["weakness_observed"]
-        if n:
+        how = shown_in_summary(fw)
+        if not n or how == "hidden":
+            continue
+        if how == "counts":
             parts.append(f"{fw['label']} ({n} control{'s' if n != 1 else ''} with a weakness observed)")
-    if not parts:
+        else:
+            pending.append(fw["label"])
+    if not parts and not pending:
         if not (doc.get("coverage") or {}).get("coverage_ok"):
             return ("No finding relevant to the listed frameworks was reported; the recorded coverage does not allow "
                     "a conclusion.")
         return "No weakness relevant to the listed frameworks was observed in the tested scope of this campaign."
-    return "Technical findings relevant to: " + "; ".join(parts) + "."
+    out = []
+    if parts:
+        out.append("Technical findings relevant to: " + "; ".join(parts) + ".")
+    if pending:
+        out.append("Findings may also be relevant to: " + "; ".join(pending)
+                   + " (applicability to confirm by the organisation).")
+    return " ".join(out)

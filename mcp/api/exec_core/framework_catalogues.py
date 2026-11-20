@@ -232,7 +232,8 @@ FRAMEWORKS = [
                    "reuse": "Article references only; descriptions are Darkmoon's own summary."},
         "scope_note": ("Only the technical side of the security of processing (art. 32) is covered. Breach "
                        "notification (art. 33-34), records, impact assessments and the other obligations are "
-                       "organisational and not covered. An authorised test is not a personal data breach."),
+                       "organisational and not covered. Whether a finding requires notification under art. 33-34 is "
+                       "assessed by the controller; this report does not make that assessment."),
         "applicability_field": "personal_data",
         "controls": [
             _c("Art.32(1)(a)", "Encryption observed on the tested surface (transport, stored secrets); "
@@ -275,9 +276,10 @@ FRAMEWORKS = [
                ["cryptography"]),
             _c("Art.21(2)(i)", "Authorisation enforcement observed on the tested surface (human resources security "
                                "and asset management are not assessed).", ["access_control", "privilege_escalation"]),
-            _c("Art.21(2)(j)", "Authentication strength observed where the tested surface offers a login "
-                               "(secured voice, video, text and emergency communications are not assessed).",
-               ["authentication", "session"]),
+            _c("Art.21(2)(j)", "Use of multi-factor or continuous authentication on the tested surface: absence or "
+                               "bypass of authentication observed (secured voice, video, text and emergency "
+                               "communications are not assessed).",
+               ["authentication"]),
         ],
     },
     {
@@ -291,9 +293,10 @@ FRAMEWORKS = [
                        "by the organisation; an AI component detected by the campaign never makes it one."),
         "applicability_field": "ai_risk_class",
         "controls": [
-            _c("Art.15(1)", "Accuracy and consistent performance of the AI system.",
-               why="Accuracy is measured against the intended purpose and declared metrics; out of scope of a "
-                   "security test."),
+            _c("Art.15(1)", "Appropriate level of accuracy, robustness and cybersecurity over the lifecycle "
+                            "(general requirement; the specific security measures are listed under art. 15(5)).",
+               why="The general requirement is measured against the intended purpose and declared metrics; the "
+                   "technical security evidence of a test is listed under art. 15(5)."),
             _c("Art.15(3)", "Accuracy figures published for users of the system.", why=_PROCESS),
             _c("Art.15(4)", "Resilience to errors, faults and inconsistencies, including feedback loops.",
                why="Not exercised by a security test."),

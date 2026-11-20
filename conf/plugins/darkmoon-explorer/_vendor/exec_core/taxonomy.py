@@ -27,6 +27,7 @@ Pure, no I/O.
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from typing import Any, Dict, List, Optional
 
@@ -127,6 +128,20 @@ def _clean_value(key: str, v: Any, depth: int = 0) -> Any:
         return {ck: _clean_value(ck, x, depth + 1) for ck, x in
                 ((_clean_key(k), x) for k, x in list(v.items())[:MAX_DETAILS])}
     return clean_text(v)
+
+
+UNKNOWN_ACTOR = "unknown"
+
+
+def login_failure_actor(submitted: Any, account_exists: bool, salt: bytes) -> Dict[str, Any]:
+    """Who a failed login names in the log (data minimisation): the account name when it is an existing account,
+    else ``unknown`` and a short salted digest of what was typed (``details.username_digest``), so repeated attempts
+    can be correlated without ever logging a mistyped password. ``salt`` = a server secret (never logged)."""
+    text = str(submitted or "")
+    if account_exists:
+        return {"actor": clean_text(text, 64), "details": {}}
+    digest = hashlib.sha256(bytes(salt or b"") + b"|login|" + text.encode("utf-8", "replace")).hexdigest()[:12]
+    return {"actor": UNKNOWN_ACTOR, "details": {"username_digest": digest}}
 
 
 def severity_of(name: str, outcome: str) -> str:

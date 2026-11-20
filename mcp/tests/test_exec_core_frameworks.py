@@ -443,6 +443,41 @@ def test_assessment_of_the_real_dvga_run():
     assert all(f["counts"]["none_observed_in_tested_scope"] == 0 for f in legacy["frameworks"])
 
 
+def test_summary_line_follows_the_declared_applicability():
+    """R2 B-1 (the reviewer's reproduction): a profile declaring no AI system, not in NIS2 scope and no personal data,
+    with one prompt-injection and one SQL injection finding: the executive line never names the AI Act, GDPR or NIS2;
+    a framework to confirm is named without counts; the AI Act appears only for a declared high-risk AI system."""
+    vs = [{"id": "a", "category": "prompt_injection", "severity": "high", "status": "exploited", "target_id": "t",
+           "title": "Prompt injection"},
+          {"id": "b", "category": "sql_injection", "severity": "high", "status": "exploited", "target_id": "t",
+           "title": "SQL injection"}]
+    camp = {"id": "c", "status": "completed"}
+
+    def line(decl):
+        clean, issues = P.validate_declared(decl)
+        assert not issues
+        return FA.summary_line(FA.assess({"campaign": camp, "findings": vs, "profile": P.view(clean, None, "p")}))
+    out = line({"ai_system_declared": "no", "nis2_entity_type": "not_in_scope", "personal_data": "no"})
+    assert "AI Act" not in out and "GDPR" not in out and "NIS2" not in out
+    assert "ISO/IEC 27001" in out and "applicability to confirm" in out and "control" not in out
+    out = line({})
+    assert "AI Act" not in out and "with a weakness observed" not in out
+    out = line({"ai_system_declared": "yes", "ai_risk_class": "high_risk", "personal_data": "yes"})
+    assert "EU AI Act (EU) 2024/1689, art. 15 (1 control with a weakness observed)" in out
+    assert "GDPR (EU) 2016/679, art. 32 and 25 (" in out and "NIS2" in out and "applicability to confirm" in out
+
+
+def test_catalogue_paraphrases_reviewed_by_counsel():
+    """R2 M-1 / M-2: no legal qualification of a breach; NIS2 21(2)(j) is about multi-factor or continuous
+    authentication; AI Act 15(1) names accuracy, robustness and cybersecurity."""
+    gdpr = next(f for f in K.FRAMEWORKS if f["framework"] == "gdpr")
+    assert "is not a personal data breach" not in gdpr["scope_note"] and "assessed by the controller" in gdpr["scope_note"]
+    j = next(c for f in K.FRAMEWORKS if f["framework"] == "nis2" for c in f["controls"] if c["id"] == "Art.21(2)(j)")
+    assert "multi-factor or continuous authentication" in j["text"] and "session" not in (j.get("classes") or [])
+    a15 = next(c for f in K.FRAMEWORKS if f["framework"] == "ai_act" for c in f["controls"] if c["id"] == "Art.15(1)")
+    assert "robustness and cybersecurity" in a15["text"]
+
+
 if __name__ == "__main__":   # regenerate the expected outputs after a deliberate change
     (FIX / "expected_assessment.json").write_text(
         json.dumps(_parity_outputs(), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")

@@ -891,7 +891,7 @@
      "Only the technical side of art. 32 is covered; art. 33-34 and the other obligations are not.",
      "Personal data categories are never inferred from findings."
     ],
-    "scope_note": "Only the technical side of the security of processing (art. 32) is covered. Breach notification (art. 33-34), records, impact assessments and the other obligations are organisational and not covered. An authorised test is not a personal data breach.",
+    "scope_note": "Only the technical side of the security of processing (art. 32) is covered. Breach notification (art. 33-34), records, impact assessments and the other obligations are organisational and not covered. Whether a finding requires notification under art. 33-34 is assessed by the controller; this report does not make that assessment.",
     "source": {
      "celex": "32016R0679",
      "reference": "Regulation (EU) 2016/679, articles 25 and 32",
@@ -1087,8 +1087,7 @@
       "action_ids": [],
       "attack_path_ids": [],
       "classes": [
-       "authentication",
-       "session"
+       "authentication"
       ],
       "control_id": "Art.21(2)(j)",
       "finding_ids": [
@@ -1103,7 +1102,7 @@
       },
       "state": "weakness_observed",
       "state_label": "Weakness observed",
-      "text": "Authentication strength observed where the tested surface offers a login (secured voice, video, text and emergency communications are not assessed).",
+      "text": "Use of multi-factor or continuous authentication on the tested surface: absence or bypass of authentication observed (secured voice, video, text and emergency communications are not assessed).",
       "to_confirm": false
      }
     ],
@@ -1163,8 +1162,8 @@
       "key": "ai_act:Art.15(1)",
       "state": "not_technically_assessable",
       "state_label": "Not assessable by a technical test",
-      "text": "Accuracy and consistent performance of the AI system.",
-      "why": "Accuracy is measured against the intended purpose and declared metrics; out of scope of a security test."
+      "text": "Appropriate level of accuracy, robustness and cybersecurity over the lifecycle (general requirement; the specific security measures are listed under art. 15(5)).",
+      "why": "The general requirement is measured against the intended purpose and declared metrics; the technical security evidence of a test is listed under art. 15(5)."
      },
      {
       "action_ids": [],
@@ -2086,6 +2085,7 @@
      "unknown"
     ],
     "at": null,
+    "by": null,
     "by_role": null,
     "group": "regulatory",
     "provenance": "declared_by_customer",
@@ -2142,6 +2142,7 @@
      "unknown"
     ],
     "at": null,
+    "by": null,
     "by_role": null,
     "group": "resilience",
     "provenance": "declared_by_customer",
@@ -2177,6 +2178,7 @@
    },
    "description": {
     "at": null,
+    "by": null,
     "by_role": null,
     "group": "application",
     "provenance": "declared_by_customer",
@@ -2229,6 +2231,7 @@
    },
    "languages": {
     "at": null,
+    "by": null,
     "by_role": null,
     "group": "technology",
     "provenance": "declared_by_customer",
@@ -2266,6 +2269,7 @@
      "unknown"
     ],
     "at": "2026-10-20",
+    "by": null,
     "by_role": "DPO",
     "group": "data",
     "provenance": "verified",
@@ -2283,6 +2287,7 @@
    },
    "rto": {
     "at": null,
+    "by": null,
     "by_role": null,
     "group": "resilience",
     "note": "Declared, not assessed by Darkmoon.",
@@ -2314,6 +2319,7 @@
      "unknown"
     ],
     "at": null,
+    "by": null,
     "by_role": null,
     "group": "regulatory",
     "provenance": "declared_by_customer",

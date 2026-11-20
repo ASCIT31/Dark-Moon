@@ -59,9 +59,19 @@
       "min_commands": 10,
       "min_duration_seconds": 1800
      },
+     "launch_restrictions": {
+      "exclude": 0,
+      "focus": 0,
+      "noise": null,
+      "out_of_scope": 0,
+      "recorded": false,
+      "rules": 0,
+      "severity": null
+     },
      "measured_duration_seconds": 4000,
      "present": true,
-     "sentence": "full campaign, 2 test agent(s), 67 min measured, 3 asset(s) registered, 90 toolbox command(s) executed.",
+     "sentence": "full campaign, 2 test agents, 67 min of server-measured activity, 3 assets registered, 90 toolbox commands executed.",
+     "signals_intact": null,
      "specialised_agents": [
       "graphql",
       "php"
@@ -141,12 +151,16 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "The campaign did not complete (status: running).",
     "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
    "penalty_total": null,
    "score": null,
    "score_status": "not_rated",
@@ -164,6 +178,7 @@
     }
    ],
    "target_id": "tgt_fx_aborted",
+   "top_classes": [],
    "trend": null
   },
   "stats": {
@@ -206,9 +221,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 68,
     "present": true,
-    "sentence": "full campaign, 0 test agent(s), 1 min measured, 2 asset(s) registered, 10 toolbox command(s) executed.",
+    "sentence": "full campaign, 0 test agents, 1 min of server-measured activity, 2 assets registered, 10 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [],
     "started_at": "2026-11-19T10:30:20Z",
     "workflows_executed": 2
@@ -248,6 +273,8 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "The campaign did not complete (status: aborted).",
@@ -255,6 +282,8 @@
     "0 specialised agent(s) dispatched, under 2."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
    "penalty_total": null,
    "score": null,
    "score_status": "not_rated",
@@ -276,6 +305,7 @@
     }
    ],
    "target_id": "tgt_fx_aborted",
+   "top_classes": [],
    "trend": null
   },
   "stats": {
@@ -682,11 +712,15 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
    "penalty_total": null,
    "score": null,
    "score_status": "not_rated",
@@ -700,6 +734,7 @@
     }
    ],
    "target_id": "tgt_fx_dvga",
+   "top_classes": [],
    "trend": null
   },
   "stats": {
@@ -746,9 +781,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 3746,
     "present": true,
-    "sentence": "full campaign, 3 test agent(s), 62 min measured, 5 asset(s) registered, 325 toolbox command(s) executed.",
+    "sentence": "full campaign, 3 test agents, 62 min of server-measured activity, 5 assets registered, 325 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "graphql",
      "headless-browser",
@@ -1209,10 +1254,21 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
-    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen."
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "The penalties exceed the scale (sum 232.2, 2.32x the scale): the rating is at 0 and does not distinguish further exposure."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": null,
+    "finding_ids": [],
+    "rule": "penalties",
+    "score_without": null,
+    "text": "The penalty sum of the weakness classes sets the rating at 0 (the penalties exceed the scale); the caps by worst evidence would also hold it: capped at 39 while 10 exploited critical finding(s) remain open. The weakness classes that weigh most are listed with their share of the penalty sum."
+   },
+   "penalty_over_scale": 2.32,
    "penalty_total": 232.2,
    "score": 0,
    "score_status": "rated",
@@ -1221,6 +1277,26 @@
    ],
    "status_reasons": [],
    "target_id": "tgt_fx_dvga",
+   "top_classes": [
+    {
+     "class_penalty": 39.0,
+     "share_of_penalty": 0.17,
+     "share_text": "17 % of the penalty sum",
+     "weakness_class": "information_disclosure"
+    },
+    {
+     "class_penalty": 33.0,
+     "share_of_penalty": 0.14,
+     "share_text": "14 % of the penalty sum",
+     "weakness_class": "authentication"
+    },
+    {
+     "class_penalty": 33.0,
+     "share_of_penalty": 0.14,
+     "share_text": "14 % of the penalty sum",
+     "weakness_class": "code_execution"
+    }
+   ],
    "trend": null
   },
   "stats": {
@@ -1567,11 +1643,15 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
    "penalty_total": null,
    "score": null,
    "score_status": "not_rated",
@@ -1585,6 +1665,7 @@
     }
    ],
    "target_id": "tgt_fx_dvwa",
+   "top_classes": [],
    "trend": null
   },
   "stats": {
@@ -1630,9 +1711,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 3386,
     "present": true,
-    "sentence": "full campaign, 2 test agent(s), 56 min measured, 4 asset(s) registered, 23 toolbox command(s) executed.",
+    "sentence": "full campaign, 2 test agents, 56 min of server-measured activity, 4 assets registered, 23 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "headless-browser",
      "php"
@@ -2008,10 +2099,21 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
-    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen."
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "The penalties exceed the scale (sum 251.1, 2.51x the scale): the rating is at 0 and does not distinguish further exposure."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": null,
+    "finding_ids": [],
+    "rule": "penalties",
+    "score_without": null,
+    "text": "The penalty sum of the weakness classes sets the rating at 0 (the penalties exceed the scale); the caps by worst evidence would also hold it: capped at 39 while 12 exploited critical finding(s) remain open. The weakness classes that weigh most are listed with their share of the penalty sum."
+   },
+   "penalty_over_scale": 2.51,
    "penalty_total": 251.1,
    "score": 0,
    "score_status": "rated",
@@ -2020,6 +2122,26 @@
    ],
    "status_reasons": [],
    "target_id": "tgt_fx_dvwa",
+   "top_classes": [
+    {
+     "class_penalty": 39.0,
+     "share_of_penalty": 0.16,
+     "share_text": "16 % of the penalty sum",
+     "weakness_class": "authentication"
+    },
+    {
+     "class_penalty": 39.0,
+     "share_of_penalty": 0.16,
+     "share_text": "16 % of the penalty sum",
+     "weakness_class": "information_disclosure"
+    },
+    {
+     "class_penalty": 36.0,
+     "share_of_penalty": 0.14,
+     "share_text": "14 % of the penalty sum",
+     "weakness_class": "code_execution"
+    }
+   ],
    "trend": null
   },
   "stats": {
@@ -2112,11 +2234,15 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
    "penalty_total": null,
    "score": null,
    "score_status": "not_rated",
@@ -2130,6 +2256,7 @@
     }
    ],
    "target_id": "tgt_fx_dvga_prev",
+   "top_classes": [],
    "trend": null
   },
   "stats": {
@@ -2174,9 +2301,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 60,
     "present": true,
-    "sentence": "short campaign, 1 test agent(s), 1 min measured, 1 asset(s) registered, 2 toolbox command(s) executed.",
+    "sentence": "short campaign, 1 test agent, 1 min of server-measured activity, 1 asset registered, 2 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "graphql"
     ],
@@ -2249,6 +2386,8 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "Declared as a short campaign.",
@@ -2258,6 +2397,14 @@
     "Dispatched agents were taken from the MCP calls that carried an agent name (the agent session log was not readable); an agent that ran without reporting is not seen."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 69,
+    "finding_ids": [],
+    "rule": "limited_coverage",
+    "score_without": null,
+    "text": "Capped at 69 because the test was limited: a completed full campaign that meets the coverage floor removes this cap."
+   },
+   "penalty_over_scale": 0.05,
    "penalty_total": 5.0,
    "score": 69,
    "score_status": "limited",
@@ -2283,6 +2430,14 @@
     }
    ],
    "target_id": "tgt_fx_dvga_prev",
+   "top_classes": [
+    {
+     "class_penalty": 5.0,
+     "share_of_penalty": 1.0,
+     "share_text": "100 % of the penalty sum",
+     "weakness_class": "information_disclosure"
+    }
+   ],
    "trend": null
   },
   "stats": {
@@ -2329,9 +2484,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 3600,
     "present": true,
-    "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "graphql",
      "headless-browser",
@@ -2401,11 +2566,15 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "The campaign did not complete (status: aborted)."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
    "penalty_total": null,
    "score": null,
    "score_status": "not_rated",
@@ -2419,6 +2588,7 @@
     }
    ],
    "target_id": "tgt_fx_syn",
+   "top_classes": [],
    "trend": null
   },
   "stats": {
@@ -2465,9 +2635,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 3600,
     "present": true,
-    "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "graphql",
      "headless-browser",
@@ -2607,10 +2787,24 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 39,
+    "finding_ids": [
+     "vuln_s0001",
+     "vuln_s0010",
+     "vuln_s0020"
+    ],
+    "rule": "exploited_critical",
+    "score_without": 82,
+    "text": "Capped at 39 while 3 exploited critical finding(s) remain open. Without them (no longer reported by a new campaign, nothing else changed) the same rules would give 82."
+   },
+   "penalty_over_scale": 0.51,
    "penalty_total": 50.6,
    "score": 39,
    "score_status": "rated",
@@ -2619,6 +2813,26 @@
    ],
    "status_reasons": [],
    "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 33.0,
+     "share_of_penalty": 0.65,
+     "share_text": "65 % of the penalty sum",
+     "weakness_class": "sql_injection"
+    },
+    {
+     "class_penalty": 13.2,
+     "share_of_penalty": 0.26,
+     "share_text": "26 % of the penalty sum",
+     "weakness_class": "xss"
+    },
+    {
+     "class_penalty": 4.4,
+     "share_of_penalty": 0.09,
+     "share_text": "9 % of the penalty sum",
+     "weakness_class": "configuration"
+    }
+   ],
    "trend": null
   },
   "stats": {
@@ -2665,9 +2879,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 3600,
     "present": true,
-    "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "graphql",
      "headless-browser",
@@ -2797,10 +3021,22 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 39,
+    "finding_ids": [
+     "vuln_s0001"
+    ],
+    "rule": "exploited_critical",
+    "score_without": 84,
+    "text": "Capped at 39 while 1 exploited critical finding(s) remain open. Without them (no longer reported by a new campaign, nothing else changed) the same rules would give 84."
+   },
+   "penalty_over_scale": 0.46,
    "penalty_total": 46.0,
    "score": 39,
    "score_status": "rated",
@@ -2809,6 +3045,26 @@
    ],
    "status_reasons": [],
    "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 30.0,
+     "share_of_penalty": 0.65,
+     "share_text": "65 % of the penalty sum",
+     "weakness_class": "sql_injection"
+    },
+    {
+     "class_penalty": 12.0,
+     "share_of_penalty": 0.26,
+     "share_text": "26 % of the penalty sum",
+     "weakness_class": "xss"
+    },
+    {
+     "class_penalty": 4.0,
+     "share_of_penalty": 0.09,
+     "share_text": "9 % of the penalty sum",
+     "weakness_class": "configuration"
+    }
+   ],
    "trend": null
   },
   "stats": {
@@ -2853,9 +3109,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 600,
     "present": true,
-    "sentence": "full campaign, 1 test agent(s), 10 min measured, 1 asset(s) registered, 3 toolbox command(s) executed.",
+    "sentence": "full campaign, 1 test agent, 10 min of server-measured activity, 1 asset registered, 3 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "php"
     ],
@@ -2927,6 +3193,8 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "Measured duration 10 min, under 30 min.",
@@ -2934,6 +3202,14 @@
     "3 toolbox command(s) executed, under 10."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 69,
+    "finding_ids": [],
+    "rule": "limited_coverage",
+    "score_without": null,
+    "text": "Capped at 69 because the test was limited: a completed full campaign that meets the coverage floor removes this cap."
+   },
+   "penalty_over_scale": 0.02,
    "penalty_total": 1.6,
    "score": 69,
    "score_status": "limited",
@@ -2955,6 +3231,14 @@
     }
    ],
    "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 1.6,
+     "share_of_penalty": 1.0,
+     "share_text": "100 % of the penalty sum",
+     "weakness_class": "session"
+    }
+   ],
    "trend": null
   },
   "stats": {
@@ -3001,9 +3285,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 3600,
     "present": true,
-    "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "graphql",
      "headless-browser",
@@ -3047,11 +3341,15 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "100 means no weakness was found in the tested scope; it is not a proof of absence."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": 0.0,
    "penalty_total": 0.0,
    "score": 100,
    "score_status": "rated",
@@ -3060,6 +3358,7 @@
    ],
    "status_reasons": [],
    "target_id": "tgt_fx_syn",
+   "top_classes": [],
    "trend": null
   },
   "stats": {
@@ -3151,11 +3450,15 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
    "penalty_total": null,
    "score": null,
    "score_status": "not_rated",
@@ -3169,6 +3472,7 @@
     }
    ],
    "target_id": "tgt_fx_syn",
+   "top_classes": [],
    "trend": null
   },
   "stats": {
@@ -3215,9 +3519,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 3600,
     "present": true,
-    "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "graphql",
      "headless-browser",
@@ -3301,10 +3615,22 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 39,
+    "finding_ids": [
+     "vuln_s0001"
+    ],
+    "rule": "exploited_critical",
+    "score_without": 100,
+    "text": "Capped at 39 while 1 exploited critical finding(s) remain open. Without them (no longer reported by a new campaign, nothing else changed) the same rules would give 100."
+   },
+   "penalty_over_scale": 0.3,
    "penalty_total": 30.0,
    "score": 39,
    "score_status": "rated",
@@ -3313,6 +3639,14 @@
    ],
    "status_reasons": [],
    "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 30.0,
+     "share_of_penalty": 1.0,
+     "share_text": "100 % of the penalty sum",
+     "weakness_class": "code_execution"
+    }
+   ],
    "trend": null
   },
   "stats": {
@@ -3359,9 +3693,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 3600,
     "present": true,
-    "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "graphql",
      "headless-browser",
@@ -3478,11 +3822,21 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "2 unconfirmed critical/high finding(s) to confirm; they weigh less than proven ones and never set a cap."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": null,
+    "finding_ids": [],
+    "rule": "penalties",
+    "score_without": null,
+    "text": "The penalty sum of the weakness classes sets the rating. The weakness classes that weigh most are listed with their share of the penalty sum."
+   },
+   "penalty_over_scale": 0.25,
    "penalty_total": 25.0,
    "score": 75,
    "score_status": "rated",
@@ -3491,6 +3845,26 @@
    ],
    "status_reasons": [],
    "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 15.0,
+     "share_of_penalty": 0.6,
+     "share_text": "60 % of the penalty sum",
+     "weakness_class": "sql_injection"
+    },
+    {
+     "class_penalty": 7.5,
+     "share_of_penalty": 0.3,
+     "share_text": "30 % of the penalty sum",
+     "weakness_class": "xss"
+    },
+    {
+     "class_penalty": 2.5,
+     "share_of_penalty": 0.1,
+     "share_text": "10 % of the penalty sum",
+     "weakness_class": "csrf"
+    }
+   ],
    "trend": null
   },
   "stats": {
@@ -3537,9 +3911,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 3600,
     "present": true,
-    "sentence": "full campaign, 3 test agent(s), 60 min measured, 4 asset(s) registered, 120 toolbox command(s) executed.",
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "graphql",
      "headless-browser",
@@ -3630,12 +4014,22 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "1 finding(s) held for privacy review are not counted.",
     "1 finding(s) marked false positive by an agent or an operator are not counted."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": null,
+    "finding_ids": [],
+    "rule": "penalties",
+    "score_without": null,
+    "text": "The penalty sum of the weakness classes sets the rating. The weakness classes that weigh most are listed with their share of the penalty sum."
+   },
+   "penalty_over_scale": 0.14,
    "penalty_total": 13.6,
    "score": 86,
    "score_status": "rated",
@@ -3644,6 +4038,20 @@
    ],
    "status_reasons": [],
    "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 12.0,
+     "share_of_penalty": 0.88,
+     "share_text": "88 % of the penalty sum",
+     "weakness_class": "csrf"
+    },
+    {
+     "class_penalty": 1.6,
+     "share_of_penalty": 0.12,
+     "share_text": "12 % of the penalty sum",
+     "weakness_class": "session"
+    }
+   ],
    "trend": null
   },
   "stats": {
@@ -3689,9 +4097,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 900,
     "present": true,
-    "sentence": "retest campaign, 2 test agent(s), 15 min measured, 2 asset(s) registered, 40 toolbox command(s) executed.",
+    "sentence": "retest campaign, 2 test agents, 15 min of server-measured activity, 2 assets registered, 40 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "headless-browser",
      "php"
@@ -3760,12 +4178,16 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "A retest checks selected findings again; it is not rated as an assessment.",
     "Measured duration 15 min, under 30 min."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
    "penalty_total": null,
    "score": null,
    "score_status": "not_rated",
@@ -3783,6 +4205,7 @@
     }
    ],
    "target_id": "tgt_fx_syn",
+   "top_classes": [],
    "trend": null
   },
   "stats": {
@@ -3827,9 +4250,19 @@
      "min_commands": 10,
      "min_duration_seconds": 1800
     },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
     "measured_duration_seconds": 600,
     "present": true,
-    "sentence": "short campaign, 1 test agent(s), 10 min measured, 1 asset(s) registered, 12 toolbox command(s) executed.",
+    "sentence": "short campaign, 1 test agent, 10 min of server-measured activity, 1 asset registered, 12 toolbox commands executed.",
+    "signals_intact": null,
     "specialised_agents": [
      "php"
     ],
@@ -3901,6 +4334,8 @@
    "limitations": [
     "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
     "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
     "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
     "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
     "Declared as a short campaign.",
@@ -3908,6 +4343,14 @@
     "1 specialised agent(s) dispatched, under 2."
    ],
    "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 69,
+    "finding_ids": [],
+    "rule": "limited_coverage",
+    "score_without": null,
+    "text": "Capped at 69 because the test was limited: a completed full campaign that meets the coverage floor removes this cap."
+   },
+   "penalty_over_scale": 0.04,
    "penalty_total": 4.0,
    "score": 69,
    "score_status": "limited",
@@ -3929,6 +4372,14 @@
     }
    ],
    "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 4.0,
+     "share_of_penalty": 1.0,
+     "share_text": "100 % of the penalty sum",
+     "weakness_class": "xss"
+    }
+   ],
    "trend": null
   },
   "stats": {

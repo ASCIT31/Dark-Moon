@@ -68,18 +68,19 @@ BASIS = "reported-severity-x-proof"
 LABEL = "By reported severity × proof"
 PATHS_LABEL = "By attack paths"
 NOTE = ("Not an attack-path ranking. Order: severity reported by the agent, then proof level (exploited, confirmed, "
-        "unconfirmed), then proven attack chains of several findings broken, then regression after a retest, then the "
+        "unconfirmed), then Evidence-Backed attack chains of several findings broken, then regression after a retest, then the "
         "CVSS score computed from the finding's vector. Equal keys share the same rank. Severity is the agent's "
         "rating, not an impact on your business assets.")
-PATHS_NOTE = "Ranked by proven attack paths broken (simulation, not applied)."
+PATHS_NOTE = "Ranked by Evidence-Backed Attack Paths broken (simulation, not applied)."
 # ranking gate reasons (attack_paths_engine.ranking_gate) in plain words, for « Why not ranked by attack paths? »
 WHY_NOT_PATHS = {
-    "too-few-scenarios": "Fewer than 2 proven attack paths: a path ranking needs at least 2 paths with a shared step.",
-    "no-choke-point": "No fix breaks more than one proven attack path: ranking them by paths would not tell them apart.",
-    "top-fix-interrupts-nothing": "No single fix breaks a proven attack path on its own.",
+    "too-few-scenarios": ("Fewer than 2 attack scenarios (distinct objectives reached): a path ranking needs at least 2 "
+                          "scenarios with a shared step."),
+    "no-choke-point": "No fix breaks more than one Evidence-Backed Attack Path: ranking them by paths would not tell them apart.",
+    "top-fix-interrupts-nothing": "No single fix breaks an Evidence-Backed Attack Path on its own.",
     "too-large": "Too many attack paths to rank them reliably in one request.",
-    "status-not-ok": "No proven attack path in this campaign: nothing to rank by paths.",
-    "provenance-not-real": "The paths of this campaign are not proven by real findings.",
+    "status-not-ok": "No Evidence-Backed Attack Path in this campaign: nothing to rank by paths.",
+    "provenance-not-real": "The paths of this campaign are not backed by real findings.",
 }
 # categories whose name says nothing precise about the flaw (review-2 M3)
 GENERIC_CATEGORIES = frozenset({"security_misconfiguration", "misconfiguration", "insecure_configuration",
@@ -281,11 +282,11 @@ def triage(a: Dict[str, Any], label_of: Callable[[str, List[str]], str], path_in
                 p = path_info[pid]
                 how = f"{p['access']} on {p['objective']}" if p["access"] else f"reaches {p['objective']}"
                 if pid in chain_breaks:
-                    reasons.append(f"breaks {'the only' if len(records) == 1 else 'a'} proven chain ({p['provenance']}: {how})")
+                    reasons.append(f"breaks {'the only' if len(records) == 1 else 'an'} Evidence-Backed chain ({p['provenance']}: {how})")
                 else:
-                    reasons.append(f"its exploitation is a proven path on its own ({p['provenance']}: {how})")
+                    reasons.append(f"its exploitation is an Evidence-Backed Attack Path on its own ({p['provenance']}: {how})")
             if on and not breaks:
-                reasons.append(f"on {len(on)} proven path{'s' if len(on) != 1 else ''}, does not break it alone")
+                reasons.append(f"on {len(on)} Evidence-Backed Attack Path{'s' if len(on) != 1 else ''}, does not break it alone")
             if regressed:
                 reasons.append("regressed after a retest")
             elif still:

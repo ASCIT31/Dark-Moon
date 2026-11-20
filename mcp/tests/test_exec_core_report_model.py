@@ -79,6 +79,15 @@ def strip_edition_specific(model):
             s["blocks"] = [b for b in s["blocks"] if not (b.get("type") == "subsection" and b.get("id") == "privacy-placeholders")]
         elif s["id"] == "treatment_plan":
             s.pop("verification", None)
+        elif s["id"] == "limitations":
+            for blk in s["blocks"]:
+                if blk.get("type") == "list":
+                    blk["items"] = [x for x in blk["items"] if x not in RM.COMMUNITY_LIMITS]
+        for blk in s.get("blocks") or []:     # who declared a profile field: an account (Pro) or the local file
+            if blk.get("type") == "table" and (blk.get("columns") or [None] * 3)[2:3] in (["Provenance"],
+                                                                                        ["Provenance"]):
+                blk["rows"] = [r[:2] + ["Declared" if str(r[2]).startswith("Declared") else r[2]] + r[3:]
+                               for r in blk["rows"]]
         if "blocks" in s:
             s["blocks"] = [b for b in s["blocks"] if b.get("id") not in ("verification-note", "masking-note")]
         out.append(s)
@@ -294,6 +303,56 @@ def test_long_tables():
     rows = re.findall(r"^\| \d+ \| \[vuln_\d{4}\]", _section_md(md, "detailed_findings"), re.M)
     assert len(rows) == 300
     assert all(len(ln) < 2000 for ln in md.split("\n") if ln.startswith("| "))
+
+
+def test_review_fixes_in_the_report():
+    """Cross-review fixes rendered by the model: proof attributed to the agent (R1 H-1 / R2 H-2), test references
+    without ISO 27001 (R2 H-1), due date / owner / effort of each action (R1 H-3 / R3 D1), both durations labelled
+    (R3 D2), the rating method summarised from the code (R1 H-2), what holds the rating (R3 D4)."""
+    m = _model()
+    assert m["campaign"]["methodology"] == "Test references: NIST SP 800-115, OWASP WSTG"
+    det = next(s for s in m["sections"] if s["id"] == "detailed_findings")
+    assert "reported by the testing agent, with evidence on file" in det["blocks"][0]["text"]
+    assert "proof levels, counts and CVSS scores are the server's" not in det["blocks"][0]["text"]
+    mc = next(s for s in m["sections"] if s["id"] == "method_coverage")
+    facts = {r["label"]: r["value"] for b in mc["blocks"] if b.get("type") == "facts" for r in b["rows"]}
+    assert facts["Test references"] == "Test references: NIST SP 800-115, OWASP WSTG"
+    assert facts["Measured activity (server clock, used by the rating)"].startswith("60 min")
+    assert facts["Duration on the campaign record (agent-declared on older campaigns)"] == "60 min"
+    method = next(b for b in mc["blocks"] if b.get("id") == "rating-method")["blocks"][0]["items"]
+    assert any("critical 30, high 15, medium 5, low 2" in x for x in method)
+    tp = next(s for s in m["sections"] if s["id"] == "treatment_plan")
+    table = next(b for b in tp["blocks"] if b.get("id") == "treatment-actions")
+    assert table["columns"][-1] == "Due date" and "Effort" in table["columns"] and "Owner" in table["columns"]
+    md = RMD.render(m)
+    assert "ISO 27001 / " not in md and "**Method:** Test references" in md
+    assert "fix immediately" not in md
+
+
+def test_not_applicable_frameworks_are_not_assessed_in_the_report():
+    fx = _fx()
+    fx["declarations"] = {**fx["declarations"], "ai_system_declared": "no", "personal_data": "no"}
+    m = RM.build(_inputs(fx))
+    fw = next(s for s in m["sections"] if s["id"] == "framework_assessment")
+    rows = {r[0]: r for b in fw["blocks"] if b.get("id") == "framework-states" for r in b["rows"]}
+    assert rows["EU AI Act (EU) 2024/1689, art. 15"][2:] == ["not assessed"] * 4
+    assert rows["GDPR (EU) 2016/679, art. 32 and 25"][2:] == ["not assessed"] * 4
+    assert not any(k.startswith(("ai_act_", "gdpr_")) for k in fw["numbers"])
+    ai = next(b for b in fw["blocks"] if b.get("id") == "framework-ai_act")
+    assert all(b.get("type") != "table" for b in ai["blocks"])
+    ex = next(s for s in m["sections"] if s["id"] == "executive_summary")
+    assert not any("AI Act" in str(b.get("text")) or "GDPR" in str(b.get("text")) for b in ex["blocks"])
+
+
+def test_community_profile_provenance_says_local_file():
+    m = RM.build({**_inputs(), "edition": "community"})
+    prof = next(s for s in m["sections"] if s["id"] == "application_profile")
+    cells = {r[2] for b in prof["blocks"] if b.get("id") == "profile-fields" for r in b["rows"]}
+    assert any(c.startswith("Declared in the local profile file") for c in cells)
+    pro = RM.build({**_inputs(), "edition": "pro"})
+    cells = {r[2] for b in next(s for s in pro["sections"] if s["id"] == "application_profile")["blocks"]
+             if b.get("id") == "profile-fields" for r in b["rows"]}
+    assert not any("local profile file" in c for c in cells)
 
 
 def test_schema_keys_are_not_secret_looking():
