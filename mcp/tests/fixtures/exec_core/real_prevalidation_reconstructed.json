@@ -1,0 +1,65 @@
+{
+ "description": "Prevalidation with its real activity as signals: short kind, 60 s, 1 reporting agent, 1 command + 1 workflow, 1 node -> limited (capped at 69).",
+ "input": {
+  "campaign": {
+   "coverage_signals": {
+    "agents_dispatched": [
+     {
+      "active_seconds": 0,
+      "agent": "graphql",
+      "sessions": 1
+     }
+    ],
+    "agents_reporting": [],
+    "agents_source": "tool_calls_only",
+    "assets_registered": 1,
+    "campaign_kind": "short",
+    "campaign_kind_source": "fixture_reconstruction",
+    "commands_executed": 1,
+    "finalized_at": "2026-11-19T10:26:45Z",
+    "measured_duration_seconds": 60,
+    "schema": "darkmoon-coverage-signals/1",
+    "started_at": "2026-11-19T10:25:45Z",
+    "workflows_executed": 1
+   },
+   "date": "2026-11-19T10:25:45Z",
+   "duration_seconds": 60,
+   "id": "camp_fx_dvga_prev",
+   "is_subagent": false,
+   "project_id": "proj_fixture",
+   "session_id": "vga_prev",
+   "status": "completed",
+   "target_id": "tgt_fx_dvga_prev"
+  },
+  "findings": [
+   {
+    "campaign_id": "camp_fx_dvga_prev",
+    "category": "information_disclosure",
+    "cvss_score": 5.3,
+    "cvss_vector": null,
+    "discovered_by_agent": "graphql",
+    "endpoint": "/graphql",
+    "id": "vuln_3f73c9",
+    "severity": "medium",
+    "status": "exploited",
+    "target_id": "tgt_fx_dvga_prev",
+    "title": "information_disclosure #1"
+   },
+   {
+    "campaign_id": "camp_fx_dvga_prev",
+    "category": "information_disclosure",
+    "cvss_score": 3.7,
+    "cvss_vector": null,
+    "discovered_by_agent": "graphql",
+    "endpoint": "/graphql",
+    "id": "vuln_24b95e",
+    "severity": "low",
+    "status": "confirmed",
+    "target_id": "tgt_fx_dvga_prev",
+    "title": "information_disclosure #2"
+   }
+  ]
+ },
+ "name": "real_prevalidation_reconstructed",
+ "source": "66-community-port/prevalidation (scripted smoke run, camp_20261119_ses_dvgaprev01); signals from prevalidation.log"
+}

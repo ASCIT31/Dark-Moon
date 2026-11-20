@@ -156,7 +156,9 @@ def _insert_after_section(content: str, heading: str, extra: str) -> str:
     start = content.find(heading)
     if start < 0:
         return content.rstrip("\n") + "\n\n" + extra + "\n"
-    nxt = content.find("\n## ", start + len(heading))
+    after = start + len(heading)
+    found = [i for i in (content.find("\n## ", after), content.find("\n<!-- dm-section:", after)) if i >= 0]
+    nxt = min(found) if found else -1     # a section id marker belongs to the heading after it
     if nxt < 0:
         return content.rstrip("\n") + "\n\n" + extra + "\n"
     return content[:nxt].rstrip("\n") + "\n\n" + extra + "\n" + content[nxt:]

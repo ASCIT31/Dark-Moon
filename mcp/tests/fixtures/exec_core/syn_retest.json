@@ -1,0 +1,54 @@
+{
+ "description": "Retest campaign: not rated whatever it found.",
+ "input": {
+  "campaign": {
+   "coverage_signals": {
+    "agents_dispatched": [
+     {
+      "active_seconds": 0,
+      "agent": "php",
+      "sessions": 1
+     },
+     {
+      "active_seconds": 0,
+      "agent": "headless-browser",
+      "sessions": 1
+     }
+    ],
+    "agents_reporting": [],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 2,
+    "campaign_kind": "retest",
+    "campaign_kind_source": "retest_store",
+    "commands_executed": 40,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "measured_duration_seconds": 900,
+    "schema": "darkmoon-coverage-signals/1",
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "date": "2026-11-20T09:00:00Z",
+   "duration_seconds": 0,
+   "id": "camp_fx_syn_retest",
+   "is_subagent": false,
+   "project_id": "proj_fixture",
+   "session_id": "n_retest",
+   "status": "completed",
+   "target_id": "tgt_fx_syn"
+  },
+  "findings": [
+   {
+    "category": "sqli",
+    "discovered_by_agent": "php",
+    "endpoint": "/app",
+    "id": "vuln_s0001",
+    "severity": "high",
+    "status": "exploited",
+    "target_id": "tgt_fx_syn",
+    "title": "sqli #1"
+   }
+  ]
+ },
+ "name": "syn_retest",
+ "source": "synthetic"
+}

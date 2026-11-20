@@ -1,0 +1,4408 @@
+{
+ "project_reference_and_trend": {
+  "project": {
+   "campaigns_considered": [
+    {
+     "campaign_id": "camp_fx_p1",
+     "campaign_kind": "full",
+     "date": "2026-10-01T09:00:00Z",
+     "reasons": [],
+     "score_status": "rated"
+    },
+    {
+     "campaign_id": "camp_fx_p2",
+     "campaign_kind": "full",
+     "date": "2026-11-01T09:00:00Z",
+     "reasons": [],
+     "score_status": "rated"
+    },
+    {
+     "campaign_id": "camp_fx_p3",
+     "campaign_kind": "retest",
+     "date": "2026-11-10T09:00:00Z",
+     "reasons": [
+      "retest",
+      "short_duration"
+     ],
+     "score_status": "not_rated"
+    },
+    {
+     "campaign_id": "camp_fx_p4",
+     "campaign_kind": "short",
+     "date": "2026-11-15T09:00:00Z",
+     "reasons": [
+      "short_campaign",
+      "short_duration",
+      "few_agents",
+      "few_commands"
+     ],
+     "score_status": "limited"
+    }
+   ],
+   "grade": "B",
+   "reference": {
+    "assessed_at": "2026-11-19T11:00:00Z",
+    "assessment_coverage": {
+     "agents_dispatched": [
+      "graphql",
+      "php"
+     ],
+     "agents_source": "opencode_sessions",
+     "assets_registered": 3,
+     "campaign_kind": "full",
+     "campaign_kind_source": "default",
+     "commands_executed": 90,
+     "finalized_at": "2026-11-19T11:00:00Z",
+     "floors": {
+      "min_agents": 2,
+      "min_assets": 1,
+      "min_commands": 10,
+      "min_duration_seconds": 1800
+     },
+     "launch_restrictions": {
+      "exclude": 0,
+      "focus": 0,
+      "noise": null,
+      "out_of_scope": 0,
+      "recorded": false,
+      "rules": 0,
+      "severity": null
+     },
+     "measured_duration_seconds": 4000,
+     "present": true,
+     "sentence": "full campaign, 2 test agents, 67 min of server-measured activity, 3 assets registered, 90 toolbox commands executed.",
+     "signals_intact": null,
+     "specialised_agents": [
+      "graphql",
+      "php"
+     ],
+     "started_at": "2026-11-19T10:00:00Z",
+     "workflows_executed": 0
+    },
+    "campaign_id": "camp_fx_p2"
+   },
+   "schema": "darkmoon-project-score/1",
+   "score": 88,
+   "score_status": "rated",
+   "source_campaign_ids": [
+    "camp_fx_p2"
+   ],
+   "target_ids": [
+    "tgt_fx_proj"
+   ],
+   "trend": {
+    "available": true,
+    "delta": 49,
+    "direction": "improved",
+    "previous_campaign_id": "camp_fx_p1",
+    "previous_score": 39,
+    "scope_differences": [
+     "agents not run this time: headless-browser",
+     "assets registered: 4 -> 3"
+    ]
+   }
+  }
+ },
+ "real_aborted_as_stored": {
+  "score": {
+   "assessed_at": "2026-11-19T10:30:20Z",
+   "assessment_coverage": {
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "present": false,
+    "sentence": "Coverage not recorded for this campaign."
+   },
+   "campaign_id": "camp_fx_aborted",
+   "caps": [],
+   "caps_applied": [],
+   "components": [],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 0,
+     "exploited": 0,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 0,
+     "high": 0,
+     "info": 0,
+     "low": 0,
+     "medium": 0
+    },
+    "counted_findings": 0,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 0,
+    "to_confirm": [],
+    "units": 0,
+    "unknown_severity": [],
+    "weakness_classes": 0
+   },
+   "grade": null,
+   "inputs_digest": "sha256:8a91a83b44d186bac10a44d79f1ae5e21a499547cb3fca72199bd8b88e12559b",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "The campaign did not complete (status: running).",
+    "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
+   "penalty_total": null,
+   "score": null,
+   "score_status": "not_rated",
+   "source_campaign_ids": [
+    "camp_fx_aborted"
+   ],
+   "status_reasons": [
+    {
+     "code": "not_completed",
+     "text": "The campaign did not complete (status: running)."
+    },
+    {
+     "code": "no_coverage_signals",
+     "text": "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
+    }
+   ],
+   "target_id": "tgt_fx_aborted",
+   "top_classes": [],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 0,
+   "critical": 0,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 0,
+   "exploited_by_severity": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 0,
+   "info": 0,
+   "low": 0,
+   "medium": 0,
+   "total_findings": 0,
+   "unconfirmed": 0
+  }
+ },
+ "real_aborted_reconstructed": {
+  "score": {
+   "assessed_at": "2026-11-19T10:31:28Z",
+   "assessment_coverage": {
+    "agents_dispatched": [],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 2,
+    "campaign_kind": "full",
+    "campaign_kind_source": "fixture_reconstruction",
+    "commands_executed": 8,
+    "finalized_at": "2026-11-19T10:31:28Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 68,
+    "present": true,
+    "sentence": "full campaign, 0 test agents, 1 min of server-measured activity, 2 assets registered, 10 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [],
+    "started_at": "2026-11-19T10:30:20Z",
+    "workflows_executed": 2
+   },
+   "campaign_id": "camp_fx_aborted",
+   "caps": [],
+   "caps_applied": [],
+   "components": [],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 0,
+     "exploited": 0,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 0,
+     "high": 0,
+     "info": 0,
+     "low": 0,
+     "medium": 0
+    },
+    "counted_findings": 0,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 0,
+    "to_confirm": [],
+    "units": 0,
+    "unknown_severity": [],
+    "weakness_classes": 0
+   },
+   "grade": null,
+   "inputs_digest": "sha256:ebbf304a5d430688d771c164912bf6656fb3789ecd277beb7e0fc12f4ef29a7e",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "The campaign did not complete (status: aborted).",
+    "Measured duration 1 min, under 30 min.",
+    "0 specialised agent(s) dispatched, under 2."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
+   "penalty_total": null,
+   "score": null,
+   "score_status": "not_rated",
+   "source_campaign_ids": [
+    "camp_fx_aborted"
+   ],
+   "status_reasons": [
+    {
+     "code": "not_completed",
+     "text": "The campaign did not complete (status: aborted)."
+    },
+    {
+     "code": "short_duration",
+     "text": "Measured duration 1 min, under 30 min."
+    },
+    {
+     "code": "few_agents",
+     "text": "0 specialised agent(s) dispatched, under 2."
+    }
+   ],
+   "target_id": "tgt_fx_aborted",
+   "top_classes": [],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 0,
+   "critical": 0,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 0,
+   "exploited_by_severity": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 0,
+   "info": 0,
+   "low": 0,
+   "medium": 0,
+   "total_findings": 0,
+   "unconfirmed": 0
+  }
+ },
+ "real_dvga_full_as_stored": {
+  "score": {
+   "assessed_at": "2026-11-19T10:31:35Z",
+   "assessment_coverage": {
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "present": false,
+    "sentence": "Coverage not recorded for this campaign."
+   },
+   "campaign_id": "camp_fx_dvga_full",
+   "caps": [
+    {
+     "cap": 39,
+     "finding_ids": [
+      "vuln_16ddc9",
+      "vuln_170a32",
+      "vuln_172ae3",
+      "vuln_2d0755",
+      "vuln_323778",
+      "vuln_369231",
+      "vuln_5e0da8",
+      "vuln_9a9585",
+      "vuln_e7952e",
+      "vuln_ea9e55"
+     ],
+     "rule": "exploited_critical"
+    },
+    {
+     "cap": 59,
+     "finding_ids": [
+      "vuln_056f88",
+      "vuln_2513ec",
+      "vuln_25a900",
+      "vuln_271421",
+      "vuln_2d1ec6",
+      "vuln_37c99e",
+      "vuln_4cb1e3",
+      "vuln_628170",
+      "vuln_62dede",
+      "vuln_733781",
+      "vuln_8911c1",
+      "vuln_8d68bb",
+      "vuln_95ee01",
+      "vuln_9fdd92",
+      "vuln_a38cb0",
+      "vuln_c22c32",
+      "vuln_c6c687",
+      "vuln_ce288d"
+     ],
+     "rule": "exploited_high"
+    }
+   ],
+   "caps_applied": [],
+   "components": [
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 4,
+       "finding_ids": [
+        "vuln_038822",
+        "vuln_056f88",
+        "vuln_1b00d6",
+        "vuln_1b5dd3",
+        "vuln_1cb958",
+        "vuln_271421",
+        "vuln_322851",
+        "vuln_323778",
+        "vuln_408624",
+        "vuln_6cd1b9",
+        "vuln_704663",
+        "vuln_8d41c4",
+        "vuln_95ee01",
+        "vuln_a38cb0",
+        "vuln_c22c32",
+        "vuln_cba58c",
+        "vuln_cd4c7e",
+        "vuln_d51936",
+        "vuln_e0006d",
+        "vuln_f27cde"
+       ],
+       "head_finding_id": "vuln_323778",
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvga|information_disclosure",
+       "weakness_class": "information_disclosure"
+      }
+     ],
+     "weakness_class": "information_disclosure"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 2,
+       "finding_ids": [
+        "vuln_170a32",
+        "vuln_172ae3",
+        "vuln_9a9585"
+       ],
+       "head_finding_id": "vuln_9a9585",
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvga|authentication",
+       "weakness_class": "authentication"
+      }
+     ],
+     "weakness_class": "authentication"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 2,
+       "finding_ids": [
+        "vuln_2d0755",
+        "vuln_369231",
+        "vuln_5e0da8",
+        "vuln_ea9e55"
+       ],
+       "head_finding_id": "vuln_ea9e55",
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvga|code_execution",
+       "weakness_class": "code_execution"
+      }
+     ],
+     "weakness_class": "code_execution"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_16ddc9",
+        "vuln_e7952e"
+       ],
+       "head_finding_id": "vuln_e7952e",
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvga|sql_injection",
+       "weakness_class": "sql_injection"
+      }
+     ],
+     "weakness_class": "sql_injection"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 4,
+       "finding_ids": [
+        "vuln_2513ec",
+        "vuln_4610b8",
+        "vuln_628170",
+        "vuln_62dede",
+        "vuln_8911c1",
+        "vuln_e1dbdb",
+        "vuln_f843a5"
+       ],
+       "head_finding_id": "vuln_8911c1",
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvga|xss",
+       "weakness_class": "xss"
+      }
+     ],
+     "weakness_class": "xss"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 3,
+       "finding_ids": [
+        "vuln_25a900",
+        "vuln_26014b",
+        "vuln_37c99e",
+        "vuln_4f7721",
+        "vuln_733781",
+        "vuln_7695e7",
+        "vuln_7d3fc9",
+        "vuln_8d68bb",
+        "vuln_9fdd92",
+        "vuln_c6c687",
+        "vuln_ce288d"
+       ],
+       "head_finding_id": "vuln_ce288d",
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvga|access_control",
+       "weakness_class": "access_control"
+      }
+     ],
+     "weakness_class": "access_control"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_4cb1e3"
+       ],
+       "head_finding_id": "vuln_4cb1e3",
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvga|cryptography",
+       "weakness_class": "cryptography"
+      }
+     ],
+     "weakness_class": "cryptography"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_2d1ec6",
+        "vuln_f52b32"
+       ],
+       "head_finding_id": "vuln_2d1ec6",
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvga|file_access",
+       "weakness_class": "file_access"
+      }
+     ],
+     "weakness_class": "file_access"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_355a88"
+       ],
+       "head_finding_id": "vuln_355a88",
+       "proof": "confirmed",
+       "severity": "high",
+       "unit": "tgt_fx_dvga|ssrf",
+       "weakness_class": "ssrf"
+      }
+     ],
+     "weakness_class": "ssrf"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 4,
+       "finding_ids": [
+        "vuln_02582e",
+        "vuln_08b559",
+        "vuln_1ca82f",
+        "vuln_213c2c",
+        "vuln_2d948b",
+        "vuln_34ddb9",
+        "vuln_787c8e",
+        "vuln_9be88b",
+        "vuln_ad74a1",
+        "vuln_dda36d",
+        "vuln_e02849"
+       ],
+       "head_finding_id": "vuln_02582e",
+       "proof": "exploited",
+       "severity": "medium",
+       "unit": "tgt_fx_dvga|configuration",
+       "weakness_class": "configuration"
+      }
+     ],
+     "weakness_class": "configuration"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_324624",
+        "vuln_573925"
+       ],
+       "head_finding_id": "vuln_573925",
+       "proof": "confirmed",
+       "severity": "medium",
+       "unit": "tgt_fx_dvga|csrf",
+       "weakness_class": "csrf"
+      }
+     ],
+     "weakness_class": "csrf"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_bf7738"
+       ],
+       "head_finding_id": "vuln_bf7738",
+       "proof": "confirmed",
+       "severity": "medium",
+       "unit": "tgt_fx_dvga|graphql_batching",
+       "weakness_class": "graphql_batching"
+      }
+     ],
+     "weakness_class": "graphql_batching"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_37bc1e"
+       ],
+       "head_finding_id": "vuln_37bc1e",
+       "proof": "confirmed",
+       "severity": "low",
+       "unit": "tgt_fx_dvga|input_validation",
+       "weakness_class": "input_validation"
+      }
+     ],
+     "weakness_class": "input_validation"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_20d2ae"
+       ],
+       "head_finding_id": "vuln_20d2ae",
+       "proof": "confirmed",
+       "severity": "low",
+       "unit": "tgt_fx_dvga|session",
+       "weakness_class": "session"
+      }
+     ],
+     "weakness_class": "session"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 33,
+     "exploited": 34,
+     "unconfirmed": 1
+    },
+    "by_severity": {
+     "critical": 10,
+     "high": 21,
+     "info": 1,
+     "low": 13,
+     "medium": 23
+    },
+    "counted_findings": 68,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 1,
+     "quarantined": 0
+    },
+    "open_findings": 68,
+    "to_confirm": [],
+    "units": 14,
+    "unknown_severity": [],
+    "weakness_classes": 14
+   },
+   "grade": null,
+   "inputs_digest": "sha256:f1bf99ba44a1ba3af9a45b3788a38aafc1fffbf04160f6339fcaa831164a5fe0",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
+   "penalty_total": null,
+   "score": null,
+   "score_status": "not_rated",
+   "source_campaign_ids": [
+    "camp_fx_dvga_full"
+   ],
+   "status_reasons": [
+    {
+     "code": "no_coverage_signals",
+     "text": "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
+    }
+   ],
+   "target_id": "tgt_fx_dvga",
+   "top_classes": [],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 33,
+   "critical": 10,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 34,
+   "exploited_by_severity": {
+    "critical": 10,
+    "high": 18,
+    "info": 0,
+    "low": 0,
+    "medium": 6
+   },
+   "high": 21,
+   "info": 1,
+   "low": 13,
+   "medium": 23,
+   "total_findings": 68,
+   "unconfirmed": 1
+  }
+ },
+ "real_dvga_full_reconstructed": {
+  "score": {
+   "assessed_at": "2026-11-19T11:33:58Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "graphql",
+     "headless-browser",
+     "python-flask"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 5,
+    "campaign_kind": "full",
+    "campaign_kind_source": "fixture_reconstruction",
+    "commands_executed": 325,
+    "finalized_at": "2026-11-19T11:33:58Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 3746,
+    "present": true,
+    "sentence": "full campaign, 3 test agents, 62 min of server-measured activity, 5 assets registered, 325 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "python-flask"
+    ],
+    "started_at": "2026-11-19T10:31:35Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_dvga_full",
+   "caps": [
+    {
+     "cap": 39,
+     "finding_ids": [
+      "vuln_16ddc9",
+      "vuln_170a32",
+      "vuln_172ae3",
+      "vuln_2d0755",
+      "vuln_323778",
+      "vuln_369231",
+      "vuln_5e0da8",
+      "vuln_9a9585",
+      "vuln_e7952e",
+      "vuln_ea9e55"
+     ],
+     "rule": "exploited_critical"
+    },
+    {
+     "cap": 59,
+     "finding_ids": [
+      "vuln_056f88",
+      "vuln_2513ec",
+      "vuln_25a900",
+      "vuln_271421",
+      "vuln_2d1ec6",
+      "vuln_37c99e",
+      "vuln_4cb1e3",
+      "vuln_628170",
+      "vuln_62dede",
+      "vuln_733781",
+      "vuln_8911c1",
+      "vuln_8d68bb",
+      "vuln_95ee01",
+      "vuln_9fdd92",
+      "vuln_a38cb0",
+      "vuln_c22c32",
+      "vuln_c6c687",
+      "vuln_ce288d"
+     ],
+     "rule": "exploited_high"
+    }
+   ],
+   "caps_applied": [],
+   "components": [
+    {
+     "class_penalty": 39.0,
+     "spread": 0.0,
+     "top_unit_penalty": 39.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 4,
+       "finding_ids": [
+        "vuln_038822",
+        "vuln_056f88",
+        "vuln_1b00d6",
+        "vuln_1b5dd3",
+        "vuln_1cb958",
+        "vuln_271421",
+        "vuln_322851",
+        "vuln_323778",
+        "vuln_408624",
+        "vuln_6cd1b9",
+        "vuln_704663",
+        "vuln_8d41c4",
+        "vuln_95ee01",
+        "vuln_a38cb0",
+        "vuln_c22c32",
+        "vuln_cba58c",
+        "vuln_cd4c7e",
+        "vuln_d51936",
+        "vuln_e0006d",
+        "vuln_f27cde"
+       ],
+       "head_finding_id": "vuln_323778",
+       "increment": 9.0,
+       "penalty": 39.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvga|information_disclosure",
+       "weakness_class": "information_disclosure"
+      }
+     ],
+     "weakness_class": "information_disclosure"
+    },
+    {
+     "class_penalty": 33.0,
+     "spread": 0.0,
+     "top_unit_penalty": 33.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 2,
+       "finding_ids": [
+        "vuln_170a32",
+        "vuln_172ae3",
+        "vuln_9a9585"
+       ],
+       "head_finding_id": "vuln_9a9585",
+       "increment": 3.0,
+       "penalty": 33.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvga|authentication",
+       "weakness_class": "authentication"
+      }
+     ],
+     "weakness_class": "authentication"
+    },
+    {
+     "class_penalty": 33.0,
+     "spread": 0.0,
+     "top_unit_penalty": 33.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 2,
+       "finding_ids": [
+        "vuln_2d0755",
+        "vuln_369231",
+        "vuln_5e0da8",
+        "vuln_ea9e55"
+       ],
+       "head_finding_id": "vuln_ea9e55",
+       "increment": 3.0,
+       "penalty": 33.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvga|code_execution",
+       "weakness_class": "code_execution"
+      }
+     ],
+     "weakness_class": "code_execution"
+    },
+    {
+     "class_penalty": 30.0,
+     "spread": 0.0,
+     "top_unit_penalty": 30.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_16ddc9",
+        "vuln_e7952e"
+       ],
+       "head_finding_id": "vuln_e7952e",
+       "increment": 0.0,
+       "penalty": 30.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvga|sql_injection",
+       "weakness_class": "sql_injection"
+      }
+     ],
+     "weakness_class": "sql_injection"
+    },
+    {
+     "class_penalty": 19.5,
+     "spread": 0.0,
+     "top_unit_penalty": 19.5,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 15.0,
+       "distinct_weaknesses": 4,
+       "finding_ids": [
+        "vuln_2513ec",
+        "vuln_4610b8",
+        "vuln_628170",
+        "vuln_62dede",
+        "vuln_8911c1",
+        "vuln_e1dbdb",
+        "vuln_f843a5"
+       ],
+       "head_finding_id": "vuln_8911c1",
+       "increment": 4.5,
+       "penalty": 19.5,
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvga|xss",
+       "weakness_class": "xss"
+      }
+     ],
+     "weakness_class": "xss"
+    },
+    {
+     "class_penalty": 18.0,
+     "spread": 0.0,
+     "top_unit_penalty": 18.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 15.0,
+       "distinct_weaknesses": 3,
+       "finding_ids": [
+        "vuln_25a900",
+        "vuln_26014b",
+        "vuln_37c99e",
+        "vuln_4f7721",
+        "vuln_733781",
+        "vuln_7695e7",
+        "vuln_7d3fc9",
+        "vuln_8d68bb",
+        "vuln_9fdd92",
+        "vuln_c6c687",
+        "vuln_ce288d"
+       ],
+       "head_finding_id": "vuln_ce288d",
+       "increment": 3.0,
+       "penalty": 18.0,
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvga|access_control",
+       "weakness_class": "access_control"
+      }
+     ],
+     "weakness_class": "access_control"
+    },
+    {
+     "class_penalty": 15.0,
+     "spread": 0.0,
+     "top_unit_penalty": 15.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 15.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_4cb1e3"
+       ],
+       "head_finding_id": "vuln_4cb1e3",
+       "increment": 0.0,
+       "penalty": 15.0,
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvga|cryptography",
+       "weakness_class": "cryptography"
+      }
+     ],
+     "weakness_class": "cryptography"
+    },
+    {
+     "class_penalty": 15.0,
+     "spread": 0.0,
+     "top_unit_penalty": 15.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 15.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_2d1ec6",
+        "vuln_f52b32"
+       ],
+       "head_finding_id": "vuln_2d1ec6",
+       "increment": 0.0,
+       "penalty": 15.0,
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvga|file_access",
+       "weakness_class": "file_access"
+      }
+     ],
+     "weakness_class": "file_access"
+    },
+    {
+     "class_penalty": 12.0,
+     "spread": 0.0,
+     "top_unit_penalty": 12.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 12.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_355a88"
+       ],
+       "head_finding_id": "vuln_355a88",
+       "increment": 0.0,
+       "penalty": 12.0,
+       "proof": "confirmed",
+       "severity": "high",
+       "unit": "tgt_fx_dvga|ssrf",
+       "weakness_class": "ssrf"
+      }
+     ],
+     "weakness_class": "ssrf"
+    },
+    {
+     "class_penalty": 6.5,
+     "spread": 0.0,
+     "top_unit_penalty": 6.5,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 5.0,
+       "distinct_weaknesses": 4,
+       "finding_ids": [
+        "vuln_02582e",
+        "vuln_08b559",
+        "vuln_1ca82f",
+        "vuln_213c2c",
+        "vuln_2d948b",
+        "vuln_34ddb9",
+        "vuln_787c8e",
+        "vuln_9be88b",
+        "vuln_ad74a1",
+        "vuln_dda36d",
+        "vuln_e02849"
+       ],
+       "head_finding_id": "vuln_02582e",
+       "increment": 1.5,
+       "penalty": 6.5,
+       "proof": "exploited",
+       "severity": "medium",
+       "unit": "tgt_fx_dvga|configuration",
+       "weakness_class": "configuration"
+      }
+     ],
+     "weakness_class": "configuration"
+    },
+    {
+     "class_penalty": 4.0,
+     "spread": 0.0,
+     "top_unit_penalty": 4.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 4.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_324624",
+        "vuln_573925"
+       ],
+       "head_finding_id": "vuln_573925",
+       "increment": 0.0,
+       "penalty": 4.0,
+       "proof": "confirmed",
+       "severity": "medium",
+       "unit": "tgt_fx_dvga|csrf",
+       "weakness_class": "csrf"
+      }
+     ],
+     "weakness_class": "csrf"
+    },
+    {
+     "class_penalty": 4.0,
+     "spread": 0.0,
+     "top_unit_penalty": 4.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 4.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_bf7738"
+       ],
+       "head_finding_id": "vuln_bf7738",
+       "increment": 0.0,
+       "penalty": 4.0,
+       "proof": "confirmed",
+       "severity": "medium",
+       "unit": "tgt_fx_dvga|graphql_batching",
+       "weakness_class": "graphql_batching"
+      }
+     ],
+     "weakness_class": "graphql_batching"
+    },
+    {
+     "class_penalty": 1.6,
+     "spread": 0.0,
+     "top_unit_penalty": 1.6,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 1.6,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_37bc1e"
+       ],
+       "head_finding_id": "vuln_37bc1e",
+       "increment": 0.0,
+       "penalty": 1.6,
+       "proof": "confirmed",
+       "severity": "low",
+       "unit": "tgt_fx_dvga|input_validation",
+       "weakness_class": "input_validation"
+      }
+     ],
+     "weakness_class": "input_validation"
+    },
+    {
+     "class_penalty": 1.6,
+     "spread": 0.0,
+     "top_unit_penalty": 1.6,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga",
+       "base_penalty": 1.6,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_20d2ae"
+       ],
+       "head_finding_id": "vuln_20d2ae",
+       "increment": 0.0,
+       "penalty": 1.6,
+       "proof": "confirmed",
+       "severity": "low",
+       "unit": "tgt_fx_dvga|session",
+       "weakness_class": "session"
+      }
+     ],
+     "weakness_class": "session"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 33,
+     "exploited": 34,
+     "unconfirmed": 1
+    },
+    "by_severity": {
+     "critical": 10,
+     "high": 21,
+     "info": 1,
+     "low": 13,
+     "medium": 23
+    },
+    "counted_findings": 68,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 1,
+     "quarantined": 0
+    },
+    "open_findings": 68,
+    "to_confirm": [],
+    "units": 14,
+    "unknown_severity": [],
+    "weakness_classes": 14
+   },
+   "grade": "E",
+   "inputs_digest": "sha256:8ca3da01b2fe5f464e12a02c401ae3167f1d482b408f5d0f3d21d50053b3dbb2",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "The penalties exceed the scale (sum 232.2, 2.32x the scale): the rating is at 0 and does not distinguish further exposure."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": null,
+    "finding_ids": [],
+    "rule": "penalties",
+    "score_without": null,
+    "text": "The penalty sum of the weakness classes sets the rating at 0 (the penalties exceed the scale); the caps by worst evidence would also hold it: capped at 39 while 10 exploited critical finding(s) remain open. The weakness classes that weigh most are listed with their share of the penalty sum."
+   },
+   "penalty_over_scale": 2.32,
+   "penalty_total": 232.2,
+   "score": 0,
+   "score_status": "rated",
+   "source_campaign_ids": [
+    "camp_fx_dvga_full"
+   ],
+   "status_reasons": [],
+   "target_id": "tgt_fx_dvga",
+   "top_classes": [
+    {
+     "class_penalty": 39.0,
+     "share_of_penalty": 0.17,
+     "share_text": "17 % of the penalty sum",
+     "weakness_class": "information_disclosure"
+    },
+    {
+     "class_penalty": 33.0,
+     "share_of_penalty": 0.14,
+     "share_text": "14 % of the penalty sum",
+     "weakness_class": "authentication"
+    },
+    {
+     "class_penalty": 33.0,
+     "share_of_penalty": 0.14,
+     "share_text": "14 % of the penalty sum",
+     "weakness_class": "code_execution"
+    }
+   ],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 33,
+   "critical": 10,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 34,
+   "exploited_by_severity": {
+    "critical": 10,
+    "high": 18,
+    "info": 0,
+    "low": 0,
+    "medium": 6
+   },
+   "high": 21,
+   "info": 1,
+   "low": 13,
+   "medium": 23,
+   "total_findings": 68,
+   "unconfirmed": 1
+  }
+ },
+ "real_dvwa_e2e_as_stored": {
+  "score": {
+   "assessed_at": "2026-11-19T12:22:11Z",
+   "assessment_coverage": {
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "present": false,
+    "sentence": "Coverage not recorded for this campaign."
+   },
+   "campaign_id": "camp_fx_dvwa_e2e",
+   "caps": [
+    {
+     "cap": 39,
+     "finding_ids": [
+      "vuln_3a59f4",
+      "vuln_556942",
+      "vuln_62ede1",
+      "vuln_85e037",
+      "vuln_95e740",
+      "vuln_aa2b91",
+      "vuln_b9b78b",
+      "vuln_c3d0a0",
+      "vuln_cbb141",
+      "vuln_e1b38d",
+      "vuln_fdffba",
+      "vuln_ff7f07"
+     ],
+     "rule": "exploited_critical"
+    },
+    {
+     "cap": 49,
+     "finding_ids": [
+      "vuln_937bb3"
+     ],
+     "rule": "confirmed_critical"
+    },
+    {
+     "cap": 59,
+     "finding_ids": [
+      "vuln_0d256b",
+      "vuln_204cc1",
+      "vuln_2504c1",
+      "vuln_30ea16",
+      "vuln_39454b",
+      "vuln_433f57",
+      "vuln_49d276",
+      "vuln_4b8a14",
+      "vuln_55ca32",
+      "vuln_653d79",
+      "vuln_69e2e2",
+      "vuln_74c7b9",
+      "vuln_887126",
+      "vuln_9c205c",
+      "vuln_a3da5f",
+      "vuln_a4478f",
+      "vuln_acb9d7",
+      "vuln_ccf87b",
+      "vuln_cd24c0",
+      "vuln_da750d",
+      "vuln_f7c531"
+     ],
+     "rule": "exploited_high"
+    }
+   ],
+   "caps_applied": [],
+   "components": [
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "distinct_weaknesses": 4,
+       "finding_ids": [
+        "vuln_1b1df4",
+        "vuln_433f57",
+        "vuln_a4478f",
+        "vuln_aa2b91",
+        "vuln_d76711",
+        "vuln_f7c531"
+       ],
+       "head_finding_id": "vuln_aa2b91",
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvwa|authentication",
+       "weakness_class": "authentication"
+      }
+     ],
+     "weakness_class": "authentication"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "distinct_weaknesses": 6,
+       "finding_ids": [
+        "vuln_5e849b",
+        "vuln_67ffeb",
+        "vuln_68e4ad",
+        "vuln_6daf2d",
+        "vuln_817e3e",
+        "vuln_85e037",
+        "vuln_cd24c0"
+       ],
+       "head_finding_id": "vuln_85e037",
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvwa|information_disclosure",
+       "weakness_class": "information_disclosure"
+      }
+     ],
+     "weakness_class": "information_disclosure"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "distinct_weaknesses": 3,
+       "finding_ids": [
+        "vuln_556942",
+        "vuln_937bb3",
+        "vuln_95e740",
+        "vuln_c3d0a0",
+        "vuln_fdffba"
+       ],
+       "head_finding_id": "vuln_fdffba",
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvwa|code_execution",
+       "weakness_class": "code_execution"
+      }
+     ],
+     "weakness_class": "code_execution"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "distinct_weaknesses": 2,
+       "finding_ids": [
+        "vuln_653d79",
+        "vuln_887126",
+        "vuln_a3da5f",
+        "vuln_b9b78b"
+       ],
+       "head_finding_id": "vuln_b9b78b",
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvwa|file_access",
+       "weakness_class": "file_access"
+      }
+     ],
+     "weakness_class": "file_access"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "distinct_weaknesses": 2,
+       "finding_ids": [
+        "vuln_39454b",
+        "vuln_3a59f4",
+        "vuln_62ede1",
+        "vuln_6bcc66",
+        "vuln_9e65cc",
+        "vuln_cbb141",
+        "vuln_e1b38d",
+        "vuln_ff7f07"
+       ],
+       "head_finding_id": "vuln_ff7f07",
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvwa|sql_injection",
+       "weakness_class": "sql_injection"
+      }
+     ],
+     "weakness_class": "sql_injection"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "distinct_weaknesses": 5,
+       "finding_ids": [
+        "vuln_0a732d",
+        "vuln_0d256b",
+        "vuln_204cc1",
+        "vuln_2504c1",
+        "vuln_30ea16",
+        "vuln_4b8a14",
+        "vuln_55ca32",
+        "vuln_69e2e2",
+        "vuln_93b190",
+        "vuln_acb9d7",
+        "vuln_ccf87b",
+        "vuln_da750d"
+       ],
+       "head_finding_id": "vuln_da750d",
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvwa|xss",
+       "weakness_class": "xss"
+      }
+     ],
+     "weakness_class": "xss"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "distinct_weaknesses": 9,
+       "finding_ids": [
+        "vuln_1e6825",
+        "vuln_6f3628",
+        "vuln_7c8ef3",
+        "vuln_8c1be7",
+        "vuln_8dcb64",
+        "vuln_93ac5f",
+        "vuln_af7215",
+        "vuln_c08d88",
+        "vuln_d7e841",
+        "vuln_ed330d",
+        "vuln_fe343e"
+       ],
+       "head_finding_id": "vuln_ed330d",
+       "proof": "confirmed",
+       "severity": "high",
+       "unit": "tgt_fx_dvwa|configuration",
+       "weakness_class": "configuration"
+      }
+     ],
+     "weakness_class": "configuration"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_49d276"
+       ],
+       "head_finding_id": "vuln_49d276",
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvwa|access_control",
+       "weakness_class": "access_control"
+      }
+     ],
+     "weakness_class": "access_control"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_74c7b9",
+        "vuln_9c205c"
+       ],
+       "head_finding_id": "vuln_9c205c",
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvwa|csrf",
+       "weakness_class": "csrf"
+      }
+     ],
+     "weakness_class": "csrf"
+    },
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "distinct_weaknesses": 3,
+       "finding_ids": [
+        "vuln_828c57",
+        "vuln_a14791",
+        "vuln_c987a4"
+       ],
+       "head_finding_id": "vuln_c987a4",
+       "proof": "exploited",
+       "severity": "medium",
+       "unit": "tgt_fx_dvwa|client_side_validation_bypass",
+       "weakness_class": "client_side_validation_bypass"
+      }
+     ],
+     "weakness_class": "client_side_validation_bypass"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 18,
+     "exploited": 40,
+     "unconfirmed": 1
+    },
+    "by_severity": {
+     "critical": 13,
+     "high": 26,
+     "info": 0,
+     "low": 2,
+     "medium": 18
+    },
+    "counted_findings": 59,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 59,
+    "to_confirm": [],
+    "units": 10,
+    "unknown_severity": [],
+    "weakness_classes": 10
+   },
+   "grade": null,
+   "inputs_digest": "sha256:4ab4d72e6328ad6deb2c793fe0ca5e0af64fe664564969e172cc82c40e3606a1",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
+   "penalty_total": null,
+   "score": null,
+   "score_status": "not_rated",
+   "source_campaign_ids": [
+    "camp_fx_dvwa_e2e"
+   ],
+   "status_reasons": [
+    {
+     "code": "no_coverage_signals",
+     "text": "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
+    }
+   ],
+   "target_id": "tgt_fx_dvwa",
+   "top_classes": [],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 18,
+   "critical": 13,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 40,
+   "exploited_by_severity": {
+    "critical": 12,
+    "high": 21,
+    "info": 0,
+    "low": 0,
+    "medium": 7
+   },
+   "high": 26,
+   "info": 0,
+   "low": 2,
+   "medium": 18,
+   "total_findings": 59,
+   "unconfirmed": 1
+  }
+ },
+ "real_dvwa_e2e_reconstructed": {
+  "score": {
+   "assessed_at": "2026-11-19T13:18:37Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "headless-browser",
+     "php"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 4,
+    "campaign_kind": "full",
+    "campaign_kind_source": "fixture_reconstruction",
+    "commands_executed": 23,
+    "finalized_at": "2026-11-19T13:18:37Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 3386,
+    "present": true,
+    "sentence": "full campaign, 2 test agents, 56 min of server-measured activity, 4 assets registered, 23 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "headless-browser",
+     "php"
+    ],
+    "started_at": "2026-11-19T12:22:11Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_dvwa_e2e",
+   "caps": [
+    {
+     "cap": 39,
+     "finding_ids": [
+      "vuln_3a59f4",
+      "vuln_556942",
+      "vuln_62ede1",
+      "vuln_85e037",
+      "vuln_95e740",
+      "vuln_aa2b91",
+      "vuln_b9b78b",
+      "vuln_c3d0a0",
+      "vuln_cbb141",
+      "vuln_e1b38d",
+      "vuln_fdffba",
+      "vuln_ff7f07"
+     ],
+     "rule": "exploited_critical"
+    },
+    {
+     "cap": 49,
+     "finding_ids": [
+      "vuln_937bb3"
+     ],
+     "rule": "confirmed_critical"
+    },
+    {
+     "cap": 59,
+     "finding_ids": [
+      "vuln_0d256b",
+      "vuln_204cc1",
+      "vuln_2504c1",
+      "vuln_30ea16",
+      "vuln_39454b",
+      "vuln_433f57",
+      "vuln_49d276",
+      "vuln_4b8a14",
+      "vuln_55ca32",
+      "vuln_653d79",
+      "vuln_69e2e2",
+      "vuln_74c7b9",
+      "vuln_887126",
+      "vuln_9c205c",
+      "vuln_a3da5f",
+      "vuln_a4478f",
+      "vuln_acb9d7",
+      "vuln_ccf87b",
+      "vuln_cd24c0",
+      "vuln_da750d",
+      "vuln_f7c531"
+     ],
+     "rule": "exploited_high"
+    }
+   ],
+   "caps_applied": [],
+   "components": [
+    {
+     "class_penalty": 39.0,
+     "spread": 0.0,
+     "top_unit_penalty": 39.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 4,
+       "finding_ids": [
+        "vuln_1b1df4",
+        "vuln_433f57",
+        "vuln_a4478f",
+        "vuln_aa2b91",
+        "vuln_d76711",
+        "vuln_f7c531"
+       ],
+       "head_finding_id": "vuln_aa2b91",
+       "increment": 9.0,
+       "penalty": 39.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvwa|authentication",
+       "weakness_class": "authentication"
+      }
+     ],
+     "weakness_class": "authentication"
+    },
+    {
+     "class_penalty": 39.0,
+     "spread": 0.0,
+     "top_unit_penalty": 39.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 6,
+       "finding_ids": [
+        "vuln_5e849b",
+        "vuln_67ffeb",
+        "vuln_68e4ad",
+        "vuln_6daf2d",
+        "vuln_817e3e",
+        "vuln_85e037",
+        "vuln_cd24c0"
+       ],
+       "head_finding_id": "vuln_85e037",
+       "increment": 9.0,
+       "penalty": 39.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvwa|information_disclosure",
+       "weakness_class": "information_disclosure"
+      }
+     ],
+     "weakness_class": "information_disclosure"
+    },
+    {
+     "class_penalty": 36.0,
+     "spread": 0.0,
+     "top_unit_penalty": 36.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 3,
+       "finding_ids": [
+        "vuln_556942",
+        "vuln_937bb3",
+        "vuln_95e740",
+        "vuln_c3d0a0",
+        "vuln_fdffba"
+       ],
+       "head_finding_id": "vuln_fdffba",
+       "increment": 6.0,
+       "penalty": 36.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvwa|code_execution",
+       "weakness_class": "code_execution"
+      }
+     ],
+     "weakness_class": "code_execution"
+    },
+    {
+     "class_penalty": 33.0,
+     "spread": 0.0,
+     "top_unit_penalty": 33.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 2,
+       "finding_ids": [
+        "vuln_653d79",
+        "vuln_887126",
+        "vuln_a3da5f",
+        "vuln_b9b78b"
+       ],
+       "head_finding_id": "vuln_b9b78b",
+       "increment": 3.0,
+       "penalty": 33.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvwa|file_access",
+       "weakness_class": "file_access"
+      }
+     ],
+     "weakness_class": "file_access"
+    },
+    {
+     "class_penalty": 33.0,
+     "spread": 0.0,
+     "top_unit_penalty": 33.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 2,
+       "finding_ids": [
+        "vuln_39454b",
+        "vuln_3a59f4",
+        "vuln_62ede1",
+        "vuln_6bcc66",
+        "vuln_9e65cc",
+        "vuln_cbb141",
+        "vuln_e1b38d",
+        "vuln_ff7f07"
+       ],
+       "head_finding_id": "vuln_ff7f07",
+       "increment": 3.0,
+       "penalty": 33.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_dvwa|sql_injection",
+       "weakness_class": "sql_injection"
+      }
+     ],
+     "weakness_class": "sql_injection"
+    },
+    {
+     "class_penalty": 19.5,
+     "spread": 0.0,
+     "top_unit_penalty": 19.5,
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "base_penalty": 15.0,
+       "distinct_weaknesses": 5,
+       "finding_ids": [
+        "vuln_0a732d",
+        "vuln_0d256b",
+        "vuln_204cc1",
+        "vuln_2504c1",
+        "vuln_30ea16",
+        "vuln_4b8a14",
+        "vuln_55ca32",
+        "vuln_69e2e2",
+        "vuln_93b190",
+        "vuln_acb9d7",
+        "vuln_ccf87b",
+        "vuln_da750d"
+       ],
+       "head_finding_id": "vuln_da750d",
+       "increment": 4.5,
+       "penalty": 19.5,
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvwa|xss",
+       "weakness_class": "xss"
+      }
+     ],
+     "weakness_class": "xss"
+    },
+    {
+     "class_penalty": 15.6,
+     "spread": 0.0,
+     "top_unit_penalty": 15.6,
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "base_penalty": 12.0,
+       "distinct_weaknesses": 9,
+       "finding_ids": [
+        "vuln_1e6825",
+        "vuln_6f3628",
+        "vuln_7c8ef3",
+        "vuln_8c1be7",
+        "vuln_8dcb64",
+        "vuln_93ac5f",
+        "vuln_af7215",
+        "vuln_c08d88",
+        "vuln_d7e841",
+        "vuln_ed330d",
+        "vuln_fe343e"
+       ],
+       "head_finding_id": "vuln_ed330d",
+       "increment": 3.6,
+       "penalty": 15.6,
+       "proof": "confirmed",
+       "severity": "high",
+       "unit": "tgt_fx_dvwa|configuration",
+       "weakness_class": "configuration"
+      }
+     ],
+     "weakness_class": "configuration"
+    },
+    {
+     "class_penalty": 15.0,
+     "spread": 0.0,
+     "top_unit_penalty": 15.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "base_penalty": 15.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_49d276"
+       ],
+       "head_finding_id": "vuln_49d276",
+       "increment": 0.0,
+       "penalty": 15.0,
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvwa|access_control",
+       "weakness_class": "access_control"
+      }
+     ],
+     "weakness_class": "access_control"
+    },
+    {
+     "class_penalty": 15.0,
+     "spread": 0.0,
+     "top_unit_penalty": 15.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "base_penalty": 15.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_74c7b9",
+        "vuln_9c205c"
+       ],
+       "head_finding_id": "vuln_9c205c",
+       "increment": 0.0,
+       "penalty": 15.0,
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_dvwa|csrf",
+       "weakness_class": "csrf"
+      }
+     ],
+     "weakness_class": "csrf"
+    },
+    {
+     "class_penalty": 6.0,
+     "spread": 0.0,
+     "top_unit_penalty": 6.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvwa",
+       "base_penalty": 5.0,
+       "distinct_weaknesses": 3,
+       "finding_ids": [
+        "vuln_828c57",
+        "vuln_a14791",
+        "vuln_c987a4"
+       ],
+       "head_finding_id": "vuln_c987a4",
+       "increment": 1.0,
+       "penalty": 6.0,
+       "proof": "exploited",
+       "severity": "medium",
+       "unit": "tgt_fx_dvwa|client_side_validation_bypass",
+       "weakness_class": "client_side_validation_bypass"
+      }
+     ],
+     "weakness_class": "client_side_validation_bypass"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 18,
+     "exploited": 40,
+     "unconfirmed": 1
+    },
+    "by_severity": {
+     "critical": 13,
+     "high": 26,
+     "info": 0,
+     "low": 2,
+     "medium": 18
+    },
+    "counted_findings": 59,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 59,
+    "to_confirm": [],
+    "units": 10,
+    "unknown_severity": [],
+    "weakness_classes": 10
+   },
+   "grade": "E",
+   "inputs_digest": "sha256:c9291fec48bc239bad4c5d283d98f6550f1138f11dfc6bd7dc46eca778fc3e46",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "The penalties exceed the scale (sum 251.1, 2.51x the scale): the rating is at 0 and does not distinguish further exposure."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": null,
+    "finding_ids": [],
+    "rule": "penalties",
+    "score_without": null,
+    "text": "The penalty sum of the weakness classes sets the rating at 0 (the penalties exceed the scale); the caps by worst evidence would also hold it: capped at 39 while 12 exploited critical finding(s) remain open. The weakness classes that weigh most are listed with their share of the penalty sum."
+   },
+   "penalty_over_scale": 2.51,
+   "penalty_total": 251.1,
+   "score": 0,
+   "score_status": "rated",
+   "source_campaign_ids": [
+    "camp_fx_dvwa_e2e"
+   ],
+   "status_reasons": [],
+   "target_id": "tgt_fx_dvwa",
+   "top_classes": [
+    {
+     "class_penalty": 39.0,
+     "share_of_penalty": 0.16,
+     "share_text": "16 % of the penalty sum",
+     "weakness_class": "authentication"
+    },
+    {
+     "class_penalty": 39.0,
+     "share_of_penalty": 0.16,
+     "share_text": "16 % of the penalty sum",
+     "weakness_class": "information_disclosure"
+    },
+    {
+     "class_penalty": 36.0,
+     "share_of_penalty": 0.14,
+     "share_text": "14 % of the penalty sum",
+     "weakness_class": "code_execution"
+    }
+   ],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 18,
+   "critical": 13,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 40,
+   "exploited_by_severity": {
+    "critical": 12,
+    "high": 21,
+    "info": 0,
+    "low": 0,
+    "medium": 7
+   },
+   "high": 26,
+   "info": 0,
+   "low": 2,
+   "medium": 18,
+   "total_findings": 59,
+   "unconfirmed": 1
+  }
+ },
+ "real_prevalidation_as_stored": {
+  "score": {
+   "assessed_at": "2026-11-19T10:25:45Z",
+   "assessment_coverage": {
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "present": false,
+    "sentence": "Coverage not recorded for this campaign."
+   },
+   "campaign_id": "camp_fx_dvga_prev",
+   "caps": [],
+   "caps_applied": [],
+   "components": [
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_dvga_prev",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_24b95e",
+        "vuln_3f73c9"
+       ],
+       "head_finding_id": "vuln_3f73c9",
+       "proof": "exploited",
+       "severity": "medium",
+       "unit": "tgt_fx_dvga_prev|information_disclosure",
+       "weakness_class": "information_disclosure"
+      }
+     ],
+     "weakness_class": "information_disclosure"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 1,
+     "exploited": 1,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 0,
+     "high": 0,
+     "info": 0,
+     "low": 1,
+     "medium": 1
+    },
+    "counted_findings": 2,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 2,
+    "to_confirm": [],
+    "units": 1,
+    "unknown_severity": [],
+    "weakness_classes": 1
+   },
+   "grade": null,
+   "inputs_digest": "sha256:d1c2b07138f834687cca402a037085e652872f227771ba94190532e216270e37",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
+   "penalty_total": null,
+   "score": null,
+   "score_status": "not_rated",
+   "source_campaign_ids": [
+    "camp_fx_dvga_prev"
+   ],
+   "status_reasons": [
+    {
+     "code": "no_coverage_signals",
+     "text": "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
+    }
+   ],
+   "target_id": "tgt_fx_dvga_prev",
+   "top_classes": [],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 1,
+   "critical": 0,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 1,
+   "exploited_by_severity": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 1
+   },
+   "high": 0,
+   "info": 0,
+   "low": 1,
+   "medium": 1,
+   "total_findings": 2,
+   "unconfirmed": 0
+  }
+ },
+ "real_prevalidation_reconstructed": {
+  "score": {
+   "assessed_at": "2026-11-19T10:26:45Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "graphql"
+    ],
+    "agents_source": "tool_calls_only",
+    "assets_registered": 1,
+    "campaign_kind": "short",
+    "campaign_kind_source": "fixture_reconstruction",
+    "commands_executed": 1,
+    "finalized_at": "2026-11-19T10:26:45Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 60,
+    "present": true,
+    "sentence": "short campaign, 1 test agent, 1 min of server-measured activity, 1 asset registered, 2 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "graphql"
+    ],
+    "started_at": "2026-11-19T10:25:45Z",
+    "workflows_executed": 1
+   },
+   "campaign_id": "camp_fx_dvga_prev",
+   "caps": [],
+   "caps_applied": [
+    {
+     "cap": 69,
+     "finding_ids": [],
+     "rule": "limited_coverage"
+    }
+   ],
+   "components": [
+    {
+     "class_penalty": 5.0,
+     "spread": 0.0,
+     "top_unit_penalty": 5.0,
+     "units": [
+      {
+       "asset": "tgt_fx_dvga_prev",
+       "base_penalty": 5.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_24b95e",
+        "vuln_3f73c9"
+       ],
+       "head_finding_id": "vuln_3f73c9",
+       "increment": 0.0,
+       "penalty": 5.0,
+       "proof": "exploited",
+       "severity": "medium",
+       "unit": "tgt_fx_dvga_prev|information_disclosure",
+       "weakness_class": "information_disclosure"
+      }
+     ],
+     "weakness_class": "information_disclosure"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 1,
+     "exploited": 1,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 0,
+     "high": 0,
+     "info": 0,
+     "low": 1,
+     "medium": 1
+    },
+    "counted_findings": 2,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 2,
+    "to_confirm": [],
+    "units": 1,
+    "unknown_severity": [],
+    "weakness_classes": 1
+   },
+   "grade": "C",
+   "inputs_digest": "sha256:7addd317341bf1347c8842b279a246231d4d95c710a2d2a9004440248097edb6",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "Declared as a short campaign.",
+    "Measured duration 1 min, under 30 min.",
+    "Dispatched agents were not observed in the agent session log; the agent names given in the MCP calls cannot meet the coverage floor.",
+    "2 toolbox command(s) executed, under 10.",
+    "Dispatched agents were taken from the MCP calls that carried an agent name (the agent session log was not readable); an agent that ran without reporting is not seen."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 69,
+    "finding_ids": [],
+    "rule": "limited_coverage",
+    "score_without": null,
+    "text": "Capped at 69 because the test was limited: a completed full campaign that meets the coverage floor removes this cap."
+   },
+   "penalty_over_scale": 0.05,
+   "penalty_total": 5.0,
+   "score": 69,
+   "score_status": "limited",
+   "source_campaign_ids": [
+    "camp_fx_dvga_prev"
+   ],
+   "status_reasons": [
+    {
+     "code": "short_campaign",
+     "text": "Declared as a short campaign."
+    },
+    {
+     "code": "short_duration",
+     "text": "Measured duration 1 min, under 30 min."
+    },
+    {
+     "code": "agents_not_observed",
+     "text": "Dispatched agents were not observed in the agent session log; the agent names given in the MCP calls cannot meet the coverage floor."
+    },
+    {
+     "code": "few_commands",
+     "text": "2 toolbox command(s) executed, under 10."
+    }
+   ],
+   "target_id": "tgt_fx_dvga_prev",
+   "top_classes": [
+    {
+     "class_penalty": 5.0,
+     "share_of_penalty": 1.0,
+     "share_text": "100 % of the penalty sum",
+     "weakness_class": "information_disclosure"
+    }
+   ],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 1,
+   "critical": 0,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 1,
+   "exploited_by_severity": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 1
+   },
+   "high": 0,
+   "info": 0,
+   "low": 1,
+   "medium": 1,
+   "total_findings": 2,
+   "unconfirmed": 0
+  }
+ },
+ "syn_aborted": {
+  "score": {
+   "assessed_at": "2026-11-19T11:00:00Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 4,
+    "campaign_kind": "full",
+    "campaign_kind_source": "default",
+    "commands_executed": 120,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 3600,
+    "present": true,
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_syn_aborted",
+   "caps": [
+    {
+     "cap": 39,
+     "finding_ids": [
+      "vuln_s0001"
+     ],
+     "rule": "exploited_critical"
+    }
+   ],
+   "caps_applied": [],
+   "components": [
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0001"
+       ],
+       "head_finding_id": "vuln_s0001",
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_syn|code_execution",
+       "weakness_class": "code_execution"
+      }
+     ],
+     "weakness_class": "code_execution"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 0,
+     "exploited": 1,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 1,
+     "high": 0,
+     "info": 0,
+     "low": 0,
+     "medium": 0
+    },
+    "counted_findings": 1,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 1,
+    "to_confirm": [],
+    "units": 1,
+    "unknown_severity": [],
+    "weakness_classes": 1
+   },
+   "grade": null,
+   "inputs_digest": "sha256:749ebebcd38f5a82a6c7fe1257d4d5027d4586c3fa33eef43aa58eb42235fb55",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "The campaign did not complete (status: aborted)."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
+   "penalty_total": null,
+   "score": null,
+   "score_status": "not_rated",
+   "source_campaign_ids": [
+    "camp_fx_syn_aborted"
+   ],
+   "status_reasons": [
+    {
+     "code": "not_completed",
+     "text": "The campaign did not complete (status: aborted)."
+    }
+   ],
+   "target_id": "tgt_fx_syn",
+   "top_classes": [],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 0,
+   "critical": 1,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 1,
+   "exploited_by_severity": {
+    "critical": 1,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 0,
+   "info": 0,
+   "low": 0,
+   "medium": 0,
+   "total_findings": 1,
+   "unconfirmed": 0
+  }
+ },
+ "syn_duplicates_across_agents": {
+  "score": {
+   "assessed_at": "2026-11-19T11:00:00Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 4,
+    "campaign_kind": "full",
+    "campaign_kind_source": "default",
+    "commands_executed": 120,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 3600,
+    "present": true,
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_syn_duplicates_across_agents",
+   "caps": [
+    {
+     "cap": 39,
+     "finding_ids": [
+      "vuln_s0001",
+      "vuln_s0010",
+      "vuln_s0020"
+     ],
+     "rule": "exploited_critical"
+    }
+   ],
+   "caps_applied": [
+    {
+     "cap": 39,
+     "finding_ids": [
+      "vuln_s0001",
+      "vuln_s0010",
+      "vuln_s0020"
+     ],
+     "rule": "exploited_critical"
+    }
+   ],
+   "components": [
+    {
+     "class_penalty": 33.0,
+     "spread": 0.0,
+     "top_unit_penalty": 33.0,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 2,
+       "finding_ids": [
+        "vuln_s0001",
+        "vuln_s0010",
+        "vuln_s0020"
+       ],
+       "head_finding_id": "vuln_s0020",
+       "increment": 3.0,
+       "penalty": 33.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_syn|sql_injection",
+       "weakness_class": "sql_injection"
+      }
+     ],
+     "weakness_class": "sql_injection"
+    },
+    {
+     "class_penalty": 13.2,
+     "spread": 0.0,
+     "top_unit_penalty": 13.2,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 12.0,
+       "distinct_weaknesses": 2,
+       "finding_ids": [
+        "vuln_s0002",
+        "vuln_s0011",
+        "vuln_s0021"
+       ],
+       "head_finding_id": "vuln_s0021",
+       "increment": 1.2,
+       "penalty": 13.2,
+       "proof": "confirmed",
+       "severity": "high",
+       "unit": "tgt_fx_syn|xss",
+       "weakness_class": "xss"
+      }
+     ],
+     "weakness_class": "xss"
+    },
+    {
+     "class_penalty": 4.4,
+     "spread": 0.0,
+     "top_unit_penalty": 4.4,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 4.0,
+       "distinct_weaknesses": 2,
+       "finding_ids": [
+        "vuln_s0003",
+        "vuln_s0012",
+        "vuln_s0022"
+       ],
+       "head_finding_id": "vuln_s0022",
+       "increment": 0.4,
+       "penalty": 4.4,
+       "proof": "confirmed",
+       "severity": "medium",
+       "unit": "tgt_fx_syn|configuration",
+       "weakness_class": "configuration"
+      }
+     ],
+     "weakness_class": "configuration"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 6,
+     "exploited": 3,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 3,
+     "high": 3,
+     "info": 0,
+     "low": 0,
+     "medium": 3
+    },
+    "counted_findings": 9,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 9,
+    "to_confirm": [],
+    "units": 3,
+    "unknown_severity": [],
+    "weakness_classes": 3
+   },
+   "grade": "E",
+   "inputs_digest": "sha256:b40239ab876b2aebde951c6897cc87f53ade572b92605323bfbd7c9755979dd8",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 39,
+    "finding_ids": [
+     "vuln_s0001",
+     "vuln_s0010",
+     "vuln_s0020"
+    ],
+    "rule": "exploited_critical",
+    "score_without": 82,
+    "text": "Capped at 39 while 3 exploited critical finding(s) remain open. Without them (no longer reported by a new campaign, nothing else changed) the same rules would give 82."
+   },
+   "penalty_over_scale": 0.51,
+   "penalty_total": 50.6,
+   "score": 39,
+   "score_status": "rated",
+   "source_campaign_ids": [
+    "camp_fx_syn_duplicates_across_agents"
+   ],
+   "status_reasons": [],
+   "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 33.0,
+     "share_of_penalty": 0.65,
+     "share_text": "65 % of the penalty sum",
+     "weakness_class": "sql_injection"
+    },
+    {
+     "class_penalty": 13.2,
+     "share_of_penalty": 0.26,
+     "share_text": "26 % of the penalty sum",
+     "weakness_class": "xss"
+    },
+    {
+     "class_penalty": 4.4,
+     "share_of_penalty": 0.09,
+     "share_text": "9 % of the penalty sum",
+     "weakness_class": "configuration"
+    }
+   ],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 6,
+   "critical": 3,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 3,
+   "exploited_by_severity": {
+    "critical": 3,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 3,
+   "info": 0,
+   "low": 0,
+   "medium": 3,
+   "total_findings": 9,
+   "unconfirmed": 0
+  }
+ },
+ "syn_duplicates_base": {
+  "score": {
+   "assessed_at": "2026-11-19T11:00:00Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 4,
+    "campaign_kind": "full",
+    "campaign_kind_source": "default",
+    "commands_executed": 120,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 3600,
+    "present": true,
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_syn_duplicates_base",
+   "caps": [
+    {
+     "cap": 39,
+     "finding_ids": [
+      "vuln_s0001"
+     ],
+     "rule": "exploited_critical"
+    }
+   ],
+   "caps_applied": [
+    {
+     "cap": 39,
+     "finding_ids": [
+      "vuln_s0001"
+     ],
+     "rule": "exploited_critical"
+    }
+   ],
+   "components": [
+    {
+     "class_penalty": 30.0,
+     "spread": 0.0,
+     "top_unit_penalty": 30.0,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0001"
+       ],
+       "head_finding_id": "vuln_s0001",
+       "increment": 0.0,
+       "penalty": 30.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_syn|sql_injection",
+       "weakness_class": "sql_injection"
+      }
+     ],
+     "weakness_class": "sql_injection"
+    },
+    {
+     "class_penalty": 12.0,
+     "spread": 0.0,
+     "top_unit_penalty": 12.0,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 12.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0002"
+       ],
+       "head_finding_id": "vuln_s0002",
+       "increment": 0.0,
+       "penalty": 12.0,
+       "proof": "confirmed",
+       "severity": "high",
+       "unit": "tgt_fx_syn|xss",
+       "weakness_class": "xss"
+      }
+     ],
+     "weakness_class": "xss"
+    },
+    {
+     "class_penalty": 4.0,
+     "spread": 0.0,
+     "top_unit_penalty": 4.0,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 4.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0003"
+       ],
+       "head_finding_id": "vuln_s0003",
+       "increment": 0.0,
+       "penalty": 4.0,
+       "proof": "confirmed",
+       "severity": "medium",
+       "unit": "tgt_fx_syn|configuration",
+       "weakness_class": "configuration"
+      }
+     ],
+     "weakness_class": "configuration"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 2,
+     "exploited": 1,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 1,
+     "high": 1,
+     "info": 0,
+     "low": 0,
+     "medium": 1
+    },
+    "counted_findings": 3,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 3,
+    "to_confirm": [],
+    "units": 3,
+    "unknown_severity": [],
+    "weakness_classes": 3
+   },
+   "grade": "E",
+   "inputs_digest": "sha256:4214bd975f57cb5437e1897b5c1f2aae915033f0127beeb181024ab93ae8267e",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 39,
+    "finding_ids": [
+     "vuln_s0001"
+    ],
+    "rule": "exploited_critical",
+    "score_without": 84,
+    "text": "Capped at 39 while 1 exploited critical finding(s) remain open. Without them (no longer reported by a new campaign, nothing else changed) the same rules would give 84."
+   },
+   "penalty_over_scale": 0.46,
+   "penalty_total": 46.0,
+   "score": 39,
+   "score_status": "rated",
+   "source_campaign_ids": [
+    "camp_fx_syn_duplicates_base"
+   ],
+   "status_reasons": [],
+   "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 30.0,
+     "share_of_penalty": 0.65,
+     "share_text": "65 % of the penalty sum",
+     "weakness_class": "sql_injection"
+    },
+    {
+     "class_penalty": 12.0,
+     "share_of_penalty": 0.26,
+     "share_text": "26 % of the penalty sum",
+     "weakness_class": "xss"
+    },
+    {
+     "class_penalty": 4.0,
+     "share_of_penalty": 0.09,
+     "share_text": "9 % of the penalty sum",
+     "weakness_class": "configuration"
+    }
+   ],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 2,
+   "critical": 1,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 1,
+   "exploited_by_severity": {
+    "critical": 1,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 1,
+   "info": 0,
+   "low": 0,
+   "medium": 1,
+   "total_findings": 3,
+   "unconfirmed": 0
+  }
+ },
+ "syn_few_agents_short_duration": {
+  "score": {
+   "assessed_at": "2026-11-19T11:00:00Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "php"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 1,
+    "campaign_kind": "full",
+    "campaign_kind_source": "default",
+    "commands_executed": 3,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 600,
+    "present": true,
+    "sentence": "full campaign, 1 test agent, 10 min of server-measured activity, 1 asset registered, 3 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "php"
+    ],
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_syn_few_agents_short_duration",
+   "caps": [],
+   "caps_applied": [
+    {
+     "cap": 69,
+     "finding_ids": [],
+     "rule": "limited_coverage"
+    }
+   ],
+   "components": [
+    {
+     "class_penalty": 1.6,
+     "spread": 0.0,
+     "top_unit_penalty": 1.6,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 1.6,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0001"
+       ],
+       "head_finding_id": "vuln_s0001",
+       "increment": 0.0,
+       "penalty": 1.6,
+       "proof": "confirmed",
+       "severity": "low",
+       "unit": "tgt_fx_syn|session",
+       "weakness_class": "session"
+      }
+     ],
+     "weakness_class": "session"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 1,
+     "exploited": 0,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 0,
+     "high": 0,
+     "info": 0,
+     "low": 1,
+     "medium": 0
+    },
+    "counted_findings": 1,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 1,
+    "to_confirm": [],
+    "units": 1,
+    "unknown_severity": [],
+    "weakness_classes": 1
+   },
+   "grade": "C",
+   "inputs_digest": "sha256:396fcc6f1030c4fc8df4f03d369245dd3f1814db5f8084b0aa3f7e4d6269467c",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "Measured duration 10 min, under 30 min.",
+    "1 specialised agent(s) dispatched, under 2.",
+    "3 toolbox command(s) executed, under 10."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 69,
+    "finding_ids": [],
+    "rule": "limited_coverage",
+    "score_without": null,
+    "text": "Capped at 69 because the test was limited: a completed full campaign that meets the coverage floor removes this cap."
+   },
+   "penalty_over_scale": 0.02,
+   "penalty_total": 1.6,
+   "score": 69,
+   "score_status": "limited",
+   "source_campaign_ids": [
+    "camp_fx_syn_few_agents_short_duration"
+   ],
+   "status_reasons": [
+    {
+     "code": "short_duration",
+     "text": "Measured duration 10 min, under 30 min."
+    },
+    {
+     "code": "few_agents",
+     "text": "1 specialised agent(s) dispatched, under 2."
+    },
+    {
+     "code": "few_commands",
+     "text": "3 toolbox command(s) executed, under 10."
+    }
+   ],
+   "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 1.6,
+     "share_of_penalty": 1.0,
+     "share_text": "100 % of the penalty sum",
+     "weakness_class": "session"
+    }
+   ],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 1,
+   "critical": 0,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 0,
+   "exploited_by_severity": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 0,
+   "info": 0,
+   "low": 1,
+   "medium": 0,
+   "total_findings": 1,
+   "unconfirmed": 0
+  }
+ },
+ "syn_full_no_findings": {
+  "score": {
+   "assessed_at": "2026-11-19T11:00:00Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 4,
+    "campaign_kind": "full",
+    "campaign_kind_source": "default",
+    "commands_executed": 120,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 3600,
+    "present": true,
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_syn_full_no_findings",
+   "caps": [],
+   "caps_applied": [],
+   "components": [],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 0,
+     "exploited": 0,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 0,
+     "high": 0,
+     "info": 0,
+     "low": 0,
+     "medium": 0
+    },
+    "counted_findings": 0,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 0,
+    "to_confirm": [],
+    "units": 0,
+    "unknown_severity": [],
+    "weakness_classes": 0
+   },
+   "grade": "A",
+   "inputs_digest": "sha256:0734380c3531ad5dd604c967ece78a7d7814fd3fca0421b233b966117855b066",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "100 means no weakness was found in the tested scope; it is not a proof of absence."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": 0.0,
+   "penalty_total": 0.0,
+   "score": 100,
+   "score_status": "rated",
+   "source_campaign_ids": [
+    "camp_fx_syn_full_no_findings"
+   ],
+   "status_reasons": [],
+   "target_id": "tgt_fx_syn",
+   "top_classes": [],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 0,
+   "critical": 0,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 0,
+   "exploited_by_severity": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 0,
+   "info": 0,
+   "low": 0,
+   "medium": 0,
+   "total_findings": 0,
+   "unconfirmed": 0
+  }
+ },
+ "syn_legacy_no_signals": {
+  "score": {
+   "assessed_at": "2026-11-20T09:00:00Z",
+   "assessment_coverage": {
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "present": false,
+    "sentence": "Coverage not recorded for this campaign."
+   },
+   "campaign_id": "camp_fx_syn_legacy_no_signals",
+   "caps": [],
+   "caps_applied": [],
+   "components": [
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0001"
+       ],
+       "head_finding_id": "vuln_s0001",
+       "proof": "confirmed",
+       "severity": "high",
+       "unit": "tgt_fx_syn|xss",
+       "weakness_class": "xss"
+      }
+     ],
+     "weakness_class": "xss"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 1,
+     "exploited": 0,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 0,
+     "high": 1,
+     "info": 0,
+     "low": 0,
+     "medium": 0
+    },
+    "counted_findings": 1,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 1,
+    "to_confirm": [],
+    "units": 1,
+    "unknown_severity": [],
+    "weakness_classes": 1
+   },
+   "grade": null,
+   "inputs_digest": "sha256:b1727259f14e71522e84ca1bc8f8352dc4ca992d84c1726b8536cf9d846b29bb",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
+   "penalty_total": null,
+   "score": null,
+   "score_status": "not_rated",
+   "source_campaign_ids": [
+    "camp_fx_syn_legacy_no_signals"
+   ],
+   "status_reasons": [
+    {
+     "code": "no_coverage_signals",
+     "text": "This campaign was recorded before coverage signals existed (no server-measured duration, dispatched agents or command count): it cannot be rated."
+    }
+   ],
+   "target_id": "tgt_fx_syn",
+   "top_classes": [],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 1,
+   "critical": 0,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 0,
+   "exploited_by_severity": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 1,
+   "info": 0,
+   "low": 0,
+   "medium": 0,
+   "total_findings": 1,
+   "unconfirmed": 0
+  }
+ },
+ "syn_one_exploited_critical": {
+  "score": {
+   "assessed_at": "2026-11-19T11:00:00Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 4,
+    "campaign_kind": "full",
+    "campaign_kind_source": "default",
+    "commands_executed": 120,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 3600,
+    "present": true,
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_syn_one_exploited_critical",
+   "caps": [
+    {
+     "cap": 39,
+     "finding_ids": [
+      "vuln_s0001"
+     ],
+     "rule": "exploited_critical"
+    }
+   ],
+   "caps_applied": [
+    {
+     "cap": 39,
+     "finding_ids": [
+      "vuln_s0001"
+     ],
+     "rule": "exploited_critical"
+    }
+   ],
+   "components": [
+    {
+     "class_penalty": 30.0,
+     "spread": 0.0,
+     "top_unit_penalty": 30.0,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 30.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0001"
+       ],
+       "head_finding_id": "vuln_s0001",
+       "increment": 0.0,
+       "penalty": 30.0,
+       "proof": "exploited",
+       "severity": "critical",
+       "unit": "tgt_fx_syn|code_execution",
+       "weakness_class": "code_execution"
+      }
+     ],
+     "weakness_class": "code_execution"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 0,
+     "exploited": 1,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 1,
+     "high": 0,
+     "info": 0,
+     "low": 0,
+     "medium": 0
+    },
+    "counted_findings": 1,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 1,
+    "to_confirm": [],
+    "units": 1,
+    "unknown_severity": [],
+    "weakness_classes": 1
+   },
+   "grade": "E",
+   "inputs_digest": "sha256:612680bfc4fc86855d29caad1966d9171e8790186bde48ef4f805095911003dd",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 39,
+    "finding_ids": [
+     "vuln_s0001"
+    ],
+    "rule": "exploited_critical",
+    "score_without": 100,
+    "text": "Capped at 39 while 1 exploited critical finding(s) remain open. Without them (no longer reported by a new campaign, nothing else changed) the same rules would give 100."
+   },
+   "penalty_over_scale": 0.3,
+   "penalty_total": 30.0,
+   "score": 39,
+   "score_status": "rated",
+   "source_campaign_ids": [
+    "camp_fx_syn_one_exploited_critical"
+   ],
+   "status_reasons": [],
+   "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 30.0,
+     "share_of_penalty": 1.0,
+     "share_text": "100 % of the penalty sum",
+     "weakness_class": "code_execution"
+    }
+   ],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 0,
+   "critical": 1,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 1,
+   "exploited_by_severity": {
+    "critical": 1,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 0,
+   "info": 0,
+   "low": 0,
+   "medium": 0,
+   "total_findings": 1,
+   "unconfirmed": 0
+  }
+ },
+ "syn_only_unconfirmed": {
+  "score": {
+   "assessed_at": "2026-11-19T11:00:00Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 4,
+    "campaign_kind": "full",
+    "campaign_kind_source": "default",
+    "commands_executed": 120,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 3600,
+    "present": true,
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_syn_only_unconfirmed",
+   "caps": [],
+   "caps_applied": [],
+   "components": [
+    {
+     "class_penalty": 15.0,
+     "spread": 0.0,
+     "top_unit_penalty": 15.0,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 15.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0001"
+       ],
+       "head_finding_id": "vuln_s0001",
+       "increment": 0.0,
+       "penalty": 15.0,
+       "proof": "unconfirmed",
+       "severity": "critical",
+       "unit": "tgt_fx_syn|sql_injection",
+       "weakness_class": "sql_injection"
+      }
+     ],
+     "weakness_class": "sql_injection"
+    },
+    {
+     "class_penalty": 7.5,
+     "spread": 0.0,
+     "top_unit_penalty": 7.5,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 7.5,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0002"
+       ],
+       "head_finding_id": "vuln_s0002",
+       "increment": 0.0,
+       "penalty": 7.5,
+       "proof": "unconfirmed",
+       "severity": "high",
+       "unit": "tgt_fx_syn|xss",
+       "weakness_class": "xss"
+      }
+     ],
+     "weakness_class": "xss"
+    },
+    {
+     "class_penalty": 2.5,
+     "spread": 0.0,
+     "top_unit_penalty": 2.5,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 2.5,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0003"
+       ],
+       "head_finding_id": "vuln_s0003",
+       "increment": 0.0,
+       "penalty": 2.5,
+       "proof": "unconfirmed",
+       "severity": "medium",
+       "unit": "tgt_fx_syn|csrf",
+       "weakness_class": "csrf"
+      }
+     ],
+     "weakness_class": "csrf"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 0,
+     "exploited": 0,
+     "unconfirmed": 3
+    },
+    "by_severity": {
+     "critical": 1,
+     "high": 1,
+     "info": 0,
+     "low": 0,
+     "medium": 1
+    },
+    "counted_findings": 3,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 3,
+    "to_confirm": [
+     "vuln_s0001",
+     "vuln_s0002"
+    ],
+    "units": 3,
+    "unknown_severity": [],
+    "weakness_classes": 3
+   },
+   "grade": "B",
+   "inputs_digest": "sha256:33dd619becf99a09d09673effd27d48c87cfe4a76ad766fa7df749f2fce1965f",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "2 unconfirmed critical/high finding(s) to confirm; they weigh less than proven ones and never set a cap."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": null,
+    "finding_ids": [],
+    "rule": "penalties",
+    "score_without": null,
+    "text": "The penalty sum of the weakness classes sets the rating. The weakness classes that weigh most are listed with their share of the penalty sum."
+   },
+   "penalty_over_scale": 0.25,
+   "penalty_total": 25.0,
+   "score": 75,
+   "score_status": "rated",
+   "source_campaign_ids": [
+    "camp_fx_syn_only_unconfirmed"
+   ],
+   "status_reasons": [],
+   "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 15.0,
+     "share_of_penalty": 0.6,
+     "share_text": "60 % of the penalty sum",
+     "weakness_class": "sql_injection"
+    },
+    {
+     "class_penalty": 7.5,
+     "share_of_penalty": 0.3,
+     "share_text": "30 % of the penalty sum",
+     "weakness_class": "xss"
+    },
+    {
+     "class_penalty": 2.5,
+     "share_of_penalty": 0.1,
+     "share_text": "10 % of the penalty sum",
+     "weakness_class": "csrf"
+    }
+   ],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 0,
+   "critical": 1,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 0,
+   "exploited_by_severity": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 1,
+   "info": 0,
+   "low": 0,
+   "medium": 1,
+   "total_findings": 3,
+   "unconfirmed": 3
+  }
+ },
+ "syn_quarantine": {
+  "score": {
+   "assessed_at": "2026-11-19T11:00:00Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 4,
+    "campaign_kind": "full",
+    "campaign_kind_source": "default",
+    "commands_executed": 120,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 3600,
+    "present": true,
+    "sentence": "full campaign, 3 test agents, 60 min of server-measured activity, 4 assets registered, 120 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "graphql",
+     "headless-browser",
+     "php"
+    ],
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_syn_quarantine",
+   "caps": [],
+   "caps_applied": [],
+   "components": [
+    {
+     "class_penalty": 12.0,
+     "spread": 0.0,
+     "top_unit_penalty": 12.0,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 12.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0004"
+       ],
+       "head_finding_id": "vuln_s0004",
+       "increment": 0.0,
+       "penalty": 12.0,
+       "proof": "confirmed",
+       "severity": "high",
+       "unit": "tgt_fx_syn|csrf",
+       "weakness_class": "csrf"
+      }
+     ],
+     "weakness_class": "csrf"
+    },
+    {
+     "class_penalty": 1.6,
+     "spread": 0.0,
+     "top_unit_penalty": 1.6,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 1.6,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0003"
+       ],
+       "head_finding_id": "vuln_s0003",
+       "increment": 0.0,
+       "penalty": 1.6,
+       "proof": "confirmed",
+       "severity": "low",
+       "unit": "tgt_fx_syn|session",
+       "weakness_class": "session"
+      }
+     ],
+     "weakness_class": "session"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 2,
+     "exploited": 0,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 0,
+     "high": 1,
+     "info": 0,
+     "low": 1,
+     "medium": 0
+    },
+    "counted_findings": 2,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 1,
+     "informational": 0,
+     "quarantined": 1
+    },
+    "open_findings": 2,
+    "to_confirm": [],
+    "units": 2,
+    "unknown_severity": [],
+    "weakness_classes": 2
+   },
+   "grade": "B",
+   "inputs_digest": "sha256:cd3b3ed3228201a13bada79d1a3efe9fd1df62b2bc63fef92f7e23e750f6200c",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "1 finding(s) held for privacy review are not counted.",
+    "1 finding(s) marked false positive by an agent or an operator are not counted."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": null,
+    "finding_ids": [],
+    "rule": "penalties",
+    "score_without": null,
+    "text": "The penalty sum of the weakness classes sets the rating. The weakness classes that weigh most are listed with their share of the penalty sum."
+   },
+   "penalty_over_scale": 0.14,
+   "penalty_total": 13.6,
+   "score": 86,
+   "score_status": "rated",
+   "source_campaign_ids": [
+    "camp_fx_syn_quarantine"
+   ],
+   "status_reasons": [],
+   "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 12.0,
+     "share_of_penalty": 0.88,
+     "share_text": "88 % of the penalty sum",
+     "weakness_class": "csrf"
+    },
+    {
+     "class_penalty": 1.6,
+     "share_of_penalty": 0.12,
+     "share_text": "12 % of the penalty sum",
+     "weakness_class": "session"
+    }
+   ],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 2,
+   "critical": 0,
+   "excluded": {
+    "false_positive": 1,
+    "quarantined": 1
+   },
+   "exploited": 0,
+   "exploited_by_severity": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 1,
+   "info": 0,
+   "low": 1,
+   "medium": 0,
+   "total_findings": 2,
+   "unconfirmed": 0
+  }
+ },
+ "syn_retest": {
+  "score": {
+   "assessed_at": "2026-11-19T11:00:00Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "headless-browser",
+     "php"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 2,
+    "campaign_kind": "retest",
+    "campaign_kind_source": "retest_store",
+    "commands_executed": 40,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 900,
+    "present": true,
+    "sentence": "retest campaign, 2 test agents, 15 min of server-measured activity, 2 assets registered, 40 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "headless-browser",
+     "php"
+    ],
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_syn_retest",
+   "caps": [
+    {
+     "cap": 59,
+     "finding_ids": [
+      "vuln_s0001"
+     ],
+     "rule": "exploited_high"
+    }
+   ],
+   "caps_applied": [],
+   "components": [
+    {
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0001"
+       ],
+       "head_finding_id": "vuln_s0001",
+       "proof": "exploited",
+       "severity": "high",
+       "unit": "tgt_fx_syn|sql_injection",
+       "weakness_class": "sql_injection"
+      }
+     ],
+     "weakness_class": "sql_injection"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 0,
+     "exploited": 1,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 0,
+     "high": 1,
+     "info": 0,
+     "low": 0,
+     "medium": 0
+    },
+    "counted_findings": 1,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 1,
+    "to_confirm": [],
+    "units": 1,
+    "unknown_severity": [],
+    "weakness_classes": 1
+   },
+   "grade": null,
+   "inputs_digest": "sha256:ed62d545a177ea8dba58a6bff9b9797ae0dd0bdc0f63095765d672a40bb6f0b6",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "A retest checks selected findings again; it is not rated as an assessment.",
+    "Measured duration 15 min, under 30 min."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": null,
+   "penalty_over_scale": null,
+   "penalty_total": null,
+   "score": null,
+   "score_status": "not_rated",
+   "source_campaign_ids": [
+    "camp_fx_syn_retest"
+   ],
+   "status_reasons": [
+    {
+     "code": "retest",
+     "text": "A retest checks selected findings again; it is not rated as an assessment."
+    },
+    {
+     "code": "short_duration",
+     "text": "Measured duration 15 min, under 30 min."
+    }
+   ],
+   "target_id": "tgt_fx_syn",
+   "top_classes": [],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 0,
+   "critical": 0,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 1,
+   "exploited_by_severity": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 1,
+   "info": 0,
+   "low": 0,
+   "medium": 0,
+   "total_findings": 1,
+   "unconfirmed": 0
+  }
+ },
+ "syn_short_run": {
+  "score": {
+   "assessed_at": "2026-11-19T11:00:00Z",
+   "assessment_coverage": {
+    "agents_dispatched": [
+     "php"
+    ],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 1,
+    "campaign_kind": "short",
+    "campaign_kind_source": "declared_at_init",
+    "commands_executed": 12,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "floors": {
+     "min_agents": 2,
+     "min_assets": 1,
+     "min_commands": 10,
+     "min_duration_seconds": 1800
+    },
+    "launch_restrictions": {
+     "exclude": 0,
+     "focus": 0,
+     "noise": null,
+     "out_of_scope": 0,
+     "recorded": false,
+     "rules": 0,
+     "severity": null
+    },
+    "measured_duration_seconds": 600,
+    "present": true,
+    "sentence": "short campaign, 1 test agent, 10 min of server-measured activity, 1 asset registered, 12 toolbox commands executed.",
+    "signals_intact": null,
+    "specialised_agents": [
+     "php"
+    ],
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "campaign_id": "camp_fx_syn_short_run",
+   "caps": [],
+   "caps_applied": [
+    {
+     "cap": 69,
+     "finding_ids": [],
+     "rule": "limited_coverage"
+    }
+   ],
+   "components": [
+    {
+     "class_penalty": 4.0,
+     "spread": 0.0,
+     "top_unit_penalty": 4.0,
+     "units": [
+      {
+       "asset": "tgt_fx_syn",
+       "base_penalty": 4.0,
+       "distinct_weaknesses": 1,
+       "finding_ids": [
+        "vuln_s0001"
+       ],
+       "head_finding_id": "vuln_s0001",
+       "increment": 0.0,
+       "penalty": 4.0,
+       "proof": "confirmed",
+       "severity": "medium",
+       "unit": "tgt_fx_syn|xss",
+       "weakness_class": "xss"
+      }
+     ],
+     "weakness_class": "xss"
+    }
+   ],
+   "evidence_summary": {
+    "by_proof": {
+     "confirmed": 1,
+     "exploited": 0,
+     "unconfirmed": 0
+    },
+    "by_severity": {
+     "critical": 0,
+     "high": 0,
+     "info": 0,
+     "low": 0,
+     "medium": 1
+    },
+    "counted_findings": 1,
+    "declared_closed": [],
+    "excluded": {
+     "false_positive": 0,
+     "informational": 0,
+     "quarantined": 0
+    },
+    "open_findings": 1,
+    "to_confirm": [],
+    "units": 1,
+    "unknown_severity": [],
+    "weakness_classes": 1
+   },
+   "grade": "C",
+   "inputs_digest": "sha256:e14d9a89d8630f27a05a96cfbef47fc47359467c5b7632523d0b187e060d46b9",
+   "limitations": [
+    "Exposure rating of what this campaign found in its tested scope, not a measure of the overall security level.",
+    "Weights and caps are expert-set (methodology v1) and have not been scientifically validated.",
+    "Severity and proof level of each finding are reported by the testing agent, with evidence on file; the server does not re-verify them, and the caps by worst evidence follow the agent's report.",
+    "Run-to-run variance has not been measured: two campaigns on the same target may find different weaknesses.",
+    "Attack paths are not part of the v1 rating; they are shown beside it with their evidence status.",
+    "Only commands run through the Darkmoon toolbox are counted; commands run by the agent's own shell are not seen.",
+    "Declared as a short campaign.",
+    "Measured duration 10 min, under 30 min.",
+    "1 specialised agent(s) dispatched, under 2."
+   ],
+   "methodology_version": "darkmoon-cyber-score/1",
+   "next_cap_level": {
+    "cap": 69,
+    "finding_ids": [],
+    "rule": "limited_coverage",
+    "score_without": null,
+    "text": "Capped at 69 because the test was limited: a completed full campaign that meets the coverage floor removes this cap."
+   },
+   "penalty_over_scale": 0.04,
+   "penalty_total": 4.0,
+   "score": 69,
+   "score_status": "limited",
+   "source_campaign_ids": [
+    "camp_fx_syn_short_run"
+   ],
+   "status_reasons": [
+    {
+     "code": "short_campaign",
+     "text": "Declared as a short campaign."
+    },
+    {
+     "code": "short_duration",
+     "text": "Measured duration 10 min, under 30 min."
+    },
+    {
+     "code": "few_agents",
+     "text": "1 specialised agent(s) dispatched, under 2."
+    }
+   ],
+   "target_id": "tgt_fx_syn",
+   "top_classes": [
+    {
+     "class_penalty": 4.0,
+     "share_of_penalty": 1.0,
+     "share_text": "100 % of the penalty sum",
+     "weakness_class": "xss"
+    }
+   ],
+   "trend": null
+  },
+  "stats": {
+   "confirmed": 1,
+   "critical": 0,
+   "excluded": {
+    "false_positive": 0,
+    "quarantined": 0
+   },
+   "exploited": 0,
+   "exploited_by_severity": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "low": 0,
+    "medium": 0
+   },
+   "high": 0,
+   "info": 0,
+   "low": 0,
+   "medium": 1,
+   "total_findings": 1,
+   "unconfirmed": 0
+  }
+ }
+}

@@ -1,0 +1,161 @@
+{
+ "blocks": [
+  {
+   "text": "Facts recorded by the Darkmoon server during the campaign (not declared by the agents).",
+   "type": "paragraph"
+  },
+  {
+   "rows": [
+    {
+     "label": "Target (in scope)",
+     "value": "app.local"
+    },
+    {
+     "label": "Campaign",
+     "value": "camp_fx_report"
+    },
+    {
+     "label": "Campaign status",
+     "value": "completed"
+    },
+    {
+     "label": "Campaign kind",
+     "value": "full"
+    },
+    {
+     "label": "Started",
+     "value": "2026-11-20T10:00:00Z"
+    },
+    {
+     "label": "Finalised",
+     "value": "2026-11-20T11:00:00Z"
+    },
+    {
+     "label": "Measured activity (server clock, used by the rating)",
+     "value": "60 min (3600 s)"
+    },
+    {
+     "label": "Duration on the campaign record (agent-declared on older campaigns)",
+     "value": "60 min"
+    },
+    {
+     "label": "Test agents dispatched",
+     "value": "headless-browser, php"
+    },
+    {
+     "label": "Assets registered",
+     "value": "3"
+    },
+    {
+     "label": "Toolbox commands executed",
+     "value": "120"
+    },
+    {
+     "label": "Test references",
+     "value": "Test references: NIST SP 800-115, OWASP WSTG"
+    },
+    {
+     "label": "Launch restrictions",
+     "value": "none recorded"
+    },
+    {
+     "label": "Maintenance policy at launch",
+     "value": "Outside the maintenance policy (blackout date, outside every window) — launched by an administrator override: ada, 2026-11-20 09:58 UTC, reason: « Emergency patch validation agreed with the system owner (change CHG-1042) »"
+    }
+   ],
+   "source": "campaign record + coverage_signals",
+   "type": "facts"
+  },
+  {
+   "text": "Findings counted: 6. Held for privacy review (not counted): 1. Marked false positive (not counted): 1.",
+   "type": "paragraph"
+  },
+  {
+   "id": "maintenance-override",
+   "text": "This campaign was started outside the project's maintenance policy: an administrator overrode the block at launch. The account, the time and the reason above are recorded by the server; the reason is quoted as the administrator wrote it.",
+   "type": "paragraph"
+  },
+  {
+   "text": "Coverage floor of the rating: 30 min measured, 2 specialised agents, 1 asset registered, 10 toolbox commands.",
+   "type": "paragraph"
+  },
+  {
+   "id": "duration-note",
+   "text": "Two durations can differ: the duration stored on the campaign record (on older campaigns, the value the agent declared when it finalised; the dashboard header shows it) and the measured activity (server clock, from the campaign start to its finalisation). The rating uses the measured activity only.",
+   "type": "paragraph"
+  },
+  {
+   "blocks": [
+    {
+     "items": [
+      "Launch restrictions: none recorded.",
+      "Framework controls not exercised by a dispatched agent: 10 (listed in the framework assessment as « Not tested by this campaign »).",
+      "Assets outside the target and the tested scope are not covered."
+     ],
+     "type": "list"
+    }
+   ],
+   "id": "not-covered",
+   "title": "Not covered by this campaign",
+   "type": "subsection"
+  },
+  {
+   "blocks": [
+    {
+     "items": [
+      "Method darkmoon-cyber-score/1, published in docs/cyber-score-methodology.md.",
+      "Penalty unit: one asset and one weakness class. Severity weights: critical 30, high 15, medium 5, low 2, informational 0. Proof factors: exploited 1, confirmed 0.8, to confirm 0.5.",
+      "Each further distinct weakness in a unit adds 10 % (at most 30 %); each further asset of a class adds 25 % of its penalty (at most 50 %).",
+      "Rating = 100 minus the penalty sum, bounded 0 to 100, then the caps by worst evidence (exploited critical ≤ 39; confirmed critical ≤ 49; exploited high ≤ 59) and 69 for a limited test.",
+      "Coverage floor: 30 min measured, 2 specialised agents, 1 asset, 10 toolbox commands. Grades: A ≥ 90, B ≥ 75, C ≥ 60, D ≥ 40, E < 40."
+     ],
+     "type": "list"
+    }
+   ],
+   "id": "rating-method",
+   "title": "Rating method (summary)",
+   "type": "subsection"
+  },
+  {
+   "text": "Framework coverage: Coverage recorded: 2 test agent(s); classes exercised: 20.",
+   "type": "paragraph"
+  }
+ ],
+ "id": "method_coverage",
+ "numbers": {
+  "agents_dispatched": {
+   "source": "coverage_signals",
+   "value": 2
+  },
+  "assets_registered": {
+   "source": "coverage_signals",
+   "value": 3
+  },
+  "commands_executed": {
+   "source": "coverage_signals",
+   "value": 120
+  },
+  "findings_counted": {
+   "source": "exec_core.stats",
+   "value": 6
+  },
+  "findings_false_positive": {
+   "source": "exec_core.stats",
+   "value": 1
+  },
+  "findings_quarantined": {
+   "source": "exec_core.stats",
+   "value": 1
+  },
+  "measured_duration_seconds": {
+   "source": "coverage_signals",
+   "value": 3600
+  }
+ },
+ "sources": [
+  "campaign record",
+  "coverage_signals",
+  "exec_core.stats"
+ ],
+ "title": "Method and test coverage"
+}

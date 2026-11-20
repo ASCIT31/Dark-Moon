@@ -14,6 +14,7 @@ Each call writes JSON to disk immediately so the API serves fresh data.
 """
 
 import logging
+import os
 import re
 import sqlite3
 import uuid
@@ -157,6 +158,7 @@ from api.json_storage import (
     save_target,
     save_campaign,
     load_campaign,
+    load_campaigns,
     find_target_by_host_or_ip,
     find_project_by_target_id,
     _read_json,
@@ -429,13 +431,28 @@ def _init_live_campaign_unlocked(
     ports: Optional[List[Dict[str, Any]]] = None,
     technologies: Optional[List[Dict[str, Any]]] = None,
     os_info: str = "",
+    campaign_kind: Optional[str] = None,
+    run_frag: Optional[str] = None,
 ) -> Dict[str, str]:
     """
     Initialize a live campaign. Creates project + target + campaign skeleton.
     Rule: 1 project = 1 target.
+    ``campaign_kind`` (optional): full | retest | short, recorded in the coverage signals.
+    ``run_frag`` (optional): the caller's run key (header or env, api/run_binding.py). None in Community today; when
+    present it names the campaign and binds it to the run (R4 S3, same rule as Pro).
     """
     if not is_safe_id(f"camp_x_{session_id}"):  # refused before anything is written (no orphan project/target)
         return {"error": f"invalid session_id {str(session_id)[:40]!r}"}
+    # R4 S3: a keyless init that would re-open a campaign a run key opened is refused before anything is written
+    from api import run_binding
+    caller_key = run_binding.caller_run_key(run_frag, os.environ.get(run_binding.RUN_KEY_ENV))
+    if not caller_key:
+        _key = _run_campaign_frag(session_id)
+        _bound = next((c for c in load_campaigns() if not c.get("is_subagent")
+                       and str(c.get("session_id", "")) == _key and c.get(run_binding.BOUND_FIELD)), None)
+        if _bound is not None:
+            run_binding.guard("dashboard_init_campaign", _bound.get("id"), _bound, None)
+            return run_binding.refusal(_bound.get("id"))
     now = _now_iso()
     today = _today_compact()
 
@@ -532,6 +549,10 @@ def _init_live_campaign_unlocked(
     parent_campaign_id = None
     if is_subagent:
         parent_campaign_id = _find_parent_campaign_id(session_id)
+        # R4 S3: the opencode-DB guess never puts nodes into a campaign the caller may not write into
+        if parent_campaign_id and not run_binding.write_decision(load_campaign(parent_campaign_id),
+                                                                 caller_key)["allowed"]:
+            parent_campaign_id = None
 
     if parent_campaign_id:
         # Sub-agent: push nodes into the PARENT campaign, don't create a new campaign
@@ -562,7 +583,7 @@ def _init_live_campaign_unlocked(
             "status": "subagent_merged_into_parent",
         }
 
-    run_frag = _run_campaign_frag(session_id)
+    run_frag = caller_key or _run_campaign_frag(session_id)
     campaign_id = f"camp_{today}_{run_frag}"
 
     campaign = {
@@ -592,6 +613,28 @@ def _init_live_campaign_unlocked(
         "report_path": "",
         "executive_summary": "",
     }
+    # coverage signals (exec_core score gate): a repeated init keeps the server start of the campaign
+    from api import coverage_signals
+    _prior = load_campaign(campaign_id)
+    if _prior and not run_binding.write_decision(_prior, caller_key)["allowed"]:
+        run_binding.guard("dashboard_init_campaign", campaign_id, _prior, caller_key)
+        return run_binding.refusal(campaign_id)
+    run_binding.mark_bound(campaign, caller_key)
+    if _prior and isinstance(_prior.get("coverage_signals"), dict):
+        campaign["coverage_signals"] = _prior["coverage_signals"]
+        campaign["date"] = _prior.get("date") or campaign["date"]
+    # a record that predates coverage signals never gets any; Community = single-user TUI: the run's root session
+    # is the latest one when the campaign key is not a session prefix
+    coverage_signals.on_init(campaign, campaign_kind, create=_prior is None, latest_root_fallback=True)
+    # maintenance windows (advisory in Community): evaluated once, when the campaign is created; outside the owner's
+    # policy the server logs a WARNING and records it here; the campaign goes on and the model is told nothing
+    if _prior and isinstance(_prior.get("maintenance_check"), dict):
+        campaign["maintenance_check"] = _prior["maintenance_check"]
+    elif _prior is None:
+        from api import maintenance_local
+        _mc = maintenance_local.check_at_start(campaign, campaign_kind)
+        if _mc:
+            campaign["maintenance_check"] = _mc
     save_campaign(campaign)
 
     # Only init empty vulns if file doesn't exist yet
@@ -729,7 +772,13 @@ def _push_finding_unlocked(
     finding["project_id"] = campaign.get("project_id")
     finding["target_id"] = campaign.get("target_id")
     finding["severity"] = str(finding.get("severity", "info")).strip().lower()
-    finding["status"] = str(finding.get("status", "unconfirmed")).strip().lower()
+    # an agent pushes only exploited / confirmed / unconfirmed: false_positive, quarantined, remediated… are operator
+    # decisions. Anything else is stored as unconfirmed, the agent's word kept in ``status_reported``, with a warning.
+    from api.exec_core import identity as _push_identity
+    _raw_status = finding.get("status", "unconfirmed")
+    finding["status"], status_warning = _push_identity.agent_push_status(_raw_status)
+    if status_warning:
+        finding["status_reported"] = str(_raw_status or "").strip()[:40]
 
     # `enabled_by` = earlier findings whose result this exploitation used. Resolved HERE against the
     # findings already stored (so a forward reference cannot exist): vuln_id, then a unique short_title / dedup_key /
@@ -776,22 +825,14 @@ def _push_finding_unlocked(
     vulns.append(finding)
     _write_json(vuln_path, vulns)
 
+    # the one stats function (exec_core.stats): quarantined / false-positive findings are counted nowhere
+    from api.exec_core import stats as _core_stats
     stats = campaign.get("stats", {})
-    stats["total_findings"] = len(vulns)
-
-    for sev in ("critical", "high", "medium", "low", "info"):
-        stats[sev] = sum(
-            1 for v in vulns
-            if str(v.get("severity", "info")).strip().lower() == sev
-        )
-
-    for st in ("exploited", "confirmed", "unconfirmed"):
-        stats[st] = sum(
-            1 for v in vulns
-            if str(v.get("status", "unconfirmed")).strip().lower() == st
-        )
+    stats.update(_core_stats.compute_stats(vulns))
 
     campaign["stats"] = stats
+    from api import coverage_signals
+    coverage_signals.note_agent(campaign, finding.get("discovered_by_agent"), "push_finding")
 
     # Derive the dispatch log from the findings store, exactly like the stats
     # above. An agent that pushed a finding demonstrably ran, so the log can be
@@ -821,16 +862,7 @@ def _push_finding_unlocked(
             for name, count in sorted(seen.items(), key=lambda kv: (-kv[1], kv[0]))
         ]
 
-    if stats.get("critical", 0) > 0:
-        campaign["overall_risk"] = "critical"
-    elif stats.get("high", 0) > 0:
-        campaign["overall_risk"] = "high"
-    elif stats.get("medium", 0) > 0:
-        campaign["overall_risk"] = "medium"
-    elif stats.get("low", 0) > 0:
-        campaign["overall_risk"] = "low"
-    else:
-        campaign["overall_risk"] = "none"
+    campaign["overall_risk"] = _core_stats.overall_risk(stats)
 
     save_campaign(campaign)
 
@@ -849,6 +881,8 @@ def _push_finding_unlocked(
         "total_findings": len(vulns),
         "status": "finding_pushed",
     }
+    if status_warning:
+        result["status_warning"] = status_warning
     if enabled_warnings:
         result["enabled_by_warnings"] = enabled_warnings
     try:  # advice only: never fails a push
@@ -1068,10 +1102,27 @@ def _generate_report_from_db(
             m = re.search(r"\d+(?:\.\d+)?", str(raw or ""))
             return float(m.group()) if m else 0.0
 
+    from api import cvss31 as _cvss31
+
+    def _cvss_shown(v: Dict) -> Any:
+        """(table cell, detail cell, number used for ordering): the score recomputed from a valid vector is the
+        one shown; the agent's number is shown as « reported » when it differs."""
+        a = _cvss31.assess(v)
+        if a["score"] is not None:
+            cell = f"{a['score']:.1f}"
+            if a["status"] == "mismatch":
+                return (f"{cell} (reported {a['reported']:.1f})",
+                        f"{cell} (computed from the vector; reported by the agent: {a['reported']:.1f})", a["score"])
+            return cell, f"{cell} (computed from the vector)", a["score"]
+        if v.get("cvss_score"):
+            n = _cvss_num(v)
+            return f"{n:.1f}", f"{n:.1f} (reported by the agent; no valid vector)", n
+        return "N/A", "N/A", 0.0
+
     vulns = sorted(
         vulns,
         key=lambda v: (SEV_ORDER.get(str(v.get("severity", "info")).lower(), 9),
-                       -_cvss_num(v)),
+                       -_cvss_shown(v)[2]),
     )
 
     SEV_LABEL  = {"critical": "CRITICAL", "high": "HIGH", "medium": "MEDIUM",
@@ -1085,15 +1136,13 @@ def _generate_report_from_db(
     def stat(v: Dict) -> str:
         return STAT_LABEL.get(str(v.get("status", "")).lower(), _md_inline(v.get("status", ""), cell=True))
 
-    stats = campaign.get("stats", {})
-    if held:
-        # the report counts only what it shows: held findings are left out
-        stats = dict(stats)
-        for key in ("critical", "high", "medium", "low", "info"):
-            stats[key] = sum(1 for v in vulns if str(v.get("severity", "")).lower() == key)
-        stats["total_findings"] = len(vulns)
-        stats["exploited"] = sum(1 for v in vulns if v.get("status") == "exploited")
-        stats["confirmed"] = sum(1 for v in vulns if v.get("status") == "confirmed")
+    # the one stats function (exec_core.stats): held (quarantined) and false-positive findings are counted
+    # nowhere, so the report, the campaign record and the API give the same numbers
+    from api.exec_core import identity as _identity, stats as _core_stats
+    stats = _core_stats.compute_stats(vulns)
+    # the report lists what it counts: a finding marked false positive is left out of every section (noted below)
+    fp_n = int((stats.get("excluded") or {}).get("false_positive", 0) or 0)
+    vulns = [v for v in vulns if _identity.exclusion_reason(v) is None]
     exploited = stats.get("exploited", 0)
     confirmed = stats.get("confirmed", 0)
     now = _now_iso()
@@ -1114,8 +1163,9 @@ def _generate_report_from_db(
     A(f"**Campaign:** {campaign_id}  \n")
     # The campaign's declared methodology, not a fixed label: a synthetic or partial run must not be presented as a
     # full ISO 27001 / NIST SP 800-115 assessment in the report header.
-    methodology = _md_inline(str(campaign.get("methodology") or "").strip() or "ISO 27001 / NIST SP 800-115 / MITRE ATT&CK")
-    A(f"**Methodology:** {methodology}  \n")
+    from api.exec_core import legend as _legend
+    methodology = _md_inline(_legend.methodology_label(campaign.get("methodology")))   # never ISO 27001 as a test method
+    A(f"**Method:** {methodology}  \n")
     # A partial run says so in the report itself
     _st = str(campaign.get("status") or "").lower()
     _partial = {"stopped": "Stopped by the operator", "aborted": "Aborted", "error": "Ended with an error",
@@ -1127,15 +1177,16 @@ def _generate_report_from_db(
           f"before it ended  \n")
     A("\n---\n\n")
 
-    A("## MANAGEMENT SUMMARY\n\n")
+    A("<!-- dm-section: management-summary -->\n## MANAGEMENT SUMMARY\n\n")
     A("> *For non-technical readers and decision-makers.*\n\n")
 
     if n_crit > 0:
         posture = f"🔴 CRITICAL — Immediate Action Required"
+        _xsev = stats.get("exploited_by_severity") or {}
+        _x_ch = int(_xsev.get("critical", 0)) + int(_xsev.get("high", 0))
         posture_text = (
-            f"The system tested (**{host}**) presents an **extremely poor security posture**. "
-            f"Our team confirmed {n_crit} critical and {n_high} high severity vulnerabilities, "
-            "enabling complete compromise through multiple independent attack paths."
+            f"The automated assessment of **{host}** reported {n_crit} critical and {n_high} high severity "
+            f"findings; {_x_ch} of them were exploited during the test (proof on file)."
         )
     elif n_high > 0:
         posture = f"🟠 HIGH — Urgent Remediation Required"
@@ -1143,10 +1194,23 @@ def _generate_report_from_db(
             f"The system tested (**{host}**) has significant security weaknesses. "
             f"{n_high} high severity vulnerabilities were identified requiring urgent attention."
         )
-    else:
+    elif int(stats.get("medium", 0) or 0) or int(stats.get("low", 0) or 0):
         posture = "🟡 MEDIUM — Security Improvements Needed"
         posture_text = (
             f"The system tested (**{host}**) has moderate security issues that should be addressed."
+        )
+    elif int(stats.get("total_findings", 0) or 0) > int(stats.get("info", 0) or 0):
+        _n_unrated = int(stats.get("total_findings", 0) or 0) - int(stats.get("info", 0) or 0)
+        posture = "⚪ SEVERITY NOT RECOGNISED — Review Required"
+        posture_text = (
+            f"{_n_unrated} finding(s) on **{host}** were reported without a recognised severity level; review them "
+            "in the findings table before drawing any conclusion."
+        )
+    else:
+        posture = "⚪ NO SIGNIFICANT FINDING — in the tested scope"
+        posture_text = (
+            f"No weakness above informational was reported in the tested scope of **{host}**; this is not a "
+            "proof that none exists."
         )
 
     A(f"### Overall Security Posture: {posture}\n\n")
@@ -1162,15 +1226,24 @@ def _generate_report_from_db(
             A(f"**{i}. {_md_inline(v.get('title',''))}**  \n{_md_prose(plain)}\n\n")
 
     A("### Required Actions\n\n")
-    A("| Timeframe | Action |\n|-----------|--------|\n")
-    if n_crit > 0:
-        A("| **Today** | Block external access / take offline if possible |\n")
-    A("| **This week** | Patch all critical and high severity findings |\n")
-    A("| **2 weeks** | Address medium severity findings and security headers |\n")
-    A("| **1 month** | Full code review and independent re-test |\n\n---\n\n")
+    A("Order derived from the reported severity and the proof of the findings below; the deadlines are set by "
+      "the system owner.\n\n")
+    A("| Order | Action |\n|-------|--------|\n")
+    _order = 0
+    for _sk in ("critical", "high", "medium", "low"):
+        _n = int(stats.get(_sk, 0) or 0)
+        if not _n:
+            continue
+        _order += 1
+        _nx = int((stats.get("exploited_by_severity") or {}).get(_sk, 0) or 0)
+        A(f"| **{_order}** | Treat the {_n} {_sk} severity finding(s) ({_nx} exploited during the test) |\n")
+    if _order:
+        A(f"| **{_order + 1}** | Run a new full campaign to check the fixes |\n\n---\n\n")
+    else:
+        A("| **1** | No finding to treat in the tested scope |\n\n---\n\n")
 
     # ── EXECUTIVE SUMMARY ───────────────────────────────────────────
-    A("## 1. EXECUTIVE SUMMARY\n\n")
+    A("<!-- dm-section: executive-summary -->\n## 1. EXECUTIVE SUMMARY\n\n")
     if executive_summary:
         A("> " + _md_prose(executive_summary).replace("\n", "\n> ") + "\n\n")
     A(f"**Overall Risk Level: {overall_risk}**\n\n")
@@ -1178,17 +1251,17 @@ def _generate_report_from_db(
     A("| Severity | Count | Exploited | Confirmed |\n|----------|-------|-----------|----------|\n")
     for s, label in [("critical","CRITICAL"),("high","HIGH"),("medium","MEDIUM"),("low","LOW"),("info","INFO")]:
         n   = stats.get(s, 0)
-        exp = sum(1 for v in vulns if str(v.get("severity","")).lower()==s and v.get("status")=="exploited")
-        con = sum(1 for v in vulns if str(v.get("severity","")).lower()==s and v.get("status")=="confirmed")
+        exp = int((stats.get("exploited_by_severity") or {}).get(s, 0) or 0)
+        con = sum(1 for v in vulns if _identity.severity_of(v) == s and _identity.status_of(v) == "confirmed")
         A(f"| {label} | {n} | {exp} | {con} |\n")
     A(f"| **TOTAL** | **{n_total}** | **{exploited}** | **{confirmed}** |\n\n---\n\n")
 
     # ── FINDINGS TABLE ───────────────────────────────────────────────
-    A("## 2. FINDINGS TABLE\n\n")
+    A("<!-- dm-section: findings-table -->\n## 2. FINDINGS TABLE\n\n")
     A("| # | ID | Title | Severity | CVSS | Status | Endpoint |\n")
     A("|---|-----|-------|----------|------|--------|----------|\n")
     for i, v in enumerate(vulns):
-        cvss  = f"{_cvss_num(v):.1f}" if v.get("cvss_score") else "N/A"
+        cvss  = _cvss_shown(v)[0]
         ep    = (v.get("endpoint") or "").replace("https://","").replace("http://","")
         ep    = ep[:50]+"..." if len(ep)>50 else ep
         title = v.get("title","")[:50]+"..." if len(v.get("title",""))>50 else v.get("title","")
@@ -1196,9 +1269,9 @@ def _generate_report_from_db(
     A("\n---\n\n")
 
     # ── VULNERABILITY DETAILS ────────────────────────────────────────
-    A("## 3. VULNERABILITY DETAILS\n\n")
+    A("<!-- dm-section: vulnerability-details -->\n## 3. VULNERABILITY DETAILS\n\n")
     for i, v in enumerate(vulns):
-        cvss_score = f"{_cvss_num(v):.1f}" if v.get("cvss_score") else "N/A"
+        cvss_score = _cvss_shown(v)[1]
         cvss_vec   = v.get("cvss_vector") or "N/A"
         ev         = v.get("evidence") if isinstance(v.get("evidence"), dict) else {}
         commands   = ev.get("commands") or []
@@ -1250,21 +1323,25 @@ def _generate_report_from_db(
     if held:
         A("---\n\n> **Held for review:** " + str(len(held)) + " finding(s) are not included in this report: "
           "they are held by the privacy policy until an operator reviews them.\n\n")
+    if fp_n:
+        A("---\n\n> **Not listed:** " + str(fp_n) + " finding(s) marked false positive are not included in this "
+          "report nor in its counts.\n\n")
 
     # ── REMEDIATION ROADMAP ──────────────────────────────────────────
     A("---\n\n## 4. REMEDIATION ROADMAP\n\n")
+    A("Grouped by reported severity; the deadlines are set by the system owner.\n\n")
     for priority, sev_key, timeframe, max_items in [
-        ("P0", "critical", "Immediate (< 24h)",       6),
-        ("P1", "high",     "Short term (< 1 week)",   6),
-        ("P2", "medium",   "Medium term (< 2 weeks)", 5),
-        ("P3", "low",      "Long term (< 1 month)",   3),
+        ("P0", "critical", "Critical findings", 6),
+        ("P1", "high",     "High findings",     6),
+        ("P2", "medium",   "Medium findings",   5),
+        ("P3", "low",      "Low findings",      3),
     ]:
         items = [v for v in vulns if str(v.get("severity","")).lower()==sev_key][:max_items]
         if not items: continue
-        A(f"### {priority} — {timeframe}\n\n| Finding | Effort |\n|---------|--------|\n")
+        A(f"### {priority} — {timeframe}\n\n| Finding | Proof |\n|---------|-------|\n")
         for v in items:
             t = v.get("title","")[:60]+"..." if len(v.get("title",""))>60 else v.get("title","")
-            A(f"| {_md_inline(t, cell=True)} | High |\n")
+            A(f"| {_md_inline(t, cell=True)} | {stat(v)} |\n")
         A("\n")
 
     # ── REPORT ANNEX (computed from the campaign's own data) ─────────
@@ -1293,6 +1370,39 @@ def _generate_report_from_db(
 # 4. Finalize campaign
 # -----------------------------------------------------------------------
 
+def _measured_duration(campaign: Dict[str, Any], declared: Any) -> int:
+    """Wall-clock seconds since the campaign was initialised (server clock); the duration the agent declares is
+    only a fallback (the DVGA run of 62 min was finalised with the docstring's example value, 900 s)."""
+    try:
+        start = datetime.fromisoformat(str(campaign.get("date") or "").replace("Z", "+00:00"))
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        measured = int((datetime.now(timezone.utc) - start).total_seconds())
+        if measured > 0:
+            return measured
+    except (ValueError, TypeError):
+        pass
+    try:
+        return max(0, int(declared or 0))
+    except (ValueError, TypeError):
+        return 0
+
+
+def _model_report(campaign_id: str, campaign: Dict[str, Any], executive_summary: str = "") -> str:
+    """The report file body: the model rendering (``report_model_local``), else the previous generator (the record
+    then carries no ``report_model_version``)."""
+    try:
+        from api import report_model_local
+        save_campaign(campaign)
+        return report_model_local.report_markdown_for_file(campaign_id, campaign)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning("report model failed, legacy report written", exc_info=True)
+        campaign.pop("report_model_version", None)
+        campaign.pop("report_generated_at", None)
+        return _generate_report_from_db(campaign_id, campaign, executive_summary)
+
+
 def _finalize_campaign_unlocked(
     campaign_id: str,
     duration_seconds: int = 0,
@@ -1309,6 +1419,12 @@ def _finalize_campaign_unlocked(
     campaign = load_campaign(campaign_id)
     if not campaign:
         return {"error": f"Campaign {campaign_id} not found"}
+    from api import coverage_signals
+    # R4 S3: status whitelist; a campaign already terminal keeps its status and measured duration (never aborted ->
+    # completed through a later or forged finalize)
+    decision = coverage_signals.finalize_decision(campaign, final_status)
+    if decision["error"]:
+        return {"error": decision["error"], "campaign_id": campaign_id, "status": campaign.get("status")}
 
     # Guard: if a good report (>10KB) already exists, never overwrite with shorter content.
     # This prevents sub-agents (headless-browser, php, etc.) from replacing the
@@ -1337,9 +1453,11 @@ def _finalize_campaign_unlocked(
         except Exception:
             pass
 
-    normalized_status = _normalize_campaign_status(final_status)
+    normalized_status = decision["status"]
     campaign["status"] = normalized_status
-    campaign["duration_seconds"] = duration_seconds
+    if not decision["frozen"]:
+        campaign["duration_seconds"] = _measured_duration(campaign, duration_seconds)
+    coverage_signals.on_close(campaign, frozen=decision["frozen"])
     campaign["executive_summary"] = executive_summary
 
     if agents_dispatched:
@@ -1357,8 +1475,11 @@ def _finalize_campaign_unlocked(
     _is_reference = True  # always regenerate from DB, ignore any LLM-provided body
 
     if _is_reference:
-        # Auto-generate the report from the DB findings
-        report_markdown = _generate_report_from_db(campaign_id, campaign, executive_summary)
+        # Auto-generate the report from the DB findings: the Markdown rendering of the report model
+        # (darkmoon-report/v2, lot L6, same renderer as Pro). The record is saved first so every reader of the model
+        # (plan, framework assessment, score) sees the final status and coverage. Any failure falls back to the
+        # previous generator: a finalisation never fails over its report.
+        report_markdown = _model_report(campaign_id, campaign, executive_summary)
 
     # Restore real values before the local, CONFIDENTIAL report is written. Findings
     # are stored with placeholders (the model only ever sees those), so a

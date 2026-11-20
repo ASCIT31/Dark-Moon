@@ -8,7 +8,8 @@ finalisation (``api.report_annex_local``):
   ATTACK PATHS          the attack-path document (provenance all, steps): proven paths and possible paths kept apart; a hypothesis
                         (``hypothesis: true``, provenance ``inferred``) is always written « possible · not proven »
   INFRASTRUCTURE MAP    the infrastructure graph: zones, hosts, services, ports, findings per asset
-  FIX FIRST             ranking.fixes when the path ranking is allowed, else the server's fix-first list (fix_first.items,
+  PRIORITIZED TREATMENT PLAN (id fix-first, formerly FIX FIRST)
+                        ranking.fixes when the path ranking is allowed, else the server's fix-first list (fix_first.items,
                         its own basis and « why not paths » text) and the proven pivots; what each fix interrupts =
                         the server's ``interrupts`` / ``breaks_paths``, each path labelled proven or possible
   FRAMEWORK MAPPING     the framework views + the vendored catalogue: ATT&CK tactics (all, in matrix order), ATLAS state, ISO, IEC 62443
@@ -24,6 +25,17 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 SCHEMA = "darkmoon-report-annex/v1"
+TREATMENT_PLAN_TITLE = "Prioritized Treatment Plan"
+TREATMENT_PLAN_DEFINITION = ("Actions recommended in priority order to reduce security exposure, address related findings "
+                             "and interrupt relevant attack paths.")
+TREATMENT_PLAN_PLAIN = ("Start at the top: each action lists the findings it addresses and the attack paths it "
+                        "interrupts.")
+
+
+def section_marker(section_id: str) -> str:
+    """Stable section id on the line before a ``## `` heading (an HTML comment: invisible in a Markdown viewer). Readers
+    group sections by this id, never by the heading text (headings may be renamed; old reports have no marker)."""
+    return f"<!-- dm-section: {section_id} -->"
 
 SEV_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0, "none": -1}
 ZONE_ORDER = ["internet", "edge", "app", "data", "internal", "unknown"]
@@ -206,7 +218,7 @@ def attack_paths_section(ap: Dict[str, Any], titles: Dict[str, str]) -> str:
     # the Objective column of the path tables is disambiguated too (not only the
     # closed/reachable columns), over every objective shown here, so two assets sharing a label are distinguishable.
     obj_disp = _objective_display_map((_path_objective_id(p), (p.get("objective") or {}).get("label")) for p in paths)
-    out = ["## ATTACK PATHS", ""]
+    out = [section_marker("attack-paths"), "## ATTACK PATHS", ""]
     observed = [p for p in proven if _is_observed(p)]
     declared = [p for p in proven if not _is_observed(p)]
     seg = [_plural(len(observed), 'observed attack path')]
@@ -343,7 +355,7 @@ def infrastructure_section(infra: Dict[str, Any]) -> str:
     nodes = infra.get("nodes") or []
     edges = infra.get("edges") or []
     by_id = {n.get("id"): n for n in nodes if n.get("id")}
-    out = ["## INFRASTRUCTURE MAP", ""]
+    out = [section_marker("infrastructure"), "## INFRASTRUCTURE MAP", ""]
     if not nodes:
         out.append("No asset is mapped by this campaign.")
         return "\n".join(out)
@@ -424,7 +436,7 @@ def infrastructure_section(infra: Dict[str, Any]) -> str:
     return "\n".join(out).rstrip()
 
 
-# ── fix first ────────────────────────────────────────────────────────────────────────────────────────────────────
+# ── prioritized treatment plan (fix first) ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
 def _path_refs(path_ids: Iterable[str], paths: Dict[str, Dict[str, Any]]) -> str:
@@ -442,7 +454,8 @@ def fix_first_section(ap: Dict[str, Any], titles: Dict[str, str]) -> str:
     paths = {p.get("id"): p for p in ap.get("paths") or []}
     ranking = ap.get("ranking") or {}
     ff = ap.get("fix_first") or {}
-    out = ["## FIX FIRST", ""]
+    out = [section_marker("fix-first"), f"## {TREATMENT_PLAN_TITLE.upper()}", "",
+           f"*{TREATMENT_PLAN_DEFINITION}* {TREATMENT_PLAN_PLAIN}", ""]
     fixes = ranking.get("fixes") or []
     if ranking.get("allowed") and fixes:
         out.append(f"Ranked on the ranked attack paths (observed + declared; provenance {md_cell(ranking.get('provenance'))}): fixing the first "
@@ -517,7 +530,7 @@ def fix_first_section(ap: Dict[str, Any], titles: Dict[str, str]) -> str:
 
 
 def frameworks_section(fw: Dict[str, Any], catalogue: Dict[str, Any]) -> str:
-    out = ["## FRAMEWORK MAPPING", ""]
+    out = [section_marker("frameworks"), "## FRAMEWORK MAPPING", ""]
     att = fw.get("attack") or {}
     fdocs = fw.get("findings") or {}
     out.append("Readings of this campaign's findings in five references. A tactic, control or step without a finding means "
@@ -750,7 +763,7 @@ def remediation_priorities_section(ap: Dict[str, Any], infra: Dict[str, Any], ca
                  if findings else int(stats.get("exploited") or 0))
     ranking = ap.get("ranking") or {}
     ff = ap.get("fix_first") or {}
-    out = ["## REMEDIATION PRIORITIES & ATTACK PATHS", ""]
+    out = [section_marker("remediation-priorities"), "## REMEDIATION PRIORITIES & ATTACK PATHS", ""]
     # Honesty: a product-demo campaign is synthetic data, not a real engagement. Say so before any
     # « exploited » / « proven » figure, so the scripted demo is never read as the result of a live test.
     if (campaign or {}).get("demo"):
@@ -801,7 +814,7 @@ def remediation_priorities_section(ap: Dict[str, Any], infra: Dict[str, Any], ca
                 f"{r['marginal']} of {r['of_total']}", f"+{r['marginal']}",
                 f"{r['cumulative']} of {r['of_total']} ({r['cumulative_pct']}%)"]) + " |")
         out += ["", coverage_sentence(rows), ""]
-        out.append("> Detail, the diagram and each path's steps are in **Attack paths** and **Fix first** below.")
+        out.append("> Detail, the diagram and each path's steps are in **Attack paths** and **Prioritized Treatment Plan** below.")
     else:
         why = ff.get("why_not_paths_text") or ranking.get("note") or "insufficient proof to rank by attack paths"
         out.append(f"**Path-based prioritisation unavailable: {md_cell(why)}**")
@@ -810,14 +823,14 @@ def remediation_priorities_section(ap: Dict[str, Any], infra: Dict[str, Any], ca
             out.append(f"{_plural(len(possible), 'possible (inferred) path')} were derived from the topology and the "
                        "confirmed findings — hypotheses, not proofs. They are listed, apart, under **Attack paths**.")
         out.append(f"The alternative ranking below is **by severity and proof quality**, clearly marked as such: "
-                   f"it does not claim to interrupt attack paths. See **Fix first**.")
+                   f"it does not claim to interrupt attack paths. See **Prioritized Treatment Plan**.")
     return "\n".join(out).rstrip()
 
 
 # ── assembly ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 SECTIONS = [("remediation-priorities", "Remediation priorities"), ("attack-paths", "Attack paths"),
-            ("infrastructure", "Infrastructure map"), ("fix-first", "Fix first"), ("frameworks", "Framework mapping")]
+            ("infrastructure", "Infrastructure map"), ("fix-first", TREATMENT_PLAN_TITLE), ("frameworks", "Framework mapping")]
 
 
 # ── no written report (stopped / running / error campaign): the findings themselves, as data — never a written prose ──
@@ -843,7 +856,7 @@ def key_figures_section(campaign: Dict[str, Any], vulns: List[Dict[str, Any]]) -
         s = str(v.get("status") or "").lower()
         return s if s in proofs else "unconfirmed"
     # (the note on the missing written report travels apart, as `note` of the annex document)
-    out = ["## KEY FIGURES", "",
+    out = [section_marker("key-figures"), "## KEY FIGURES", "",
            f"{_plural(len(vulns), 'finding')} · overall risk {md_cell(campaign.get('overall_risk') or 'not rated')}.", "",
            "| Severity | Findings | Exploited | Confirmed | Unconfirmed |", "|---|---|---|---|---|"]
     for s in sevs:
@@ -860,11 +873,11 @@ def _ordered(vulns: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 def findings_sections(vulns: List[Dict[str, Any]]) -> List[str]:
     """FINDINGS TABLE + VULNERABILITY DETAILS from the stored findings: their own fields, their own text."""
     vs = _ordered(vulns)
-    table = ["## FINDINGS TABLE", "", "| # | ID | Title | Severity | CVSS | Status | Endpoint |", "|---|---|---|---|---|---|---|"]
+    table = [section_marker("findings-table"), "## FINDINGS TABLE", "", "| # | ID | Title | Severity | CVSS | Status | Endpoint |", "|---|---|---|---|---|---|---|"]
     for i, v in enumerate(vs, 1):
         table.append("| " + " | ".join([str(i), f"`{md_cell(v.get('id'))}`", md_cell(v.get("title"), 120), _sev(v.get("severity")).upper(),
                                           md_cell(v.get("cvss_score") or "—"), md_cell(v.get("status") or "—"), f"`{md_cell(v.get('endpoint'), 100)}`" if v.get("endpoint") else "—"]) + " |")
-    det = ["## VULNERABILITY DETAILS", ""]
+    det = [section_marker("vulnerability-details"), "## VULNERABILITY DETAILS", ""]
     if not vs:
         det.append("No finding recorded for this campaign.")
     for i, v in enumerate(vs, 1):

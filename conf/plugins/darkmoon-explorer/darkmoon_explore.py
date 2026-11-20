@@ -12,10 +12,27 @@ Safety
   loaded, evidence is withheld (fail closed): ``{"withheld": true}`` replaces it and nothing raw is printed.
 - Attack paths: the MCP server's read model (``api.attack_paths_local``) is used when it is installed; otherwise only
   the agents' ``enabled_by`` declarations are listed, as ``agent-declared`` hypotheses. Nothing is inferred here.
+- Prioritized Treatment Plan (``plan``): the MCP server's ``api.treatment_local`` (exec_core plan + the owner's own
+  declarations file ``<data>/treatments/<campaign_id>.json``, validated on read). Without the server or the redaction
+  engine nothing is printed (exit 2). Read-only: statuses are never written from here.
+- Framework technical assessment (``frameworks``) and application profile (``profile``): the MCP server's
+  ``api.framework_local`` / ``api.profile_local`` (exec_core, the owner's own file ``<data>/profiles/<project_id>.json``
+  validated on read). Same fail-closed rule as ``plan``; nothing is written from here.
+- Executive block (``executive``): the MCP server's ``api.executive_local`` (exec_core.executive: grade or « Not rated »,
+  one coverage sentence, the first three actions, one regulatory line), for a campaign or (``--project``) for a
+  project's reference campaign. ``legend``: the shared vocabulary (exec_core.legend). Same fail-closed rule as ``plan``.
+- Darkmoon's own catalogue and legend texts are never masked (``exec_core.static_text``): only an exact static text
+  is kept as written; everything else, evidence first, goes through the redaction engine.
+- Maintenance windows (``maintenance``): the MCP server's ``api.maintenance_local`` (exec_core.maintenance, the
+  owner's own file ``<data>/policies/<project_id>.json`` validated on read): the policy in words and what a launch would
+  get now. Community warns outside the windows, it never blocks. Same fail-closed rule as ``plan``.
+- Declarations (treatment statuses, application profile, maintenance windows) are made ONLY by the owner editing the
+  local files above by hand. This adapter has no write command, and the MCP server exposes no tool a model could call to write them.
 
 Usage: darkmoon_explore.py [--data DIR] [--reports DIR] [--mcp DIR] <command> [args]
   projects | campaigns | campaign ID | finding ID | vulnerabilities [--project ID] [--campaign ID]
-  | report CAMPAIGN_ID | paths CAMPAIGN_ID
+  | report CAMPAIGN_ID | paths CAMPAIGN_ID | plan CAMPAIGN_ID | frameworks CAMPAIGN_ID | profile PROJECT_ID
+  | executive CAMPAIGN_ID | executive --project PROJECT_ID | legend | maintenance PROJECT_ID
 Exit codes: 0 ok, 2 not found / refused, 1 error.
 """
 from __future__ import annotations
@@ -164,29 +181,58 @@ def safe_finding(v: dict, red, list_view: bool) -> dict:
     return out
 
 
+def exec_core_mod(name: str):
+    """A module of exec_core: the MCP server's copy when installed, else the copy vendored next to this file
+    (byte-identical, checked by the MCP parity test)."""
+    try:
+        return __import__(f"api.exec_core.{name}", fromlist=[name])
+    except Exception:  # noqa: BLE001
+        vendor = str(Path(__file__).resolve().parent / "_vendor")
+        if vendor not in sys.path:
+            sys.path.insert(0, vendor)
+        return __import__(f"exec_core.{name}", fromlist=[name])
+
+
 def safe_text(s: str, red) -> str | None:
+    """The report text through the redaction engine, Darkmoon's own static texts kept (fail closed: None)."""
     if red is None:
         return None
     try:
-        text, _ = red.redact_text(s)
-        return text
+        return exec_core_mod("static_text").mask_text(s, lambda t: red.redact_text(t)[0])
     except Exception:  # noqa: BLE001
         return None
 
 
 # ---------------------------------------------------------------- commands
 
+def core_stats():
+    """The one stats function of the product (exec_core.stats): the MCP server's copy when installed, else the
+    copy vendored next to this file (byte-identical, checked by the MCP parity test)."""
+    try:
+        from api.exec_core import stats as mod  # type: ignore
+        return mod
+    except Exception:  # noqa: BLE001
+        vendor = str(Path(__file__).resolve().parent / "_vendor")
+        if vendor not in sys.path:
+            sys.path.insert(0, vendor)
+        from exec_core import stats as mod  # type: ignore
+        return mod
+
+
 def severity_counts(vs: list) -> dict:
-    c = Counter(str(v.get("severity", "info")).lower() for v in vs)
-    stats = {s: c.get(s, 0) for s in SEVERITIES}
-    stats["total_findings"] = len(vs)
-    stats["exploited"] = sum(1 for v in vs if str(v.get("status", "")).lower() == "exploited")
-    return stats
+    """Campaign stats as the Pro API serves them: quarantined (held) and false-positive findings are counted
+    nowhere and reported under ``excluded``."""
+    return core_stats().compute_stats(vs)
+
+
+def counted(vs: list) -> list:
+    return core_stats().split(vs)[0]
 
 
 def worst(vs: list) -> str | None:
+    kept = counted(vs)
     for s in SEVERITIES:
-        if any(str(v.get("severity", "")).lower() == s for v in vs):
+        if any(str(v.get("severity", "")).strip().lower() == s for v in kept):
             return s
     return None
 
@@ -203,7 +249,7 @@ def cmd_projects(st: Store, red) -> dict:
         ids = {c.get("id") for c in pc}
         pv = [v for v in vulns if v.get("campaign_id") in ids or v.get("project_id") == p.get("id")]
         out.append({**p, "target": targets.get(p.get("target_id")) or p.get("target"), "campaigns_count": len(pc),
-                    "vulnerabilities_count": len(pv), "latest_risk": worst(pv)})
+                    "vulnerabilities_count": len(counted(pv)), "latest_risk": worst(pv)})
     return {"data": out, "total": len(out)}
 
 
@@ -235,10 +281,20 @@ def safe_obj(o, red):
 FREE_TEXT_KEYS = ("executive_summary", "prompt", "description", "remediation", "note", "why", "plain", "raw")
 
 
+def safe_doc(o, red):
+    """An exec_core document (plan, assessment, profile, executive block) through the redaction engine; Darkmoon's own
+    static texts kept as written. The callers refuse to print anything without the engine (fail closed)."""
+    try:
+        return exec_core_mod("static_text").masked_obj(o, red.redact_obj)
+    except Exception:  # noqa: BLE001
+        return safe_obj(o, red)
+
+
 def cmd_campaign(st: Store, red, cid: str) -> dict:
     c = safe_obj(st.campaign(cid), red)
-    vs = [safe_finding(v, red, True) for v in st.vulns(cid) if isinstance(v, dict)]
-    return {"data": {**c, "stats": severity_counts(vs), "vulnerabilities": vs}}
+    raw = [v for v in st.vulns(cid) if isinstance(v, dict)]
+    vs = [safe_finding(v, red, True) for v in raw]
+    return {"data": {**c, "stats": severity_counts(raw), "vulnerabilities": vs}}
 
 
 def cmd_finding(st: Store, red, vid: str) -> dict:
@@ -301,6 +357,99 @@ def cmd_paths(st: Store, red, cid: str) -> dict:
             "summary": {"paths_total": len(paths), "proven_paths": 0, "declared_paths": len(paths), "inferred_paths": 0}}, red)
 
 
+def cmd_plan(st: Store, red, cid: str) -> dict:
+    """Prioritized Treatment Plan (exec_core, through the MCP server's read model). Fail closed: without the redaction
+    engine or without the MCP server's plan module, no plan is printed."""
+    st.campaign(cid)
+    if red is None:
+        raise NotFound("plan withheld: the redaction engine is not available")
+    try:
+        from api.treatment_local import plan_doc  # type: ignore
+    except Exception:  # noqa: BLE001
+        raise NotFound("plan unavailable: the Darkmoon MCP server is not installed")
+    doc = plan_doc(cid, finding_filter=lambda v: safe_obj(v, red))
+    if doc is None:
+        raise NotFound(cid)
+    return safe_doc(doc, red)
+
+
+def cmd_frameworks(st: Store, red, cid: str) -> dict:
+    """Framework technical assessment (exec_core, through the MCP server's read model). Fail closed like ``plan``."""
+    st.campaign(cid)
+    if red is None:
+        raise NotFound("assessment withheld: the redaction engine is not available")
+    try:
+        from api.framework_local import assessment_doc  # type: ignore
+    except Exception:  # noqa: BLE001
+        raise NotFound("assessment unavailable: the Darkmoon MCP server is not installed")
+    doc = assessment_doc(cid, finding_filter=lambda v: safe_obj(v, red))
+    if doc is None:
+        raise NotFound(cid)
+    return safe_doc(doc, red)
+
+
+def cmd_profile(st: Store, red, pid: str) -> dict:
+    """Application profile: the owner's file validated on read + the detected stack. Fail closed like ``plan``."""
+    check_id(pid)
+    if not any(isinstance(p, dict) and p.get("id") == pid for p in st.projects()):
+        raise NotFound(pid)
+    if red is None:
+        raise NotFound("profile withheld: the redaction engine is not available")
+    try:
+        from api.profile_local import profile_doc  # type: ignore
+    except Exception:  # noqa: BLE001
+        raise NotFound("profile unavailable: the Darkmoon MCP server is not installed")
+    doc = profile_doc(pid)
+    if doc is None:
+        raise NotFound(pid)
+    return safe_doc(doc, red)
+
+
+def cmd_executive(st: Store, red, cid: str | None, pid: str | None) -> dict:
+    """The executive block of a campaign, or of a project (``--project``: its reference campaign). Fail closed like
+    ``plan``: without the redaction engine or the MCP server, nothing is printed."""
+    if pid:
+        check_id(pid)
+        if not any(isinstance(p, dict) and p.get("id") == pid for p in st.projects()):
+            raise NotFound(pid)
+    else:
+        st.campaign(cid or "")
+    if red is None:
+        raise NotFound("executive block withheld: the redaction engine is not available")
+    try:
+        from api import executive_local  # type: ignore
+    except Exception:  # noqa: BLE001
+        raise NotFound("executive block unavailable: the Darkmoon MCP server is not installed")
+    flt = lambda v: safe_obj(v, red)  # noqa: E731
+    doc = executive_local.project_doc(pid, flt) if pid else executive_local.campaign_doc(cid or "", flt)
+    if doc is None:
+        raise NotFound(pid or cid or "")
+    return safe_doc(doc, red)
+
+
+def cmd_maintenance(st: Store, red, pid: str) -> dict:
+    """Maintenance windows of a project: the owner's policy file validated on read, in words, and the evaluation now.
+    Fail closed like ``plan`` (the labels and note are the owner's free text: they go through the redaction)."""
+    check_id(pid)
+    if not any(isinstance(p, dict) and p.get("id") == pid for p in st.projects()):
+        raise NotFound(pid)
+    if red is None:
+        raise NotFound("maintenance windows withheld: the redaction engine is not available")
+    try:
+        from api.maintenance_local import policy_doc  # type: ignore
+    except Exception:  # noqa: BLE001
+        raise NotFound("maintenance windows unavailable: the Darkmoon MCP server is not installed")
+    doc = policy_doc(pid)
+    if doc is None:
+        raise NotFound(pid)
+    return safe_doc(doc, red)
+
+
+def cmd_legend() -> dict:
+    """The shared vocabulary (exec_core.legend): Darkmoon's own words, no data."""
+    return exec_core_mod("legend").legend()
+
+
 # C0 controls (but tab/newline), DEL, C1 controls (8-bit CSI/OSC/DCS...) and bidi overrides: a stored title or
 # report can never drive the terminal the explorer renders in.
 _CONTROLS = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]")
@@ -316,12 +465,33 @@ def no_controls(o):
     return o
 
 
+COMMANDS = (
+    ("projects", "projects with counts and worst severity"),
+    ("campaigns", "campaigns with their stats"),
+    ("campaign CAMPAIGN_ID", "one campaign and its findings (evidence masked)"),
+    ("finding FINDING_ID", "one finding (evidence masked)"),
+    ("vulnerabilities [--project] [--campaign]", "findings and their counts"),
+    ("report CAMPAIGN_ID", "the report, masked"),
+    ("paths CAMPAIGN_ID", "attack paths (Possible / Evidence-Backed)"),
+    ("plan CAMPAIGN_ID", "Prioritized Treatment Plan (+ treatments/<campaign_id>.json)"),
+    ("frameworks CAMPAIGN_ID", "framework technical assessment (4 states per control)"),
+    ("profile PROJECT_ID", "application profile (+ profiles/<project_id>.json)"),
+    ("executive CAMPAIGN_ID", "executive block of a campaign"),
+    ("executive --project PROJECT_ID", "executive block of a project (reference campaign)"),
+    ("legend", "shared vocabulary of the executive views"),
+    ("maintenance PROJECT_ID", "maintenance windows (+ policies/<project_id>.json), warning only"),
+)
+
+
 def main(argv: list[str]) -> int:
-    ap = argparse.ArgumentParser(add_help=True)
+    ap = argparse.ArgumentParser(
+        add_help=True, formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Darkmoon Terminal Explorer, local data adapter (read-only JSON on stdout).",
+        epilog="commands:\n" + "\n".join(f"  {c:<42} {h}" for c, h in COMMANDS))
     ap.add_argument("--data", type=Path, default=None)
     ap.add_argument("--reports", type=Path, default=None)
     ap.add_argument("--mcp", type=Path, default=None)
-    ap.add_argument("cmd")
+    ap.add_argument("cmd", help="see the commands below")
     ap.add_argument("arg", nargs="?")
     ap.add_argument("--project")
     ap.add_argument("--campaign")
@@ -348,6 +518,18 @@ def main(argv: list[str]) -> int:
             out = cmd_report(st, red, a.arg or "")
         elif a.cmd == "paths":
             out = cmd_paths(st, red, a.arg or "")
+        elif a.cmd == "plan":
+            out = cmd_plan(st, red, a.arg or "")
+        elif a.cmd == "frameworks":
+            out = cmd_frameworks(st, red, a.arg or "")
+        elif a.cmd == "profile":
+            out = cmd_profile(st, red, a.arg or "")
+        elif a.cmd == "executive":
+            out = cmd_executive(st, red, a.arg, a.project)
+        elif a.cmd == "legend":
+            out = cmd_legend()
+        elif a.cmd == "maintenance":
+            out = cmd_maintenance(st, red, a.arg or "")
         else:
             print(f"unknown command: {a.cmd}", file=sys.stderr)
             return 1

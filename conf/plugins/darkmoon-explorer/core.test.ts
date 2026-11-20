@@ -71,17 +71,23 @@ describe("attack paths keep the proof contract", () => {
     { n: 1, node_label: "Web", finding_id: null },
     { n: 2, node_label: "DB", finding_id: "vuln_9" },
   ]
+  const checked = { status: "corroborated", unverified: [], checked: true }
   test("inferred and declared are never proven", () => {
     expect(pathProof({ id: "p", title: "", provenance: "inferred", hypothesis: true })).toEqual({
-      label: "INFERRED · hypothesis",
+      label: "Possible Attack Path",
+      short: "POSSIBLE",
       proven: false,
+      why: "inferred by the server, a hypothesis",
     })
     expect(pathProof({ id: "p", title: "", provenance: "agent-declared", hypothesis: true }).proven).toBe(false)
-    expect(pathProof({ id: "p", title: "", provenance: "derived", hypothesis: false }).proven).toBe(true)
+    // a derived path is evidence-backed only when the engine checked its claims (exec_core legend.path_kind_of)
+    expect(pathProof({ id: "p", title: "", provenance: "derived", hypothesis: false, corroboration: checked }).proven).toBe(true)
+    expect(pathProof({ id: "p", title: "", provenance: "derived", hypothesis: false }).proven).toBe(false)
+    expect(pathProof({ id: "p", title: "", provenance: "derived", hypothesis: false, corroboration: { ...checked, checked: false } }).proven).toBe(false)
   })
   test("dashed arrows for hypotheses, solid for proven", () => {
     expect(pathChain({ id: "p", title: "", hypothesis: true, steps })[1]).toContain("╌▶ DB  [vuln_9]")
-    expect(pathChain({ id: "p", title: "", hypothesis: false, steps })[1]).toContain("─▶ DB")
+    expect(pathChain({ id: "p", title: "", provenance: "observed", hypothesis: false, steps })[1]).toContain("─▶ DB")
     expect(pathFindingIds({ id: "p", title: "", finding_ids: ["vuln_1"], steps })).toEqual(["vuln_1", "vuln_9"])
     const objSteps = [{ n: 1, node_label: "X", findings: [{ id: "vuln_7", title: "t" }] }]
     expect(pathFindingIds({ id: "p", title: "", steps: objSteps })).toEqual(["vuln_7"])
@@ -99,6 +105,15 @@ describe("markdown report", () => {
     const s = splitSections("# T\n| a | b\n|---\n```js\nconst x = 1\n# inside\n")
     expect(s.map((x) => x.title)).toEqual(["T"])
   })
+  test("report model metadata lines (section marker, link anchors) are never shown", () => {
+    const md = "# R\n\n<!-- dm-section: cyber-score -->\n## 1. Cyber Score\n<a id=\"cyber_score\"></a>\n\ntext\n```\n<a id=\"kept\"></a>\n```\n"
+    const s = splitSections(md)
+    expect(s.map((x) => x.title)).toEqual(["R", "1. Cyber Score"])
+    expect(s[1].body).not.toContain("<a id=\"cyber_score\">")
+    expect(s[1].body).not.toContain("dm-section")
+    expect(s[1].body).toContain("<a id=\"kept\"></a>")
+  })
+
   test("search returns matching sections", () => {
     const s = splitSections("# A\nfoo\n# B\nbar foo\n# C\nbaz")
     expect(searchSections(s, "FOO")).toEqual([0, 1])
@@ -223,13 +238,16 @@ describe("v2: data sources, cache and helpers", () => {
     expect([palette("dark").code, palette("light").code]).toEqual(["#add7f6", "#2f6fb8"])
   })
 
-  test("proof labels are the contract", () => {
+  test("proof labels are the legend vocabulary (exec_core.legend)", () => {
     const { pathProof } = require("./core")
-    expect(pathProof({ id: "p", title: "", hypothesis: false }).label).toBe("PROVEN · corroborated")
-    expect(pathProof({ id: "p", title: "", provenance: "agent-declared", hypothesis: true }).label).toBe("DECLARED · not verified")
-    expect(pathProof({ id: "p", title: "", provenance: "inferred", hypothesis: true }).label).toBe("INFERRED · hypothesis")
-    // a declared path that a client marks hypothesis:false is still only proven if the server said so: no promotion here
+    expect(pathProof({ id: "p", title: "", provenance: "observed", hypothesis: false }).label).toBe("Evidence-Backed Attack Path")
+    expect(pathProof({ id: "p", title: "", provenance: "agent-declared", hypothesis: true }).label).toBe("Possible Attack Path")
+    expect(pathProof({ id: "p", title: "", provenance: "agent-declared", hypothesis: true }).why).toBe("declared by the agent, not verified")
+    expect(pathProof({ id: "p", title: "", provenance: "inferred", hypothesis: true }).why).toBe("inferred by the server, a hypothesis")
+    // a declared path that a client marks hypothesis:false is never promoted: only the server's evidence makes a path proven
     expect(pathProof({ id: "p", title: "", provenance: "agent-declared" }).proven).toBe(false)
+    expect(pathProof({ id: "p", title: "", provenance: "declared", hypothesis: false }).proven).toBe(false)
+    expect(pathProof({ id: "p", title: "", hypothesis: false }).proven).toBe(false)
   })
 })
 
@@ -260,5 +278,222 @@ describe("visual primitives use real data only", () => {
     expect(Object.values(glyphs(false)).join("")).toMatch(/^[\x20-\x7e]*\[object Object\]$|^[\x20-\x7e]*$/)
     expect(durationText(1730)).toBe("29 min")
     expect(durationText(undefined)).toBe("—")
+  })
+})
+
+describe("splitSections: server section ids", () => {
+  test("the id marker is never shown and keys the next heading", () => {
+    const md = "# R\n\n<!-- dm-section: management-summary -->\n## MANAGEMENT SUMMARY\ntext\n\n<!-- dm-section: fix-first -->\n\n## PRIORITIZED TREATMENT PLAN\nrows\n"
+    const s = splitSections(md)
+    expect(s.map((x) => x.key ?? null)).toEqual([null, "management-summary", "fix-first"])
+    expect(s.some((x) => x.body.includes("dm-section"))).toBe(false)
+  })
+  test("a marker followed by text, or inside a fence, keys nothing", () => {
+    const s = splitSections("<!-- dm-section: a -->\ntext\n## H\n```\n<!-- dm-section: b -->\n## not a heading\n```\n")
+    expect(s.find((x) => x.title === "H")?.key).toBeUndefined()
+    expect(s.map((x) => x.body).join("")).toContain("<!-- dm-section: b -->")
+  })
+  test("old reports without markers split as before", () => {
+    expect(splitSections("## FIX FIRST\nx\n").map((x) => [x.title, x.key])).toEqual([["FIX FIRST", undefined]])
+  })
+})
+
+describe("executive views: display only, the words of exec_core", () => {
+  const core = require("./core")
+
+  test("path kinds: the same cases as exec_core legend.path_kind_of", () => {
+    const P = (provenance: string, hypothesis: boolean, corroboration?: any) => ({ id: "p", title: "", provenance, hypothesis, corroboration })
+    const ok = { status: "corroborated", unverified: [], checked: true }
+    const cases: [any, string][] = [
+      [P("observed", false), "evidence_backed"],
+      [P("observed", true), "possible"],
+      [P("derived", false, ok), "evidence_backed"],
+      [P("derived", false, { ...ok, checked: false }), "possible"],
+      [P("derived", false, { status: "corroborated", unverified: [] }), "possible"],
+      [P("derived", true, { status: "claimed", unverified: ["x"], checked: true }), "possible"],
+      [P("derived", false, { ...ok, unverified: ["x"] }), "possible"],
+      [P("derived", false), "possible"],
+      [P("declared", false), "possible"],
+      [P("agent-declared", false), "possible"],
+      [P("inferred", false), "possible"],
+      [P("whatever", false), "possible"],
+      [null, "possible"],
+    ]
+    for (const [p, k] of cases) expect(core.pathKind(p)).toBe(k)
+    expect(core.pathKindCounts({ paths: cases.map((c) => c[0]).filter(Boolean) })).toEqual({ total: 12, evidence_backed: 2, possible: 10 })
+  })
+
+  test("score headline: a number only when rated or limited, never for « Not rated »", () => {
+    expect(core.scoreHeadline({ score_status: "rated", score: 0, grade: "E", status_label: "Rated" })).toEqual({ big: "E  0/100", status: "Rated", rated: true, limited: false })
+    expect(core.scoreHeadline({ score_status: "limited", score: 41, grade: "D", status_label: "Limited test" }).limited).toBe(true)
+    const nr = core.scoreHeadline({ score_status: "not_rated", score: 55, grade: "C", status_label: "Not rated" })
+    expect(nr.big).toBe("Not rated")
+    expect(nr.big).not.toContain("55")
+    expect(core.scoreHeadline(undefined).big).toBe("Not rated")
+    expect(core.scoreWhy({ status_reasons: [{ code: "x", text: "Retest campaign" }] })).toBe("Retest campaign")
+    expect(core.scoreWhy({ status_meaning: "No rating" })).toBe("No rating")
+  })
+
+  test("treatment: the server's status words (same as the dashboard); applied always reads not verified", () => {
+    expect(core.treatmentLabel({ action_id: "a", status: "applied", status_label: "Applied" })).toBe("Applied — not verified")
+    expect(core.treatmentLabel({ action_id: "a", status: "applied", status_label: "Applied — not verified" })).toBe("Applied — not verified")
+    expect(core.treatmentLabel({ action_id: "a", status: "verified_resolved", status_label: "Not reproduced at retest", last_retest: { retest_id: "r1" } })).toBe("Not reproduced at retest")
+    // no client-side downgrade: exec_core decides every status (the dashboard shows the same label)
+    expect(core.treatmentLabel({ action_id: "a", status: "verified_resolved", status_label: "Not reproduced at retest" })).toBe("Not reproduced at retest")
+    expect(core.treatmentLabel({ action_id: "a", status: "proposed", status_label: "Proposed" })).toBe("Proposed")
+    expect(core.treatmentLabel(undefined)).toBe("proposed")
+    for (const s of ["proposed", "in_progress", "applied", "verified_resolved", "failed_verification", "risk_accepted", "deferred"]) {
+      expect(core.treatmentMark(s, true).length).toBe(1)
+      expect(core.treatmentMark(s, false)).toMatch(/^[ -~]$/)
+    }
+    // treatment marks are their own family: never the evidence circles (unicode) nor the evidence ASCII marks
+    const fams = ["proposed", "in_progress", "verified_resolved", "failed_verification", "risk_accepted", "deferred"]
+    for (const s of fams) {
+      expect(["●", "◐", "○"]).not.toContain(core.treatmentMark(s, true))
+      expect(["*", "+", "o"]).not.toContain(core.treatmentMark(s, false))
+    }
+    expect(new Set(fams.map((s) => core.treatmentMark(s, true))).size).toBe(fams.length)
+    expect(new Set(fams.map((s) => core.treatmentMark(s, false))).size).toBe(fams.length)
+    expect(core.treatmentLabel({ action_id: "a", status: "applied", status_label: "Applied\x1b[2J" })).not.toContain("\x1b")
+  })
+
+  test("plan v2 fields: retest coverage, effort, risk acceptance, grade lever, maintenance, declared by", () => {
+    expect(core.retestNote({ action_id: "a", last_retest: { text: "Not reproduced at retest (2026-11-20)", coverage_ok: true } })).toBe("Not reproduced at retest (2026-11-20)")
+    expect(core.retestNote({ action_id: "a", last_retest: { text: "x", coverage_ok: false, coverage_text: "retest without coverage: no asset registered" } }))
+      .toBe("Retest without coverage — not verified (retest without coverage: no asset registered)")
+    expect(core.retestNote({ action_id: "a" })).toBe("")
+    expect(core.effortText({ action_id: "a", effort: { band: "M", label: "Medium" } })).toBe("M Medium · indicative — to confirm")
+    expect(core.effortText({ action_id: "a", effort: { band: "S", label: "Small" } }, true)).toBe("S")
+    expect(core.effortText({ action_id: "a" })).toBe("")
+    expect(core.effortText({ action_id: "a", effort: { band: "unknown", label: "Not determined" } }, true)).toBe("—")
+    expect(core.effortText({ action_id: "a", effort: { band: "unknown", label: "Not determined" } })).toBe("Not determined (no band for this weakness class)")
+    expect(core.riskAcceptanceText({ action_id: "a", risk_acceptance: { risk_owner: "CISO", until: "2027-03-31", recorded_by: "admin", expired: false, complete: true } }))
+      .toBe("CISO until 2027-03-31, recorded by admin")
+    expect(core.riskAcceptanceText({ action_id: "a", risk_acceptance: { risk_owner: "CISO", until: "2026-01-31", expired: true } })).toBe("Risk acceptance expired (CISO, until 2026-01-31)")
+    const lever = core.gradeLever({ next_cap_level: { text: "Capped at 39 while 10 exploited critical finding(s) remain open." },
+      top_classes: [{ weakness_class: "code_execution", share_text: "16 % of the penalty sum" }, { weakness_class: "sql_injection", share_text: "9 % of the penalty sum" }] },
+      { weakness_class: { sql_injection: "SQL injection" } } as any)
+    expect(lever.holds).toContain("Capped at 39")
+    expect(lever.classes).toBe("Code execution 16 % · SQL injection 9 %")
+    expect(core.gradeLever(undefined)).toEqual({ holds: "", classes: "" })
+    expect(core.maintenanceCheckLine({ maintenance_check: { decision: "blocked", source: "mcp_init", enforced: false } }))
+      .toBe("Maintenance: started from the terminal / agent, outside the maintenance windows — recorded, not enforced.")
+    expect(core.maintenanceCheckLine({ maintenance_check: { decision: "allowed" } })).toBe("")
+    expect(core.maintenanceCheckLine({})).toBe("")
+    const f = { value: "high", provenance: "declared_by_customer", at: "2026-11-20T01:00:47Z", by: "admin", by_role: "admin" }
+    expect(core.declaredByText(f, false)).toBe("Declared by admin on 2026-11-20")
+    expect(core.declaredByText(f, true)).toBe("Declared in the local profile file on 2026-11-20")
+    expect(core.declaredByText({ value: "x", provenance: "detected" }, false)).toBe("")
+    expect(core.applicabilityMark("declared_by_customer")).not.toBe("●")
+    expect(new Set(["declared_by_customer", "to_confirm", "not_applicable_declared"].map((s) => core.applicabilityMark(s, false))).size).toBe(3)
+  })
+
+  test("frameworks: four states in words, never a percentage, a grade or « compliant »", () => {
+    const f = { framework: "gdpr", label: "GDPR", applicability: { status: "to_confirm", label: "To confirm" }, counts: { weakness_observed: 3, none_observed_in_tested_scope: 1, not_tested: 2, not_technically_assessable: 4 } }
+    const line = core.frameworkLine(f)
+    expect(line).toBe("3 weakness observed · 1 none observed in tested scope · 2 not tested · 4 not technically assessable")
+    expect(line + core.frameworkLine(f, true)).not.toMatch(/%|compliant|grade/i)
+    // « not technically assessable » is never shortened to something that reads « not applicable »
+    expect(core.frameworkLine(f, true)).toContain("4 not assessable")
+    expect(core.frameworkLine(f, true)).not.toMatch(/n\/a/i)
+    expect(core.applicabilityOf(f)).toEqual({ status: "to_confirm", label: "To confirm" })
+    expect(core.applicabilityOf({ framework: "x", applicability: "declared_by_customer", applicability_label: "Applicable" })).toEqual({ status: "declared_by_customer", label: "Applicable" })
+  })
+
+  test("profile: provenance is a shape and a word; unknown values are never invented", () => {
+    expect(core.provenanceBadge("verified").word).toBe("Verified")
+    expect(core.provenanceBadge("declared_by_customer").word).toBe("Declared")
+    expect(core.provenanceBadge("detected").word).toBe("Detected")
+    expect(core.provenanceBadge("unknown").word).toBe("Not provided")
+    expect(new Set(["verified", "declared_by_customer", "detected", "unknown"].map((p) => core.provenanceBadge(p).mark)).size).toBe(4)
+    for (const p of ["verified", "declared_by_customer", "detected", "unknown"]) expect(["●", "◐", "○"]).not.toContain(core.provenanceBadge(p).mark)
+    expect(core.provenanceBadge("verified", false).mark).toMatch(/^[ -~]$/)
+    expect(core.profileValue(null)).toBe("—")
+    expect(core.profileValue(["a", "b"])).toBe("a, b")
+    expect(core.profileValue(true)).toBe("yes")
+  })
+
+  test("legend: shared words, evidence status kept apart from severity", () => {
+    const l = {
+      path_kind: { evidence_backed: { label: "Evidence-Backed Attack Path", meaning: "m1" }, possible: { label: "Possible Attack Path", meaning: "m2" } },
+      evidence_status: { exploited: { label: "Exploited", meaning: "e" }, confirmed: { label: "Confirmed", meaning: "c" }, unconfirmed: { label: "To confirm", meaning: "u" } },
+      treatment: { in_progress: { label: "Treatment in Progress", meaning: "t" }, not_reproduced: { label: "Not reproduced at retest", meaning: "n" }, risk_accepted: { label: "Risk accepted", meaning: "r" } },
+      score_status: { rated: { label: "Rated", meaning: "a" }, limited: { label: "Limited test", meaning: "b" }, not_rated: { label: "Not rated", meaning: "c" } },
+    }
+    const text = core.legendLines(l).join("\n")
+    for (const w of ["Evidence-Backed Attack Path", "Possible Attack Path", "To confirm", "Treatment in Progress", "Not reproduced at retest", "Not rated", "not severity"]) expect(text).toContain(w)
+    expect(core.legendLines(l, false).join("\n")).toMatch(/^[\x20-\x7e\n—«»…·]*$/)
+    expect(core.legendLines(undefined).join("\n")).toContain("Possible Attack Path")
+    const compact = core.legendLines(l, true, true)
+    expect(compact.length).toBeLessThanOrEqual(13)
+    for (const w of ["Evidence-Backed Attack Path", "Possible Attack Path", "To confirm", "Not reproduced at retest", "Not rated"]) expect(compact.join("\n")).toContain(w)
+  })
+
+  test("wrapLines: bounded lines, cut text says so", () => {
+    expect(core.wrapLines("aaa bbb ccc ddd", 7, 3)).toEqual(["aaa bbb", "ccc ddd"])
+    expect(core.wrapLines("aaa bbb ccc ddd eee", 7, 2)).toEqual(["aaa bbb", "ccc dd…"])
+    expect(core.wrapLines("x".repeat(20), 8, 2)).toEqual(["xxxxxxx…"])
+    expect(core.wrapLines("", 8, 2)).toEqual([])
+  })
+
+  test("sources: the executive documents come from the server routes / the adapter commands", async () => {
+    const urls: string[] = []
+    const api = new core.ExplorerApi("http://x/api/v1", (async (u: string) => {
+      urls.push(u)
+      return new Response("{}", { status: 200 })
+    }) as any)
+    api.useToken("t")
+    await api.executive("c1"); await api.projectExecutive("p1"); await api.plan("c1"); await api.frameworks("c1"); await api.profile("p1"); await api.legend()
+    expect(urls.map((u) => u.replace("http://x/api/v1", ""))).toEqual([
+      "/campaigns/c1/executive", "/projects/p1/executive", "/campaigns/c1/treatment-plan", "/campaigns/c1/framework-assessment", "/projects/p1/profile", "/executive/legend",
+    ])
+    const seen: string[][] = []
+    const fs = new core.FileSource(async (a: string[]) => (seen.push(a), { code: 0, stdout: "{}", stderr: "" }))
+    await fs.executive("c1"); await fs.projectExecutive("p1"); await fs.plan("c1"); await fs.frameworks("c1"); await fs.profile("p1"); await fs.legend()
+    expect(seen).toEqual([["executive", "c1"], ["executive", "--project", "p1"], ["plan", "c1"], ["frameworks", "c1"], ["profile", "p1"], ["legend"]])
+    const c = new core.CachedSource(fs)
+    await c.plan("c1"); await c.plan("c1"); await c.projectExecutive("p1"); await c.executive("p1")
+    expect(seen.length).toBe(6 + 3) // cached per key; a project block and a campaign block never share a key
+  })
+})
+
+describe("maintenance windows (L9)", () => {
+  const DOC = {
+    policy: { timezone: "Europe/Paris" },
+    summary: ["Every campaign may start only inside these windows (Europe/Paris time):", "• Monday to Friday, 22:00–06:00 (next day)"],
+    evaluation_now: { decision: "blocked", next_window_start_utc: "2026-11-20T21:00:00Z",
+      reasons: [{ code: "inside-window", message: "x", effect: "none" }, { code: "outside-window", message: "Outside every maintenance window\x1b[2J\nforged", effect: "block" }] },
+    enforced: true,
+  }
+
+  test("Pro: GET /projects/{id}/maintenance-policy; Community: the adapter's maintenance command", async () => {
+    const urls: string[] = []
+    const api = new ExplorerApi("http://x/api/v1", (async (u: string) => (urls.push(u), new Response("{}", { status: 200 }))) as any)
+    await api.maintenance("p 1")
+    expect(urls[0]).toBe("http://x/api/v1/projects/p%201/maintenance-policy")
+    const core = await import("./core")
+    const seen: string[][] = []
+    const fs = new core.FileSource(async (args: string[]) => (seen.push(args), { code: 0, stdout: "{}", stderr: "" }))
+    await fs.maintenance("p1")
+    expect(seen[0]).toEqual(["maintenance", "p1"])
+  })
+
+  test("lines: the policy in words, the state now with its blocking reasons only, who enforces; no control character", async () => {
+    const { maintenanceLines } = await import("./core")
+    const pro = maintenanceLines(DOC as any, "Shop").join("\n")
+    expect(pro).toContain("Monday to Friday, 22:00–06:00 (next day)")
+    expect(pro).toContain("Now: a launch would be blocked.")
+    expect(pro).toContain("Next allowed start: 2026-11-20T21:00:00Z (UTC)")
+    expect(pro).toContain("Pro blocks New Campaign, the scheduler and retests")
+    expect(pro).not.toContain("\x1b")
+    expect(pro.split("\n").filter((l) => l.includes("forged")).every((l) => l.includes("Outside"))).toBe(true)
+    expect(pro).not.toMatch(/·\s*x$/m)                                       // reasons without effect are not listed
+    const community = maintenanceLines({ ...DOC, enforced: false, evaluation_now: { ...DOC.evaluation_now, decision: "warn", advisory_of: "blocked" },
+      file: { path: "policies/p1.json", status: "read" } } as any, "Lab").join("\n")
+    expect(community).toContain("Now: outside the windows (a launch gets a WARNING, it is not blocked).")
+    expect(community).toContain("File: policies/p1.json (read), edited by hand; no MCP tool writes it, but the local agent has shell access: not tamper-evident.")
+    expect(community).not.toContain("never by an agent")
+    expect(community).toContain("Community warns outside the windows; it never blocks a launch.")
+    expect(maintenanceLines(undefined, "Lab")[0]).toContain("not available")
   })
 })

@@ -1,0 +1,196 @@
+{
+ "campaign": {
+  "date": "2026-11-01T10:00:00Z",
+  "id": "camp_fx_plan",
+  "project_id": "proj_fx",
+  "status": "completed",
+  "target_id": "tgt_fx"
+ },
+ "findings": [
+  {
+   "campaign_id": "camp_fx_plan",
+   "category": "sql_injection",
+   "endpoint": "http://app.local/search?q=1",
+   "evidence": {
+    "request": "GET /x",
+    "response": "200"
+   },
+   "id": "vuln_sq1",
+   "remediation": "Use parameterised queries for the q parameter.",
+   "severity": "critical",
+   "status": "exploited",
+   "target_id": "tgt_fx",
+   "title": "SQL injection in search"
+  },
+  {
+   "campaign_id": "camp_fx_plan",
+   "category": "sql_injection",
+   "endpoint": "http://app.local/search?q=2",
+   "id": "vuln_sq2",
+   "remediation": "Use prepared statements.",
+   "severity": "high",
+   "status": "confirmed",
+   "target_id": "tgt_fx",
+   "title": "Blind SQL injection in search"
+  },
+  {
+   "campaign_id": "camp_fx_plan",
+   "category": "xss_stored",
+   "endpoint": "http://app.local/comments",
+   "evidence": {
+    "request": "GET /x",
+    "response": "200"
+   },
+   "id": "vuln_xs1",
+   "remediation": "Encode output in the comment template.",
+   "severity": "high",
+   "status": "exploited",
+   "target_id": "tgt_fx",
+   "title": "Stored XSS in comments"
+  },
+  {
+   "campaign_id": "camp_fx_plan",
+   "category": "outdated_software",
+   "cve": "CVE-2020-11022",
+   "endpoint": "http://app.local/static/jquery.js",
+   "id": "vuln_cmp",
+   "remediation": "Upgrade jQuery to a supported version.",
+   "severity": "medium",
+   "status": "confirmed",
+   "target_id": "tgt_fx",
+   "title": "Outdated jQuery 1.8"
+  },
+  {
+   "campaign_id": "camp_fx_plan",
+   "category": "missing_security_headers",
+   "endpoint": "http://app.local/admin/settings",
+   "id": "vuln_hdr",
+   "remediation": "",
+   "severity": "low",
+   "status": "confirmed",
+   "target_id": "tgt_fx",
+   "title": "Missing security headers"
+  },
+  {
+   "campaign_id": "camp_fx_plan",
+   "category": "information_disclosure",
+   "endpoint": "http://app.local/",
+   "id": "vuln_inf",
+   "remediation": "",
+   "severity": "info",
+   "status": "confirmed",
+   "target_id": "tgt_fx",
+   "title": "Server banner"
+  },
+  {
+   "campaign_id": "camp_fx_plan",
+   "category": "xss_reflected",
+   "endpoint": "http://app.local/x",
+   "id": "vuln_fp",
+   "remediation": "",
+   "severity": "high",
+   "status": "false_positive",
+   "target_id": "tgt_fx",
+   "title": "False alarm"
+  }
+ ],
+ "name": "treatment_plan_parity",
+ "note": "Synthetic campaign for the Prioritized Treatment Plan parity (Community = Pro): the attack-path document is built by each edition's own engine from these findings (no infrastructure), then exec_core.actions.build_plan applies the stored state and the completed retests.",
+ "retest": {
+  "at": "2026-11-05T12:00:00Z",
+  "finding_ids": null,
+  "outcome": "complete",
+  "retest_campaign_id": "camp_fx_retest",
+  "retest_id": "retest_fx01",
+  "coverage": {
+   "present": true,
+   "campaign_kind": "retest",
+   "measured_duration_seconds": 900,
+   "agents_dispatched": [
+    "web-app"
+   ],
+   "specialised_agents": [
+    "web-app"
+   ],
+   "agents_source": "opencode_sessions",
+   "assets_registered": 1,
+   "commands_executed": 12,
+   "workflows_executed": 0
+  }
+ },
+ "retest_findings": [
+  {
+   "campaign_id": "camp_fx_plan",
+   "category": "blind_sql_injection",
+   "endpoint": "http://app.local/search?q=3",
+   "id": "vuln_r1",
+   "remediation": "",
+   "severity": "high",
+   "status": "confirmed",
+   "target_id": "tgt_fx",
+   "title": "Blind SQL injection (time based)"
+  },
+  {
+   "campaign_id": "camp_fx_plan",
+   "category": "outdated_component",
+   "cve": "CVE-2020-11022",
+   "endpoint": "http://app.local/static/jquery.js",
+   "id": "vuln_r2",
+   "remediation": "",
+   "severity": "medium",
+   "status": "confirmed",
+   "target_id": "tgt_fx",
+   "title": "Outdated jQuery"
+  }
+ ],
+ "state_entries": [
+  {
+   "at": "2026-11-02T09:00:00Z",
+   "by_role": "admin",
+   "declared": {
+    "owner": "web team"
+   },
+   "select": {
+    "head_finding_id": "vuln_xs1"
+   },
+   "status": "approved"
+  },
+  {
+   "at": "2026-11-03T09:00:00Z",
+   "by_role": "admin",
+   "note": "Template patched in release 4.2",
+   "select": {
+    "head_finding_id": "vuln_xs1"
+   },
+   "status": "applied"
+  },
+  {
+   "at": "2026-11-03T10:00:00Z",
+   "by_role": "admin",
+   "select": {
+    "head_finding_id": "vuln_sq1"
+   },
+   "status": "applied"
+  },
+  {
+   "at": "2026-11-03T11:00:00Z",
+   "by_role": "admin",
+   "declared": {
+    "risk_accepted_until": "2027-03-31",
+    "risk_owner": "Head of Digital"
+   },
+   "select": {
+    "head_finding_id": "vuln_hdr"
+   },
+   "status": "risk_accepted"
+  },
+  {
+   "at": "2026-11-04T11:00:00Z",
+   "by_role": "admin",
+   "select": {
+    "head_finding_id": "vuln_hdr"
+   },
+   "status": "verified_resolved"
+  }
+ ]
+}

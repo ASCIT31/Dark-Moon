@@ -46,7 +46,8 @@ from api.url_parts import safe_port, safe_urlparse
 from api import cvss31
 from api.attack_paths_engine import first_blocked_step
 from api.attack_paths_observed import normalise_title
-from api.campaign_view import fingerprint
+from api.exec_core import identity as _identity
+from api.exec_core.identity import fingerprint
 
 CLOSED_STATUSES = frozenset({"remediated", "resolved", "closed", "fixed"})   # json_storage/campaign_view/retest_store
 _FALSE_POSITIVE = re.compile(r"^false[\s_-]?positive$")
@@ -61,22 +62,25 @@ _SEVERITY_ALIAS = {
 PROOF_LEVEL = {"exploited": 4, "confirmed": 3, "unconfirmed": 1}             # unknown status -> 1, labelled
 ORDER_KEYS = ["reported_severity", "proof", "proven_chains_broken", "retest_regressed", "cvss_from_vector"]
 MAX_ITEMS = 20
+_GROUP_KEYS = ("fix_id", "rank", "tie_size", "finding_ids", "head_finding_id", "label", "severity", "proof",
+               "breaks_paths", "reasons", "fold")
 BASIS = "reported-severity-x-proof"
 LABEL = "By reported severity × proof"
 PATHS_LABEL = "By attack paths"
 NOTE = ("Not an attack-path ranking. Order: severity reported by the agent, then proof level (exploited, confirmed, "
-        "unconfirmed), then proven attack chains of several findings broken, then regression after a retest, then the "
+        "unconfirmed), then Evidence-Backed attack chains of several findings broken, then regression after a retest, then the "
         "CVSS score computed from the finding's vector. Equal keys share the same rank. Severity is the agent's "
         "rating, not an impact on your business assets.")
-PATHS_NOTE = "Ranked by proven attack paths broken (simulation, not applied)."
+PATHS_NOTE = "Ranked by Evidence-Backed Attack Paths broken (simulation, not applied)."
 # ranking gate reasons (attack_paths_engine.ranking_gate) in plain words, for « Why not ranked by attack paths? »
 WHY_NOT_PATHS = {
-    "too-few-scenarios": "Fewer than 2 proven attack paths: a path ranking needs at least 2 paths with a shared step.",
-    "no-choke-point": "No fix breaks more than one proven attack path: ranking them by paths would not tell them apart.",
-    "top-fix-interrupts-nothing": "No single fix breaks a proven attack path on its own.",
+    "too-few-scenarios": ("Fewer than 2 attack scenarios (distinct objectives reached): a path ranking needs at least 2 "
+                          "scenarios with a shared step."),
+    "no-choke-point": "No fix breaks more than one Evidence-Backed Attack Path: ranking them by paths would not tell them apart.",
+    "top-fix-interrupts-nothing": "No single fix breaks an Evidence-Backed Attack Path on its own.",
     "too-large": "Too many attack paths to rank them reliably in one request.",
-    "status-not-ok": "No proven attack path in this campaign: nothing to rank by paths.",
-    "provenance-not-real": "The paths of this campaign are not proven by real findings.",
+    "status-not-ok": "No Evidence-Backed Attack Path in this campaign: nothing to rank by paths.",
+    "provenance-not-real": "The paths of this campaign are not backed by real findings.",
 }
 # categories whose name says nothing precise about the flaw (review-2 M3)
 GENERIC_CATEGORIES = frozenset({"security_misconfiguration", "misconfiguration", "insecure_configuration",
@@ -218,17 +222,18 @@ def triage(a: Dict[str, Any], label_of: Callable[[str, List[str]], str], path_in
     open_total = 0
     by_fp: Dict[str, List[Tuple[Dict[str, Any], Dict[str, Any]]]] = {}
     for v in a["vmap"].values():
-        st = _status(v)
         vid = str(v["id"])
         # integration P4 x P1: held by the strict privacy policy (quarantined, not reviewed by an operator) ->
         # never ordered nor counted as open, like attack paths and the report (_analyse marks the status too)
-        if st == "quarantined" or (v.get("quarantined") and not v.get("quarantine_reviewed_by")):
+        # exclusion rules shared with the stats and the score (exec_core.identity)
+        reason = _identity.exclusion_reason(v)
+        if reason == "quarantined" or _status(v) == "quarantined":   # _analyse marks held findings by status
             excluded["quarantined"] += 1
             continue
-        if st in CLOSED_STATUSES:
+        if _identity.is_closed(v):
             excluded["closed"] += 1
             continue
-        if _FALSE_POSITIVE.match(st):
+        if reason == "false_positive":
             excluded["false_positive"] += 1
             continue
         if verdicts.get(vid) == "fixed":
@@ -277,11 +282,11 @@ def triage(a: Dict[str, Any], label_of: Callable[[str, List[str]], str], path_in
                 p = path_info[pid]
                 how = f"{p['access']} on {p['objective']}" if p["access"] else f"reaches {p['objective']}"
                 if pid in chain_breaks:
-                    reasons.append(f"breaks {'the only' if len(records) == 1 else 'a'} proven chain ({p['provenance']}: {how})")
+                    reasons.append(f"breaks {'the only' if len(records) == 1 else 'an'} Evidence-Backed chain ({p['provenance']}: {how})")
                 else:
-                    reasons.append(f"its exploitation is a proven path on its own ({p['provenance']}: {how})")
+                    reasons.append(f"its exploitation is an Evidence-Backed Attack Path on its own ({p['provenance']}: {how})")
             if on and not breaks:
-                reasons.append(f"on {len(on)} proven path{'s' if len(on) != 1 else ''}, does not break it alone")
+                reasons.append(f"on {len(on)} Evidence-Backed Attack Path{'s' if len(on) != 1 else ''}, does not break it alone")
             if regressed:
                 reasons.append("regressed after a retest")
             elif still:
@@ -326,6 +331,8 @@ def triage(a: Dict[str, Any], label_of: Callable[[str, List[str]], str], path_in
                        "excluded_from_order": ["info (informational)"]},
             "total": len(items), "fingerprints": len(by_fp), "open_findings": open_total,
             "items": items[:MAX_ITEMS], "_top": top, "_all": items, "excluded": excluded,
+            # every group (not only the first MAX_ITEMS), compact: what the treatment plan (exec_core.actions) reads
+            "groups_all": [{k: i.get(k) for k in _GROUP_KEYS} for i in items],
             "unknown_severity_ids": sorted(unknown_ids)}
 
 

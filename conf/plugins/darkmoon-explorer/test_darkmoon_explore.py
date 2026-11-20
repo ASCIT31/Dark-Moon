@@ -55,6 +55,22 @@ class AdapterTests(unittest.TestCase):
         code, out, _ = run(self.root, "vulnerabilities", "--project", "p1")
         self.assertEqual(json.loads(out)["stats"]["by_severity"], {"critical": 1, "high": 1})
 
+    def test_counts_use_the_one_stats_function(self):
+        """exec_core.stats (vendored copy, no MCP installed): held and false-positive findings counted nowhere."""
+        extra = json.loads((self.root / "vulnerabilities" / "c1.json").read_text()) + [
+            {"id": "v3", "title": "Held", "severity": "critical", "status": "exploited", "quarantined": True},
+            {"id": "v4", "title": "FP", "severity": "high", "status": "false_positive"},
+            {"id": "v5", "title": "Low", "severity": "Low", "status": "confirmed"},
+        ]
+        (self.root / "vulnerabilities" / "c1.json").write_text(json.dumps(extra))
+        code, out, _ = run(self.root, "campaign", "c1")
+        st = json.loads(out)["data"]["stats"]
+        self.assertEqual((code, st["total_findings"], st["critical"], st["high"], st["low"]), (0, 3, 1, 1, 1))
+        self.assertEqual(st["excluded"], {"quarantined": 1, "false_positive": 1})
+        code, out, _ = run(self.root, "projects")
+        p = json.loads(out)["data"][0]
+        self.assertEqual((p["vulnerabilities_count"], p["latest_risk"]), (3, "critical"))
+
     def test_fail_closed_without_redaction_engine(self):
         real = dx.load_redaction
         dx.load_redaction = lambda *_: None  # the engine cannot be loaded
@@ -75,6 +91,32 @@ class AdapterTests(unittest.TestCase):
             self.assertEqual(code, 0, args)
             self.assertNotIn(SECRET, out, args)
             self.assertIn("redacted", out, args)
+
+    def test_report_rendered_from_the_model_keeps_working(self):
+        """L6: the report file is the Markdown of the exec_core report model; the report command shows it masked
+        (section markers kept for the TUI) and still withholds it without the redaction engine."""
+        vendor = str(Path(__file__).resolve().parent / "_vendor")
+        if vendor not in sys.path:
+            sys.path.insert(0, vendor)
+        from exec_core import report_markdown, report_model  # vendored, byte-identical to the MCP server's
+        vulns = json.loads((self.root / "vulnerabilities" / "c1.json").read_text())
+        md = report_markdown.render(report_model.build({"edition": "community", "campaign": {"id": "c1", "status": "completed"},
+                                                        "findings": vulns, "generated_at": "2026-11-20T00:00:00Z"}))
+        self.assertIn(SECRET, md)                       # worst case: a file written without masking
+        (self.root / "reports" / "r1.md").write_text(md)
+        if dx.load_redaction(None) is not None:
+            code, out, _ = run(self.root, "report", "c1")
+            content = json.loads(out)["content"]
+            self.assertEqual(code, 0)
+            self.assertNotIn(SECRET, content)
+            self.assertIn("<!-- dm-section: cyber-score -->", content)
+            self.assertLess(content.index("dm-section: cyber-score"), content.index("dm-section: detailed-findings"))
+        real = dx.load_redaction
+        dx.load_redaction = lambda *_: None
+        self.addCleanup(setattr, dx, "load_redaction", real)
+        out = run(self.root, "report", "c1")[1]
+        self.assertNotIn(SECRET, out)
+        self.assertIn("Report withheld", json.loads(out)["content"])
 
     def test_declared_links_stay_hypotheses(self):
         doc = json.loads(run(self.root, "paths", "c1")[1])
@@ -181,3 +223,322 @@ class RobustnessTests(unittest.TestCase):
         code, out, _ = run(self.root, "vulnerabilities")
         self.assertEqual(code, 0)
         self.assertFalse(any(ch in out for ch in ("\x1b", "\x07", "\x9d", "\x9c", "‮")))
+
+
+_HAS_MCP = (Path(__file__).resolve().parents[3] / "mcp" / "api" / "treatment_local.py").is_file()
+
+
+class PlanTests(unittest.TestCase):
+    """``plan CAMPAIGN_ID``: the Prioritized Treatment Plan, the owner's declarations file validated on read,
+    read-only, redacted, fail closed. Data lives in throw-away directories only."""
+
+    setUp = AdapterTests.setUp
+    tearDown = AdapterTests.tearDown
+    MCP = LocalEngineTests.MCP
+
+    def plan(self, cid: str = "c1"):
+        import subprocess
+        env = {k: v for k, v in os.environ.items() if k != "DARKMOON_DATA_DIR"}
+        return subprocess.run([sys.executable, str(Path(dx.__file__)), "--data", str(self.root), "--mcp", str(self.MCP),
+                               "plan", cid], capture_output=True, text=True, env=env, timeout=60)
+
+    def declare(self, entries, **top):
+        d = self.root / "treatments"
+        d.mkdir(exist_ok=True)
+        (d / "c1.json").write_text(json.dumps({"schema_version": "darkmoon-treatment-declarations/1",
+                                               "campaign_id": "c1", "declarations": entries, **top}))
+
+    def test_fail_closed_without_server_or_redaction(self):
+        self.assertEqual(run(self.root, "plan", "c1")[0], 2)             # --mcp /nonexistent: no plan module
+        real = dx.load_redaction
+        dx.load_redaction = lambda *_: None
+        self.addCleanup(setattr, dx, "load_redaction", real)
+        code, out, err = run(self.root, "plan", "c1")
+        self.assertEqual((code, out), (2, ""))
+        self.assertIn("withheld", err)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_plan_without_declarations_file(self):
+        r = self.plan()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        p = json.loads(r.stdout)
+        self.assertEqual((p["label"], p["verification"], p["can_edit"]), ("Prioritized Treatment Plan", "not_available", False))
+        self.assertEqual(p["declarations"]["status"], "absent")
+        self.assertTrue(p["actions"])
+        self.assertTrue(all(a["status"] == "proposed" for a in p["actions"]))
+        self.assertNotIn(SECRET, r.stdout)
+        self.assertFalse((self.root / "treatments").exists())          # read-only: nothing written
+        self.assertEqual(self.plan("../etc").returncode, 2)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_declared_applied_is_not_verified_and_invalid_entries_are_reported(self):
+        aid = json.loads(self.plan().stdout)["actions"][0]["action_id"]
+        self.declare([
+            {"action_id": aid, "at": "2026-11-20", "by_role": "web team lead", "status": "applied",
+             "note": f"rotated {SECRET}"},
+            {"action_id": aid, "at": "2026-11-21", "by_role": "x", "status": "verified_resolved"},
+            {"action_id": "act_0000000000000000", "at": "2026-11-21", "by_role": "x", "status": "approved"},
+            {"action_id": aid, "at": "2026-11-22", "by_role": "x", "status": "applied", "evil": 1},
+        ])
+        r = self.plan()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        p = json.loads(r.stdout)
+        a = next(x for x in p["actions"] if x["action_id"] == aid)
+        self.assertEqual(a["status"], "applied")
+        self.assertEqual(a["status_text"], "Declared applied by web team lead, 2026-11-20 — not verified")
+        self.assertFalse(a["status_verified"])
+        self.assertEqual(len(p["issues"]), 3)
+        self.assertNotIn(SECRET, r.stdout)
+        # the declaration changes no count
+        code, out, _ = run(self.root, "campaign", "c1")
+        self.assertEqual(json.loads(out)["data"]["stats"]["total_findings"], 2)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_unreadable_or_foreign_declarations_file(self):
+        d = self.root / "treatments"
+        d.mkdir()
+        (d / "c1.json").write_text("{not json")
+        p = json.loads(self.plan().stdout)
+        self.assertEqual(p["declarations"]["status"], "unreadable")
+        self.assertTrue(all(a["status"] == "proposed" for a in p["actions"]))
+        self.declare([], campaign_id="other")
+        self.assertEqual(json.loads(self.plan().stdout)["declarations"]["status"], "unreadable")
+
+
+class FrameworkProfileTests(unittest.TestCase):
+    """``frameworks CAMPAIGN_ID`` and ``profile PROJECT_ID``: exec_core assessment and the owner's profile file,
+    validated on read, read-only, redacted, fail closed. Data lives in throw-away directories only."""
+
+    setUp = AdapterTests.setUp
+    tearDown = AdapterTests.tearDown
+    MCP = LocalEngineTests.MCP
+
+    def cmd(self, *args):
+        import subprocess
+        env = {k: v for k, v in os.environ.items() if k != "DARKMOON_DATA_DIR"}
+        return subprocess.run([sys.executable, str(Path(dx.__file__)), "--data", str(self.root), "--mcp", str(self.MCP),
+                               *args], capture_output=True, text=True, env=env, timeout=60)
+
+    def declare(self, fields, **top):
+        d = self.root / "profiles"
+        d.mkdir(exist_ok=True)
+        (d / "p1.json").write_text(json.dumps({"schema_version": "darkmoon-application-profile-declarations/1",
+                                               "project_id": "p1", "fields": fields, **top}))
+
+    def test_fail_closed_without_server_or_redaction(self):
+        self.assertEqual(run(self.root, "frameworks", "c1")[0], 2)
+        self.assertEqual(run(self.root, "profile", "p1")[0], 2)
+        real = dx.load_redaction
+        dx.load_redaction = lambda *_: None
+        self.addCleanup(setattr, dx, "load_redaction", real)
+        for args in (("frameworks", "c1"), ("profile", "p1")):
+            code, out, err = run(self.root, *args)
+            self.assertEqual((code, out), (2, ""), args)
+            self.assertIn("withheld", err)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_frameworks_without_profile(self):
+        r = self.cmd("frameworks", "c1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        self.assertEqual(d["schema_version"], "darkmoon-framework-assessment/1")
+        self.assertEqual({f["applicability"]["status"] for f in d["frameworks"]}, {"to_confirm"})
+        self.assertFalse(d["coverage"]["coverage_ok"])        # no coverage signals in this store
+        self.assertNotIn("none_observed_in_tested_scope", {c["state"] for f in d["frameworks"] for c in f["controls"]})
+        self.assertNotIn("compliant", r.stdout.lower())
+        self.assertNotIn(SECRET, r.stdout)
+        self.assertEqual(self.cmd("frameworks", "../etc").returncode, 2)
+        self.assertFalse((self.root / "profiles").exists())
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_profile_from_the_owner_file(self):
+        r = self.cmd("profile", "p1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        p = json.loads(r.stdout)
+        self.assertEqual(p["declarations"]["status"], "absent")
+        self.assertTrue(all(f["provenance"] in ("unknown", "detected") for f in p["profile"]["fields"].values()))
+        self.declare({"business_purpose": {"value": f"Orders portal, password={SECRET}", "by_role": "PO",
+                                           "at": "2026-11-20"},
+                      "personal_data": {"value": "yes", "provenance": "verified", "at": "2026-11-20", "by_role": "DPO"},
+                      "sector": {"value": "health", "provenance": "detected"},
+                      "business_owner": "jane@corp.example", "color": "blue"})
+        r = self.cmd("profile", "p1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        p = json.loads(r.stdout)
+        f = p["profile"]["fields"]
+        self.assertEqual(f["personal_data"]["provenance"], "verified")
+        self.assertEqual(f["sector"]["provenance"], "unknown")          # « detected » is refused in the file
+        self.assertIsNone(f["business_owner"]["value"])                 # an e-mail address is not a role
+        self.assertEqual(sorted(i.get("field") for i in p["issues"]), ["business_owner", "color", "sector"])
+        self.assertNotIn(SECRET, r.stdout)                              # free text redacted on output
+        self.assertEqual(p["can_edit"], False)
+        d = json.loads(self.cmd("frameworks", "c1").stdout)
+        st = {x["framework"]: x["applicability"]["status"] for x in d["frameworks"]}
+        self.assertEqual(st["gdpr"], "declared_by_customer")
+        self.assertEqual(st["nis2"], "to_confirm")
+        self.assertEqual(self.cmd("profile", "nope").returncode, 2)
+        self.assertEqual(self.cmd("profile", "../x").returncode, 2)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_unreadable_or_foreign_profile_file(self):
+        d = self.root / "profiles"
+        d.mkdir()
+        (d / "p1.json").write_text("{not json")
+        p = json.loads(self.cmd("profile", "p1").stdout)
+        self.assertEqual(p["declarations"]["status"], "unreadable")
+        self.declare({"sector": "health"}, project_id="other")
+        p = json.loads(self.cmd("profile", "p1").stdout)
+        self.assertEqual(p["declarations"]["status"], "unreadable")
+        self.assertEqual(p["profile"]["fields"]["sector"]["provenance"], "unknown")
+        outside = Path(self.tmp.name) / "outside.json"
+        outside.write_text(json.dumps({"project_id": "p1", "fields": {"sector": "health"}}))
+        (d / "p1.json").unlink()
+        os.symlink(outside, d / "p1.json")
+        p = json.loads(self.cmd("profile", "p1").stdout)
+        self.assertEqual(p["declarations"]["status"], "unreadable")
+
+
+class ExecutiveTests(unittest.TestCase):
+    """``executive`` (campaign / ``--project``) and ``legend``: exec_core documents, read-only, redacted, fail closed;
+    Darkmoon's own catalogue texts are never masked while evidence still is."""
+
+    setUp = AdapterTests.setUp
+    tearDown = AdapterTests.tearDown
+    MCP = LocalEngineTests.MCP
+    cmd = FrameworkProfileTests.cmd
+
+    def test_help_lists_every_command(self):
+        out = io.StringIO()
+        with redirect_stdout(out), self.assertRaises(SystemExit):
+            dx.main(["--help"])
+        for c in ("plan CAMPAIGN_ID", "frameworks CAMPAIGN_ID", "profile PROJECT_ID", "executive CAMPAIGN_ID",
+                  "executive --project PROJECT_ID", "legend"):
+            self.assertIn(c, out.getvalue())
+
+    def test_legend_needs_no_data(self):
+        code, out, _ = run(self.root, "legend")
+        self.assertEqual(code, 0)
+        d = json.loads(out)
+        self.assertEqual(d["path_kind"]["possible"]["label"], "Possible Attack Path")
+        self.assertEqual(d["path_kind"]["evidence_backed"]["label"], "Evidence-Backed Attack Path")
+
+    def test_fail_closed_without_server_or_redaction(self):
+        self.assertEqual(run(self.root, "executive", "c1")[0], 2)            # --mcp /nonexistent: no executive module
+        real = dx.load_redaction
+        dx.load_redaction = lambda *_: None
+        self.addCleanup(setattr, dx, "load_redaction", real)
+        for args in (("executive", "c1"), ("executive", "--project", "p1")):
+            code, out, err = run(self.root, *args)
+            self.assertEqual((code, out), (2, ""), args)
+            self.assertIn("withheld", err)
+        self.assertEqual(run(self.root, "executive", "../etc")[0], 2)
+        self.assertEqual(run(self.root, "executive", "--project", "nope")[0], 2)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_campaign_block(self):
+        r = self.cmd("executive", "c1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        self.assertEqual(d["schema_version"], "darkmoon-executive/1")
+        self.assertEqual((d["score"]["score_status"], d["score"]["score"], d["score"]["status_label"]), ("not_rated", None, "Not rated"))
+        self.assertLessEqual(len(d["treatment_plan"]["top_actions"]), 3)
+        self.assertEqual(d["attack_paths"]["evidence_backed"], 0)      # Community: declared paths stay possible
+        self.assertTrue(d["frameworks"]["summary_line"])
+        self.assertNotIn("compliant", r.stdout.lower())
+        self.assertNotIn(SECRET, r.stdout)
+        self.assertFalse((self.root / "treatments").exists() or (self.root / "profiles").exists())   # read-only
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_project_block(self):
+        r = self.cmd("executive", "--project", "p1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        self.assertEqual(d["schema_version"], "darkmoon-project-executive/1")
+        self.assertIsNone(d["reference_campaign_id"])                    # no rated full campaign in this store
+        self.assertEqual(d["latest_campaign"]["campaign_id"], "c1")
+        self.assertEqual(d["plan_campaign_id"], "c1")
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_catalogue_text_kept_evidence_masked(self):
+        """The ISO A.8.5 description (« Login and session handling: authentication bypass… ») reads like a credential
+        pair to the redaction engine: it is Darkmoon's own text and is shown as written; the secret is still masked."""
+        vulns = json.loads((self.root / "vulnerabilities" / "c1.json").read_text())
+        vulns.append({"id": "v3", "title": "Login bypass", "severity": "high", "status": "confirmed",
+                      "category": "authentication_bypass", "endpoint": "http://10.0.0.5/login",
+                      "description": f"default credentials admin:{SECRET}"})
+        (self.root / "vulnerabilities" / "c1.json").write_text(json.dumps(vulns))
+        r = self.cmd("frameworks", "c1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        a85 = next(c for f in d["frameworks"] for c in f["controls"] if c["key"] == "iso27001:A.8.5")
+        self.assertIn("authentication bypass", a85["text"])
+        self.assertNotIn("redacted", a85["text"])
+        self.assertNotIn(SECRET, r.stdout)
+
+    def test_report_keeps_catalogue_cells_and_masks_secrets(self):
+        a85 = "Login and session handling: authentication bypass, brute-force resistance, session token handling."
+        (self.root / "reports" / "r1.md").write_text(
+            "# Report\n\n| Control | State | Findings | What a test observes / why |\n|---|---|---|---|\n"
+            f"| A.8.5 | Weakness observed | 6 | {a85} |\n\npassword={SECRET}\n")
+        code, out, _ = run(self.root, "report", "c1")
+        self.assertEqual(code, 0)
+        content = json.loads(out)["content"]
+        self.assertIn(f"| {a85} |", content)
+        self.assertNotIn(SECRET, content)
+
+
+class MaintenanceTests(unittest.TestCase):
+    """``maintenance``: the owner's policy file validated on read, in words, with the evaluation now; Community warns,
+    never blocks; read-only, redacted, fail closed (L9)."""
+
+    setUp = AdapterTests.setUp
+    tearDown = AdapterTests.tearDown
+    MCP = LocalEngineTests.MCP
+    cmd = FrameworkProfileTests.cmd
+
+    def write(self, doc):
+        d = self.root / "policies"
+        d.mkdir(exist_ok=True)
+        (d / "p1.json").write_text(json.dumps(doc) if not isinstance(doc, str) else doc)
+
+    def test_fail_closed_without_server_or_redaction(self):
+        self.assertEqual(run(self.root, "maintenance", "p1")[0], 2)
+        real = dx.load_redaction
+        dx.load_redaction = lambda *_: None
+        self.addCleanup(setattr, dx, "load_redaction", real)
+        code, out, err = run(self.root, "maintenance", "p1")
+        self.assertEqual((code, out), (2, ""))
+        self.assertIn("withheld", err)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_policy_in_words_and_never_enforced(self):
+        r = self.cmd("maintenance", "p1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        self.assertIsNone(d["policy"])
+        self.assertEqual(d["file"]["status"], "absent")
+        self.assertEqual(d["summary"], ["No maintenance policy: launches are not restricted by time."])
+        # a window that is never open now: Sunday 00:00–00:01 does not cover every instant -> use a blackout for today
+        self.write({"timezone": "UTC", "windows": [{"days": ["mon"], "start": "09:00", "end": "10:00",
+                                                    "label": f"note password={SECRET}"}],
+                    "blackouts": [{"start": "2000-01-01", "end": "2000-01-01"}]})
+        r = self.cmd("maintenance", "p1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        self.assertEqual(d["file"]["status"], "read")
+        self.assertFalse(d["enforced"])
+        self.assertNotEqual(d["evaluation_now"]["decision"], "blocked")      # advisory: never « blocked »
+        self.assertIn("Monday, 09:00–10:00", " ".join(d["summary"]))
+        self.assertNotIn(SECRET, r.stdout)
+        self.assertEqual(self.cmd("maintenance", "../etc").returncode, 2)
+        self.assertEqual(self.cmd("maintenance", "nope").returncode, 2)
+
+    @unittest.skipUnless(_HAS_MCP, "MCP server tree not next to the plugin")
+    def test_broken_or_foreign_file_warns_never_passes_silently(self):
+        for doc in ("{not json", {"timezone": "../../etc/passwd", "windows": []},
+                    {"project_id": "other", "timezone": "UTC", "windows": []}):
+            self.write(doc)
+            d = json.loads(self.cmd("maintenance", "p1").stdout)
+            self.assertEqual(d["file"]["status"], "unreadable", doc)
+            self.assertEqual(d["evaluation_now"]["decision"], "warn", doc)
+            self.assertEqual(d["evaluation_now"]["advisory_of"], "blocked", doc)

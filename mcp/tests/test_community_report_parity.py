@@ -20,7 +20,7 @@ from api import json_storage, live_push  # noqa: E402
 CID = "camp_20261119_parity01"
 PRO_HEADINGS = ["MANAGEMENT SUMMARY", "1. EXECUTIVE SUMMARY", "2. FINDINGS TABLE", "3. VULNERABILITY DETAILS",
                 "4. REMEDIATION ROADMAP"]
-ANNEX_HEADINGS = ["REMEDIATION PRIORITIES & ATTACK PATHS", "ATTACK PATHS", "INFRASTRUCTURE MAP", "FIX FIRST",
+ANNEX_HEADINGS = ["REMEDIATION PRIORITIES & ATTACK PATHS", "ATTACK PATHS", "INFRASTRUCTURE MAP", "PRIORITIZED TREATMENT PLAN",
                   "FRAMEWORK MAPPING"]
 
 
@@ -73,7 +73,7 @@ def _report() -> str:
 
 
 def _section(md: str, title: str) -> str:
-    m = re.search(rf"^## {re.escape(title)}\n(.*?)(?=^## |^---\n\n\*Report auto-generated|\Z)", md, re.S | re.M)
+    m = re.search(rf"^## {re.escape(title)}\n(.*?)(?=^<!-- dm-section|^## |^---\n\n\*Report auto-generated|\Z)", md, re.S | re.M)
     assert m, f"section {title} missing"
     return m.group(1)
 
@@ -104,7 +104,7 @@ def test_declared_only_campaign_is_never_worded_as_proven(store):
     # the diagram never draws a thick (observed / declared-ranked) arrow
     fence = paths.split("```mermaid", 1)[1].split("```", 1)[0]
     assert "==>" not in fence
-    fix = _section(md, "FIX FIRST")
+    fix = _section(md, "PRIORITIZED TREATMENT PLAN")
     assert "No attack-path ranking for this campaign" in fix and "Paths interrupted" not in fix
     # EBIOS sequences: each status is the honest per-path word, never « observed » nor a bare « proven »
     fw = _section(md, "FRAMEWORK MAPPING")
@@ -203,5 +203,10 @@ def test_finalize_writes_the_annex_into_the_report_file(store):
     res = live_push.finalize_campaign(CID, executive_summary="Done.")
     assert "error" not in res, res
     body = (store["REPORTS_DIR"] / Path(json_storage.load_campaign(CID)["report_path"]).name).read_text(encoding="utf-8")
-    assert "## FRAMEWORK MAPPING" in body and "### Links declared by the agents" in body
-    assert "## 1. EXECUTIVE SUMMARY\n\n> Done." in body
+    # report model (L6): the annex content is part of the model sections (technique mappings under the framework
+    # assessment, the declared links under the attack paths); the agent's summary is quoted and labelled
+    assert "### Technique and reference mappings" in body and "### Links declared by the agents" in body
+    assert body.index("<!-- dm-section: framework-assessment -->") < body.index("### Technique and reference mappings")
+    assert body.index("<!-- dm-section: attack-paths -->") < body.index("### Links declared by the agents")
+    es = body.split("<!-- dm-section: executive-summary -->")[1].split("<!-- dm-section:")[0]
+    assert "*Written by the testing agent (quoted as written, not verified by the server).*\n\n> Done." in es

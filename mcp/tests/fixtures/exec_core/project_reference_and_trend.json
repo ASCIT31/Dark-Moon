@@ -1,0 +1,203 @@
+{
+ "description": "Reference = latest rated full campaign; trend only between rated full campaigns; the later retest and limited campaigns never become the reference.",
+ "input": {
+  "bundles": [
+   {
+    "campaign": {
+     "coverage_signals": {
+      "agents_dispatched": [
+       {
+        "active_seconds": 0,
+        "agent": "php",
+        "sessions": 1
+       },
+       {
+        "active_seconds": 0,
+        "agent": "headless-browser",
+        "sessions": 1
+       },
+       {
+        "active_seconds": 0,
+        "agent": "graphql",
+        "sessions": 1
+       }
+      ],
+      "agents_reporting": [],
+      "agents_source": "opencode_sessions",
+      "assets_registered": 4,
+      "campaign_kind": "full",
+      "campaign_kind_source": "default",
+      "commands_executed": 120,
+      "finalized_at": "2026-11-19T11:00:00Z",
+      "measured_duration_seconds": 3600,
+      "schema": "darkmoon-coverage-signals/1",
+      "started_at": "2026-11-19T10:00:00Z",
+      "workflows_executed": 0
+     },
+     "date": "2026-10-01T09:00:00Z",
+     "duration_seconds": 0,
+     "id": "camp_fx_p1",
+     "is_subagent": false,
+     "project_id": "proj_fixture",
+     "session_id": "mp_fx_p1",
+     "status": "completed",
+     "target_id": "tgt_fx_proj"
+    },
+    "findings": [
+     {
+      "category": "sql_injection",
+      "discovered_by_agent": "php",
+      "endpoint": "/sqli",
+      "id": "vuln_s0001",
+      "severity": "critical",
+      "status": "exploited",
+      "target_id": "tgt_fx_proj",
+      "title": "sql_injection #1"
+     },
+     {
+      "category": "xss_stored",
+      "discovered_by_agent": "php",
+      "endpoint": "/xss",
+      "id": "vuln_s0002",
+      "severity": "high",
+      "status": "confirmed",
+      "target_id": "tgt_fx_proj",
+      "title": "xss_stored #2"
+     },
+     {
+      "category": "missing_security_headers",
+      "discovered_by_agent": "php",
+      "endpoint": "/",
+      "id": "vuln_s0003",
+      "severity": "medium",
+      "status": "confirmed",
+      "target_id": "tgt_fx_proj",
+      "title": "missing_security_headers #3"
+     }
+    ]
+   },
+   {
+    "campaign": {
+     "coverage_signals": {
+      "agents_dispatched": [
+       {
+        "active_seconds": 0,
+        "agent": "php",
+        "sessions": 1
+       },
+       {
+        "active_seconds": 0,
+        "agent": "graphql",
+        "sessions": 1
+       }
+      ],
+      "agents_reporting": [],
+      "agents_source": "opencode_sessions",
+      "assets_registered": 3,
+      "campaign_kind": "full",
+      "campaign_kind_source": "default",
+      "commands_executed": 90,
+      "finalized_at": "2026-11-19T11:00:00Z",
+      "measured_duration_seconds": 4000,
+      "schema": "darkmoon-coverage-signals/1",
+      "started_at": "2026-11-19T10:00:00Z",
+      "workflows_executed": 0
+     },
+     "date": "2026-11-01T09:00:00Z",
+     "duration_seconds": 0,
+     "id": "camp_fx_p2",
+     "is_subagent": false,
+     "project_id": "proj_fixture",
+     "session_id": "mp_fx_p2",
+     "status": "completed",
+     "target_id": "tgt_fx_proj"
+    },
+    "findings": [
+     {
+      "category": "xss_stored",
+      "discovered_by_agent": "php",
+      "endpoint": "/xss",
+      "id": "vuln_s0002",
+      "severity": "high",
+      "status": "confirmed",
+      "target_id": "tgt_fx_proj",
+      "title": "xss_stored #2"
+     }
+    ]
+   },
+   {
+    "campaign": {
+     "coverage_signals": {
+      "agents_dispatched": [
+       {
+        "active_seconds": 0,
+        "agent": "php",
+        "sessions": 1
+       },
+       {
+        "active_seconds": 0,
+        "agent": "graphql",
+        "sessions": 1
+       }
+      ],
+      "agents_reporting": [],
+      "agents_source": "opencode_sessions",
+      "assets_registered": 3,
+      "campaign_kind": "retest",
+      "campaign_kind_source": "retest_store",
+      "commands_executed": 30,
+      "finalized_at": "2026-11-19T11:00:00Z",
+      "measured_duration_seconds": 900,
+      "schema": "darkmoon-coverage-signals/1",
+      "started_at": "2026-11-19T10:00:00Z",
+      "workflows_executed": 0
+     },
+     "date": "2026-11-10T09:00:00Z",
+     "duration_seconds": 0,
+     "id": "camp_fx_p3",
+     "is_subagent": false,
+     "project_id": "proj_fixture",
+     "session_id": "mp_fx_p3",
+     "status": "completed",
+     "target_id": "tgt_fx_proj"
+    },
+    "findings": []
+   },
+   {
+    "campaign": {
+     "coverage_signals": {
+      "agents_dispatched": [
+       {
+        "active_seconds": 0,
+        "agent": "php",
+        "sessions": 1
+       }
+      ],
+      "agents_reporting": [],
+      "agents_source": "opencode_sessions",
+      "assets_registered": 1,
+      "campaign_kind": "short",
+      "campaign_kind_source": "declared_at_init",
+      "commands_executed": 5,
+      "finalized_at": "2026-11-19T11:00:00Z",
+      "measured_duration_seconds": 300,
+      "schema": "darkmoon-coverage-signals/1",
+      "started_at": "2026-11-19T10:00:00Z",
+      "workflows_executed": 0
+     },
+     "date": "2026-11-15T09:00:00Z",
+     "duration_seconds": 0,
+     "id": "camp_fx_p4",
+     "is_subagent": false,
+     "project_id": "proj_fixture",
+     "session_id": "mp_fx_p4",
+     "status": "completed",
+     "target_id": "tgt_fx_proj"
+    },
+    "findings": []
+   }
+  ]
+ },
+ "name": "project_reference_and_trend",
+ "source": "synthetic"
+}

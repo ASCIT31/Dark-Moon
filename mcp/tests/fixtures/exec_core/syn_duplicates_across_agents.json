@@ -1,0 +1,139 @@
+{
+ "description": "The same three weaknesses reported by three agents (exact duplicates and variant endpoints): bounded increment only.",
+ "input": {
+  "campaign": {
+   "coverage_signals": {
+    "agents_dispatched": [
+     {
+      "active_seconds": 0,
+      "agent": "php",
+      "sessions": 1
+     },
+     {
+      "active_seconds": 0,
+      "agent": "headless-browser",
+      "sessions": 1
+     },
+     {
+      "active_seconds": 0,
+      "agent": "graphql",
+      "sessions": 1
+     }
+    ],
+    "agents_reporting": [],
+    "agents_source": "opencode_sessions",
+    "assets_registered": 4,
+    "campaign_kind": "full",
+    "campaign_kind_source": "default",
+    "commands_executed": 120,
+    "finalized_at": "2026-11-19T11:00:00Z",
+    "measured_duration_seconds": 3600,
+    "schema": "darkmoon-coverage-signals/1",
+    "started_at": "2026-11-19T10:00:00Z",
+    "workflows_executed": 0
+   },
+   "date": "2026-11-20T09:00:00Z",
+   "duration_seconds": 0,
+   "id": "camp_fx_syn_duplicates_across_agents",
+   "is_subagent": false,
+   "project_id": "proj_fixture",
+   "session_id": "s_agents",
+   "status": "completed",
+   "target_id": "tgt_fx_syn"
+  },
+  "findings": [
+   {
+    "category": "sql_injection",
+    "discovered_by_agent": "php",
+    "endpoint": "/sqli",
+    "id": "vuln_s0001",
+    "severity": "critical",
+    "status": "exploited",
+    "target_id": "tgt_fx_syn",
+    "title": "sql_injection #1"
+   },
+   {
+    "category": "xss_stored",
+    "discovered_by_agent": "php",
+    "endpoint": "/xss",
+    "id": "vuln_s0002",
+    "severity": "high",
+    "status": "confirmed",
+    "target_id": "tgt_fx_syn",
+    "title": "xss_stored #2"
+   },
+   {
+    "category": "missing_security_headers",
+    "discovered_by_agent": "php",
+    "endpoint": "/",
+    "id": "vuln_s0003",
+    "severity": "medium",
+    "status": "confirmed",
+    "target_id": "tgt_fx_syn",
+    "title": "missing_security_headers #3"
+   },
+   {
+    "category": "sql_injection",
+    "discovered_by_agent": "headless-browser",
+    "endpoint": "/sqli/x",
+    "id": "vuln_s0010",
+    "severity": "critical",
+    "status": "exploited",
+    "target_id": "tgt_fx_syn",
+    "title": "sql_injection #10"
+   },
+   {
+    "category": "xss_stored",
+    "discovered_by_agent": "headless-browser",
+    "endpoint": "/xss/x",
+    "id": "vuln_s0011",
+    "severity": "high",
+    "status": "confirmed",
+    "target_id": "tgt_fx_syn",
+    "title": "xss_stored #11"
+   },
+   {
+    "category": "missing_security_headers",
+    "discovered_by_agent": "headless-browser",
+    "endpoint": "//x",
+    "id": "vuln_s0012",
+    "severity": "medium",
+    "status": "confirmed",
+    "target_id": "tgt_fx_syn",
+    "title": "missing_security_headers #12"
+   },
+   {
+    "category": "sql_injection",
+    "discovered_by_agent": "graphql",
+    "endpoint": "/sqli",
+    "id": "vuln_s0020",
+    "severity": "critical",
+    "status": "exploited",
+    "target_id": "tgt_fx_syn",
+    "title": "sql_injection #20"
+   },
+   {
+    "category": "xss_stored",
+    "discovered_by_agent": "graphql",
+    "endpoint": "/xss",
+    "id": "vuln_s0021",
+    "severity": "high",
+    "status": "confirmed",
+    "target_id": "tgt_fx_syn",
+    "title": "xss_stored #21"
+   },
+   {
+    "category": "missing_security_headers",
+    "discovered_by_agent": "graphql",
+    "endpoint": "/",
+    "id": "vuln_s0022",
+    "severity": "medium",
+    "status": "confirmed",
+    "target_id": "tgt_fx_syn",
+    "title": "missing_security_headers #22"
+   }
+  ]
+ },
+ "name": "syn_duplicates_across_agents",
+ "source": "synthetic"
+}

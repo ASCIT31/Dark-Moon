@@ -125,7 +125,7 @@ def test_campaign_without_declared_links_still_gets_a_valid_report(store):
     # an older campaign (no enabled_by anywhere): the report and its annex are built, without the declared-link list
     _push("Default credentials")
     report = live_push._generate_report_from_db(CID, json_storage.load_campaign(CID), "summary")
-    assert "## 4. REMEDIATION ROADMAP" in report and "## ATTACK PATHS" in report and "## FIX FIRST" in report
+    assert "## 4. REMEDIATION ROADMAP" in report and "## ATTACK PATHS" in report and "## PRIORITIZED TREATMENT PLAN" in report
     assert "### Links declared by the agents" not in report
     assert report.rstrip().endswith(f"*Campaign: {CID} | Target: app.example.test*")
 

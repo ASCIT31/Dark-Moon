@@ -1,0 +1,248 @@
+{
+ "actions": [
+  {
+   "action_id": "act_fx_1",
+   "finding_ids": [
+    "vuln_sqli",
+    "vuln_sqli2"
+   ],
+   "related_attack_paths": [
+    "path_1"
+   ]
+  },
+  {
+   "action_id": "act_fx_2",
+   "finding_ids": [
+    "vuln_pi"
+   ],
+   "related_attack_paths": []
+  },
+  {
+   "action_id": "act_fx_3",
+   "finding_ids": [
+    "vuln_cwe",
+    "vuln_xss_fp"
+   ],
+   "related_attack_paths": [
+    "path_1",
+    "path_2"
+   ]
+  }
+ ],
+ "campaign": {
+  "coverage_signals": {
+   "agents_dispatched": [
+    {
+     "active_seconds": 0,
+     "agent": "php",
+     "sessions": 1
+    },
+    {
+     "active_seconds": 0,
+     "agent": "llm",
+     "sessions": 1
+    },
+    {
+     "active_seconds": 0,
+     "agent": "unknown-helper",
+     "sessions": 1
+    }
+   ],
+   "agents_reporting": [],
+   "agents_source": "opencode_sessions",
+   "assets_registered": 4,
+   "campaign_kind": "full",
+   "campaign_kind_source": "fixture",
+   "commands_executed": 120,
+   "finalized_at": "2026-11-01T10:10:00Z",
+   "measured_duration_seconds": 4200,
+   "root_session_id": "ses_fx",
+   "schema": "darkmoon-coverage-signals/1",
+   "started_at": "2026-11-01T09:00:00Z",
+   "workflows_executed": 2
+  },
+  "date": "2026-11-01T09:00:00Z",
+  "id": "camp_fx_fw",
+  "project_id": "proj_fx",
+  "status": "completed",
+  "target_id": "tgt_fx"
+ },
+ "declared": {
+  "ai_system_declared": {
+   "value": "yes"
+  },
+  "criticality": {
+   "value": "high"
+  },
+  "description": {
+   "value": "Customer self-service portal"
+  },
+  "languages": {
+   "value": [
+    "PHP"
+   ]
+  },
+  "personal_data": {
+   "at": "2026-10-20",
+   "by_role": "DPO",
+   "provenance": "verified",
+   "value": "yes"
+  },
+  "rto": {
+   "value": "4h"
+  },
+  "sector": {
+   "value": "health"
+  }
+ },
+ "findings": [
+  {
+   "campaign_id": "camp_fx_fw",
+   "category": "sql_injection",
+   "endpoint": "/app/vuln_sqli",
+   "id": "vuln_sqli",
+   "iso27001_control": "A.14.2.5",
+   "raw_request": "GET /app?id=1'",
+   "severity": "critical",
+   "status": "exploited",
+   "target_id": "tgt_fx",
+   "title": "finding vuln_sqli"
+  },
+  {
+   "campaign_id": "camp_fx_fw",
+   "category": "sqli",
+   "endpoint": "/app/vuln_sqli2",
+   "id": "vuln_sqli2",
+   "iso27001_control": "ISO 27001:2022 A.8.28",
+   "severity": "high",
+   "status": "confirmed",
+   "target_id": "tgt_fx",
+   "title": "finding vuln_sqli2"
+  },
+  {
+   "campaign_id": "camp_fx_fw",
+   "category": "weak_tls",
+   "endpoint": "/app/vuln_tls",
+   "id": "vuln_tls",
+   "severity": "medium",
+   "status": "unconfirmed",
+   "target_id": "tgt_fx",
+   "title": "finding vuln_tls"
+  },
+  {
+   "campaign_id": "camp_fx_fw",
+   "category": "xss_reflected",
+   "endpoint": "/app/vuln_xss_fp",
+   "id": "vuln_xss_fp",
+   "severity": "medium",
+   "status": "false_positive",
+   "target_id": "tgt_fx",
+   "title": "finding vuln_xss_fp"
+  },
+  {
+   "campaign_id": "camp_fx_fw",
+   "category": "xss_stored",
+   "endpoint": "/app/vuln_xss_q",
+   "id": "vuln_xss_q",
+   "quarantined": true,
+   "severity": "high",
+   "status": "exploited",
+   "target_id": "tgt_fx",
+   "title": "finding vuln_xss_q"
+  },
+  {
+   "campaign_id": "camp_fx_fw",
+   "category": "prompt_injection_direct",
+   "endpoint": "/app/vuln_pi",
+   "evidence_commands": [
+    "curl ..."
+   ],
+   "id": "vuln_pi",
+   "severity": "high",
+   "status": "exploited",
+   "target_id": "tgt_fx",
+   "title": "finding vuln_pi"
+  },
+  {
+   "campaign_id": "camp_fx_fw",
+   "category": "graphql_quirk",
+   "cwe": "CWE-639",
+   "endpoint": "/app/vuln_cwe",
+   "id": "vuln_cwe",
+   "severity": "medium",
+   "status": "confirmed",
+   "target_id": "tgt_fx",
+   "title": "finding vuln_cwe"
+  },
+  {
+   "campaign_id": "camp_fx_fw",
+   "category": "odd_category",
+   "endpoint": "/app/vuln_attack",
+   "id": "vuln_attack",
+   "mitre_attack_id": "T1110.001",
+   "severity": "low",
+   "status": "confirmed",
+   "target_id": "tgt_fx",
+   "title": "finding vuln_attack"
+  },
+  {
+   "campaign_id": "camp_fx_fw",
+   "category": "missing_audit_trail",
+   "endpoint": "/app/vuln_log",
+   "id": "vuln_log",
+   "iso27001_control": "A.8.15",
+   "severity": "low",
+   "status": "confirmed",
+   "target_id": "tgt_fx",
+   "title": "finding vuln_log"
+  },
+  {
+   "campaign_id": "camp_fx_fw",
+   "category": "outdated_component",
+   "endpoint": "/app/vuln_closed",
+   "id": "vuln_closed",
+   "severity": "high",
+   "status": "remediated",
+   "target_id": "tgt_fx",
+   "title": "finding vuln_closed"
+  }
+ ],
+ "name": "assessment_parity",
+ "nodes": [
+  {
+   "id": "n_web",
+   "label": "PHP 8.1 application",
+   "technology": "PHP",
+   "type": "app",
+   "version": "8.1"
+  },
+  {
+   "id": "n_ai",
+   "label": "Ollama inference",
+   "port": 11434,
+   "product": "ollama",
+   "type": "service"
+  }
+ ],
+ "note": "Synthetic campaign covering every mapping basis and state; same file in both editions.",
+ "technologies": [
+  {
+   "category": "language",
+   "name": "PHP",
+   "version": "8.1"
+  },
+  {
+   "category": "framework",
+   "name": "Laravel"
+  },
+  {
+   "category": "database",
+   "name": "MySQL",
+   "version": "8.0"
+  },
+  {
+   "category": "web-server",
+   "name": "nginx"
+  }
+ ]
+}

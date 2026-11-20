@@ -366,6 +366,17 @@ def diagnose() -> Dict[str, Any]:
 # GENERIC EXECUTOR (2 tools)
 # ============================================================================
 
+def _count_toolbox_call(kind: str) -> None:
+    """Coverage signal: one toolbox call served for the calling run (api/coverage_signals), keyed like the campaign
+    (the latest root OpenCode session, else the server session). Never fails the call."""
+    try:
+        from api import coverage_signals
+        from api.live_push import _run_campaign_frag
+        coverage_signals.count_call(_run_campaign_frag(SESSION_ID), kind)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 @mcp.tool()
 def execute_command(
     command: str,
@@ -438,6 +449,7 @@ def execute_command(
         )
     real_command = gw.command or command
 
+    _count_toolbox_call("command")
     result = executor.execute(
         command=real_command,
         timeout=timeout,
@@ -612,6 +624,7 @@ def run_workflow(
     privacy_gateway = _command_gateway
     privacy_vault = _get_vault(session_id)
 
+    _count_toolbox_call("workflow")
     return workflow_registry.run_workflow(
         workflow,
         method,
@@ -633,6 +646,7 @@ def dashboard_init_campaign(
     target_ip: str,
     project_name: str = "Darkmoon Assessment",
     methodology: str = "ISO 27001 / NIST SP 800-115 / MITRE ATT&CK",
+    campaign_kind: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Initialize a live campaign for the Darkmoon Dashboard.
@@ -647,6 +661,7 @@ def dashboard_init_campaign(
         target_ip: Target IP address
         project_name: Name for the assessment project
         methodology: Methodology string
+        campaign_kind: Optional. "full" (default), "retest" or "short" (a quick or partial run)
 
     Returns:
         Dictionary with project_id, target_id, campaign_id.
@@ -666,7 +681,35 @@ def dashboard_init_campaign(
         target_ip=target_ip,
         project_name=project_name,
         methodology=methodology,
+        campaign_kind=campaign_kind,
+        run_frag=_caller_run_key(),
     )
+
+
+def _caller_run_key() -> Optional[str]:
+    """The caller's run key (R4 S3, api/run_binding.py): the X-Darkmoon-Campaign-Frag header of this call, else the
+    DARKMOON_CAMPAIGN_FRAG env. Community hands no run key today (one local operator, the TUI runs several sessions
+    in one opencode process): None, and the campaigns stay unbound (behaviour unchanged)."""
+    from api import run_binding
+    header = None
+    try:
+        from fastmcp.server.dependencies import get_http_headers
+        header = (get_http_headers(include_all=True) or {}).get(run_binding.RUN_KEY_HEADER)
+    except Exception:  # noqa: BLE001 - stdio or no request context
+        header = None
+    return run_binding.caller_run_key(header, os.environ.get(run_binding.RUN_KEY_ENV))
+
+
+def _run_write_guard(tool: str, campaign_id: str) -> Optional[Dict[str, Any]]:
+    """R4 S3: a dashboard_* write lands only in a campaign the caller may write into (api/run_binding.py, shared with
+    Pro). None = proceed; else the refusal to return."""
+    from api import run_binding
+    from api.json_storage import load_campaign
+    try:
+        camp = load_campaign(campaign_id)
+    except Exception:  # noqa: BLE001
+        camp = None
+    return run_binding.guard(tool, campaign_id, camp, _caller_run_key())
 
 
 # Attack paths: earlier findings whose result this exploitation used. Stored as declared by the agent; the
@@ -773,6 +816,9 @@ def dashboard_push_finding(
             evidence_explanation="The login form passes unsanitized input to SQL query...",
         )
     """
+    refused = _run_write_guard("dashboard_push_finding", campaign_id)
+    if refused:
+        return refused
     from api.live_push import push_finding
 
     finding = {
@@ -857,6 +903,9 @@ def dashboard_push_infra_node(
             technology="Linux (Docker)",
         )
     """
+    refused = _run_write_guard("dashboard_push_infra_node", campaign_id)
+    if refused:
+        return refused
     from api.live_push import push_infra_node
 
     node = {
@@ -906,6 +955,9 @@ def dashboard_finalize_campaign(
             report_markdown="# Vulnerability Assessment Report\\n..."
         )
     """
+    refused = _run_write_guard("dashboard_finalize_campaign", campaign_id)
+    if refused:
+        return refused
     from api.live_push import finalize_campaign, _generate_report_from_db
     from api.json_storage import load_campaign, load_report_content
 
@@ -987,6 +1039,12 @@ def dashboard_finalize_campaign(
 
 def main():
     """Run the MCP server."""
+    # Security events (darkmoon.audit) on stderr; DARKMOON_LOG_FORMAT=json writes every darkmoon.* record as JSON
+    try:
+        from api import security_log
+        security_log.configure()
+    except Exception:  # noqa: BLE001 - logging set-up never stops the server
+        pass
     # Print startup info
     print("=" * 60)
     print("Darkmoon MCP Server")

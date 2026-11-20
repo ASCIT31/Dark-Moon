@@ -391,15 +391,19 @@ def _is_open_vulnerability(vuln: Dict[str, Any]) -> bool:
 
 
 def count_open_vulnerabilities_for_campaign(campaign_id: str) -> int:
-    return sum(1 for vuln in load_vulnerabilities(campaign_id) if _is_open_vulnerability(vuln))
+    """Open findings of one campaign (exec_core: quarantined / false-positive findings are counted nowhere)."""
+    from api.exec_core import stats as _core_stats
+    return len(_core_stats.open_findings(load_vulnerabilities(campaign_id)))
 
 
 def count_open_vulnerabilities_for_target(target_id: str) -> int:
-    total = 0
-    for campaign in load_campaigns():
-        if campaign.get("target_id") == target_id:
-            total += count_open_vulnerabilities_for_campaign(campaign.get("id", ""))
-    return total
+    """Distinct open weaknesses of the target's reference campaign (last complete, else latest), as in Pro.
+    It used to sum every campaign of the target, counting a weakness found by three campaigns three times."""
+    from api.exec_core import project as _core_project, stats as _core_stats
+    ref = _core_project.reference_campaign([c for c in load_campaigns() if c.get("target_id") == target_id])
+    if not ref:
+        return 0
+    return len(_core_stats.open_fingerprints(load_vulnerabilities(ref.get("id", "")), target_id))
 
 
 # ---------------------------------------------------------------------------

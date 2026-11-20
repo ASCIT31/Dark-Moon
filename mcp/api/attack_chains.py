@@ -463,7 +463,7 @@ def render_report_section(chains: List[Dict[str, Any]], issues: List[Dict[str, s
     """Markdown section "## 5. ATTACK CHAINS" of the server-generated report."""
     if not chains and not issues:
         return ""
-    L: List[str] = ["---\n\n## 5. ATTACK CHAINS\n\n"]
+    L: List[str] = ["---\n\n<!-- dm-section: attack-chains -->\n## 5. ATTACK CHAINS\n\n"]
     L.append("> Chains declared by the agents at finalisation (`darkmoon-attack-chains/v1`) and "
              "validated by the server against this campaign's findings. Only chains actually executed "
              "(`observed: true`, at least one exploited finding as evidence) are listed.\n\n")
