@@ -1028,7 +1028,7 @@ export function wrapLines(text: string, width: number, max: number): string[] {
 }
 
 /** The legend dialog text: shared words (exec_core.legend) + how the terminal draws them. ``compact``: labels only,
- *  for short terminals (the dialog cannot scroll). */
+ *  for a short summary (the dialog itself scrolls the full text). */
 export function legendLines(l: Legend | undefined, unicode = true, compact = false): string[] {
   const g = unicode ? { solid: "│", dashed: "┆", node: "●", open: "○" } : { solid: "|", dashed: ":", node: "*", open: "o" }
   const pk = l?.path_kind ?? {}
@@ -1077,4 +1077,75 @@ export function legendLines(l: Legend | undefined, unicode = true, compact = fal
     "CYBER SCORE",
     ...(["rated", "limited", "not_rated"] as const).map((k) => line(" ", ss[k], k)),
   ]
+}
+
+/** Top section bar: which label each tab shows at a terminal width. ≥ 130 full labels, 100–129 short labels,
+ *  80–99 four-letter labels with a one-cell gap (« 1 Work 2 Proj … »), so every tab stays readable at 80 columns;
+ *  below 80 no tabs. ``width`` per tab = cells drawn (padding included); ``total`` = their sum. */
+export function topTabs<T extends { label: string; short: string }>(
+  tabs: T[],
+  width: number,
+  active: number,
+): { tabs: { tab: T; text: string; padL: number; padR: number; width: number; active: boolean }[]; total: number; mode: "full" | "short" | "narrow" | "none" } {
+  const mode = width < 80 ? "none" : width < 100 ? "narrow" : width < 130 ? "short" : "full"
+  if (mode === "none") return { tabs: [], total: 0, mode }
+  const out = tabs.map((tab, i) => {
+    const on = i === active
+    const name = mode === "full" ? tab.label : mode === "short" ? tab.short : tab.short.slice(0, 4)
+    const text = `${i + 1} ${name}`
+    const padL = 1
+    const padR = mode === "narrow" && !on ? 0 : 1
+    return { tab, text, padL, padR, width: padL + text.length + padR, active: on }
+  })
+  return { tabs: out, total: out.reduce((n, t) => n + t.width, 0), mode }
+}
+
+/** Wrap dialog lines to ``width`` cells, keeping blank lines and the leading indent of each line; a continuation
+ *  line is indented two cells more. A word longer than the width is cut with « … ». */
+export function wrapDialogLines(lines: string[], width: number): string[] {
+  const w = Math.max(8, width)
+  const out: string[] = []
+  for (const raw of lines) {
+    const s = clean(raw, 4000)
+    if (s.length <= w) {
+      out.push(s)
+      continue
+    }
+    const lead = s.match(/^ */)?.[0] ?? ""
+    const cont = " ".repeat(Math.min(4, lead.length + 2))
+    let line = ""
+    let start = lead
+    for (const word of s.trim().split(/\s+/)) {
+      const next = line ? `${line} ${word}` : start + word
+      if (next.length <= w) {
+        line = next
+        continue
+      }
+      if (line) out.push(line)
+      line = (line ? cont : start) + word
+      start = cont
+      if (line.length > w) line = line.slice(0, w - 1) + "…"
+    }
+    if (line) out.push(line)
+  }
+  return out
+}
+
+/** A scrollable window of ``total`` rows, ``height`` visible: clamps the offset and says what is hidden. */
+export function scrollWindow(total: number, height: number, offset: number): { offset: number; max: number; above: number; below: number } {
+  const h = Math.max(1, height)
+  const max = Math.max(0, total - h)
+  const o = Math.min(max, Math.max(0, Math.floor(offset)))
+  return { offset: o, max, above: o, below: Math.max(0, total - h - o) }
+}
+
+/** Offset after a scroll key (up/down/pageup/pagedown/home/end, also j/k); ``undefined`` for any other key. */
+export function scrollKey(key: string, total: number, height: number, offset: number): number | undefined {
+  const h = Math.max(1, height)
+  const page = Math.max(1, h - 1)
+  const d: Record<string, number> = { up: -1, k: -1, down: 1, j: 1, pageup: -page, pagedown: page, home: -Infinity, end: Infinity }
+  if (!(key in d)) return undefined
+  const max = Math.max(0, total - h)
+  const step = d[key]
+  return step === -Infinity ? 0 : step === Infinity ? max : scrollWindow(total, h, offset + step).offset
 }
