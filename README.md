@@ -202,8 +202,8 @@ The screenshots below are the **paid Darkmoon Pro** web dashboard. They are **no
 <p align="center"><b>Pro: live web dashboard with campaign history.</b> Projects, targets, campaigns and vulnerabilities at a glance, findings split by severity, a security posture table giving each project its Cyber Score grade, latest assessment and first treatment action, and every campaign with its counts and a comparison with the previous scan.</p>
 </td>
 <td width="50%" valign="top">
-<img src="docs/pics/pro/project-sunburst.png" alt="Darkmoon Pro project sunburst of the OWASP Juice Shop project: latest campaign of 8 Nov with 24 findings across 25 assets, rings from Internet to the host, service, application and one segment per finding with a severity marker, assets with no finding in green, and a Findings per campaign chart tracking critical, high, medium and low counts across 13 campaigns from 26 Apr to 8 Nov" />
-<p align="center"><b>Pro: project sunburst and history.</b> The latest campaign at a glance, from the zone in the centre out to host, service, application and one segment per finding with its severity marker, and <b>Findings per campaign</b> tracking how the counts move over time. Here: 13 anonymised real campaigns against OWASP Juice Shop.</p>
+<img src="docs/pics/pro/project-sunburst.png" alt="Darkmoon Pro project sunburst of the OWASP Juice Shop project: latest campaign of 29 Sep with 31 findings across 37 assets, rings from Internet to the host, service, application and one segment per finding coloured by severity, assets with no finding in green, and a Findings per campaign chart tracking critical, high, medium and low counts across 11 campaigns from 26 Apr to 29 Sep" />
+<p align="center"><b>Pro: project sunburst and history.</b> The latest campaign at a glance, from the zone in the centre out to host, service, application and one segment per finding coloured by severity, and <b>Findings per campaign</b> tracking how the counts move over time. Here: 11 anonymised real campaigns against OWASP Juice Shop.</p>
 </td>
 </tr>
 <tr>
