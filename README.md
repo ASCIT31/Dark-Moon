@@ -21,13 +21,14 @@
 </div>
 
 > [!IMPORTANT]
-> **License change.** Darkmoon Community is moving from the GNU GPL v3.0 to the GNU AGPL v3.0. Every commit published up to `edfe9cb` (27 October 2026) stays under the GNU GPL v3.0; `master` is under the AGPL v3.0 since 19 November 2026 (PR #59), and no AGPL release has been tagged yet (the latest release, v1.6.0, is GPL v3.0). The contributions made by outside contributors before the switch also stay under the GNU GPL v3.0 (they are not relicensed). Details: [LICENSING.md](https://github.com/ASCIT31/Dark-Moon/blob/master/LICENSING.md).
+> **License change.** Darkmoon Community is moving from the GNU GPL v3.0 to the GNU AGPL v3.0. Every commit published up to `edfe9cb` (27 October 2026) stays under the GNU GPL v3.0; `master` is under the AGPL v3.0 since 19 November 2026 (PR #59), and [v1.7.0](https://github.com/ASCIT31/Dark-Moon/releases/tag/v1.7.0) (20 November 2026) is the first AGPL release (v1.6.0 and earlier stay GPL v3.0). The contributions made by outside contributors before the switch also stay under the GNU GPL v3.0 (they are not relicensed). Details: [LICENSING.md](https://github.com/ASCIT31/Dark-Moon/blob/master/LICENSING.md).
 
 **DarkMoon is autonomous AI penetration testing for your own infrastructure.** Point it at an authorized target and it runs the whole assessment on its own, then documents every finding with the exact command and raw output.
 
 - 🟢 **Truly open source.** AGPLv3 and self-hosted, every agent's methodology is plain Markdown you can read, diff and fork.
 - 🎯 **Finds AND proves.** Each vulnerability ships with the exact command and raw output (exploitation is agent-asserted; the Pro remediation retest is the machine-verified step), so there is almost nothing to triage.
 - 🔒 **Runs on a local LLM + Privacy Gateway.** The gateway tokenizes your real IPs, hosts and credentials locally, so the model reasons on placeholders while real values stay on your perimeter.
+- 🕸️ **An attack-path graph you can check.** Agents declare what enabled what; the server keeps each link as a hypothesis (**Possible Attack Path**) and promotes it to **Evidence-Backed** only on its own records, with no model call to qualify it. Paths, their limits and the research behind them, including our local expert-AI prototype (research, not shipped): [Attack paths](https://dark-moon.org/infrastructure-graph/) · [Research](https://github.com/ASCIT31/darkmoon-attack-paths-research).
 - 🧩 **Everywhere you build.** Run it from GitHub, GitLab, Jenkins, VS Code, JetBrains, n8n, Grafana or Splunk — the open-source edition works with the CLI-based ones. [See the integrations ↓](#-darkmoon-everywhere)
 
 ---
@@ -547,7 +548,7 @@ DarkMoon is open source and welcomes contributions. Whether you want to add new 
 
 ## License
 
-Darkmoon Community is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0-only). See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md) for what this means for users, service operators and contributors. `master` is under the AGPL-3.0 since 19 November 2026 (PR #59); no AGPL release has been tagged yet. Every commit up to `edfe9cb` (27 October 2026), including release v1.6.0, remains under the GNU GPL v3.0.
+Darkmoon Community is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0-only). See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md) for what this means for users, service operators and contributors. `master` is under the AGPL-3.0 since 19 November 2026 (PR #59); v1.7.0 (20 November 2026) is the first AGPL release. Every commit up to `edfe9cb` (27 October 2026), including release v1.6.0, remains under the GNU GPL v3.0.
 
 ---
 
