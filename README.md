@@ -191,18 +191,18 @@ The screenshots below are the **paid Darkmoon Pro** web dashboard. They are **no
 <p align="center"><b>Pro: orbital 3D infrastructure map.</b> The same campaign as a three.js scene: assets on Internet / Edge, Application and Data rings, the assets that carry findings labelled with their counts, and the attack paths in the side rail. Renders in the browser and in VR.</p>
 </td>
 <td width="50%" valign="top">
-<img src="docs/pics/pro/project-sunburst.png" alt="Darkmoon Pro project sunburst of the OWASP Juice Shop project: 57 findings in the centre, rings from Internet to the host, the 8080 TCP Nginx service and the Juice Shop Express application, and one outer segment per finding coloured by severity (8 critical, 24 high, 21 medium, 4 low) next to the assets with no finding" />
-<p align="center"><b>Pro: project sunburst.</b> One project at a glance: from the zone in the centre out to host, service, application and one segment per finding, coloured by severity, with assets that have no finding shown in green. Here: 57 findings across 30 assets.</p>
+<img src="docs/pics/pro/attack-paths.png" alt="Darkmoon Pro attack paths view of the OWASP Juice Shop campaign: six possible attack paths marked Inferred in the side rail, an explanation that no path could be proven from the evidence, and the first inferred path drawn as a dashed two-step route on the zoned map" />
+<p align="center"><b>Pro: attack paths.</b> Paths are labelled by provenance: proven paths come from chained evidence, possible paths are inferred from topology and confirmed findings and are marked <code>Inferred</code>, never shown as proof. The selected path is drawn step by step on the map.</p>
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/pics/pro/attack-paths.png" alt="Darkmoon Pro attack paths view of the OWASP Juice Shop campaign: six possible attack paths marked Inferred in the side rail, an explanation that no path could be proven from the evidence, and the first inferred path drawn as a dashed two-step route on the zoned map" />
-<p align="center"><b>Pro: attack paths.</b> Paths are labelled by provenance: proven paths come from chained evidence, possible paths are inferred from topology and confirmed findings and are marked <code>Inferred</code>, never shown as proof. The selected path is drawn step by step on the map.</p>
+<img src="docs/pics/pro/dashboard.png" alt="Darkmoon Pro dashboard: 5 projects, 5 targets, 19 campaigns and 442 vulnerabilities, vulnerabilities by severity with percentages, a security posture table with Cyber Score grade, latest assessment and first action per project (OWASP Juice Shop first), and the start of the Last campaigns table with per-severity counts, risk, date and comparison with the previous scan" />
+<p align="center"><b>Pro: live web dashboard with campaign history.</b> Projects, targets, campaigns and vulnerabilities at a glance, findings split by severity, a security posture table giving each project its Cyber Score grade, latest assessment and first treatment action, and every campaign with its counts and a comparison with the previous scan.</p>
 </td>
 <td width="50%" valign="top">
-<img src="docs/pics/pro/dashboard.png" alt="Darkmoon Pro dashboard: projects, targets, campaigns and vulnerabilities counters, vulnerabilities by severity with percentages, and a security posture table with a Cyber Score grade, latest assessment and first action per project" />
-<p align="center"><b>Pro: live web dashboard.</b> Projects, targets, campaigns and vulnerabilities at a glance, findings split by severity, and a security posture table giving each project its Cyber Score grade, latest assessment and first treatment action.</p>
+<img src="docs/pics/pro/project-sunburst.png" alt="Darkmoon Pro project sunburst of the OWASP Juice Shop project: latest campaign of 8 Nov with 24 findings across 25 assets, rings from Internet to the host, service, application and one segment per finding with a severity marker, assets with no finding in green, and a Findings per campaign chart tracking critical, high, medium and low counts across 13 campaigns from 26 Apr to 8 Nov" />
+<p align="center"><b>Pro: project sunburst and history.</b> The latest campaign at a glance, from the zone in the centre out to host, service, application and one segment per finding with its severity marker, and <b>Findings per campaign</b> tracking how the counts move over time. Here: 13 anonymised real campaigns against OWASP Juice Shop.</p>
 </td>
 </tr>
 <tr>
