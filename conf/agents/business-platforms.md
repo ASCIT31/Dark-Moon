@@ -1,5 +1,4 @@
 ---
-id: business-platforms
 name: business-platforms
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for enterprise business platforms (Salesforce, ServiceNow, Atlassian Jira/Confluence, SharePoint on-prem, Nextcloud)
 ---

@@ -40,7 +40,11 @@ NEW_AGENTS = [
 
 ROSTER_ANCHOR = "    nest\n    any future agent"
 SIGNAL_ANCHOR = "PHASE 3 — REACTIVE FEEDBACK LOOP (CORE MECHANISM)"
-APPLY_ANCHOR = '"prompt_file": "/root/.opencode/agents/pentest.md"'
+# The orchestrator's block in the opencode.json heredoc, and its line in the Darkmoon agent registry heredoc
+# (darkmoon-agents.json). opencode.json carries opencode's own agent keys only (model, mode); the agent file lives in
+# the registry, never in opencode.json (an unknown agent key is sent to the model as a call option).
+APPLY_ANCHOR = '      "mode": "primary"\n    },\n'
+REGISTRY_ANCHOR = '    "pentest": { "prompt_file": "/root/.opencode/agents/pentest.md" },\n'
 
 
 def detect_nl(raw_bytes):
@@ -127,11 +131,13 @@ def apply_block(aid):
     return (
         f'    "{aid}": {{\n'
         f'      "model": "$FINAL_MODEL",\n'
-        f'      "mcp": ["darkmoon"],\n'
-        f'      "secondary": true,\n'
-        f'      "prompt_file": "/root/.opencode/agents/{aid}.md"\n'
+        f'      "mode": "subagent"\n'
         f'    }},\n'
     )
+
+
+def registry_line(aid):
+    return f'    "{aid}": {{ "prompt_file": "/root/.opencode/agents/{aid}.md" }},\n'
 
 
 def wire_apply(path):
@@ -140,11 +146,14 @@ def wire_apply(path):
         return False
     if APPLY_ANCHOR not in text:
         return False
-    idx = text.index(APPLY_ANCHOR)
-    # find the closing "    },\n" of the pentest block right after the anchor
-    close = text.index("\n    },\n", idx) + len("\n    },\n")
+    if REGISTRY_ANCHOR not in text:
+        return False
+    # right after the closing "    },\n" of the pentest block
+    close = text.index(APPLY_ANCHOR) + len(APPLY_ANCHOR)
     blocks = "\n" + "".join(apply_block(aid) for aid, _ in NEW_AGENTS)
     text = text[:close] + blocks + text[close:]
+    reg = text.index(REGISTRY_ANCHOR) + len(REGISTRY_ANCHOR)
+    text = text[:reg] + "".join(registry_line(aid) for aid, _ in NEW_AGENTS) + text[reg:]
     write(path, text, nl)
     return True
 

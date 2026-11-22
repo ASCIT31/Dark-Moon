@@ -1,5 +1,4 @@
 ---
-id: sso-idp
 name: sso-idp
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for an SSO identity provider (Keycloak/Okta/Auth0/Authentik/PingFederate/PingOne and generic OAuth2-OIDC-SAML-SCIM-JWT flows)
 ---

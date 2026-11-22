@@ -1,5 +1,4 @@
 ---
-id: llm
 name: llm
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for LLM / AI inference endpoints
 ---

@@ -17,8 +17,8 @@ every agent is the same shape/length as the reference fleet.
 | File | Role |
 |---|---|
 | `generate.py` | build `.md` agents from `profiles/*.json` into `out/` (LF-only). `--selfcheck` verifies the spine round-trips. |
-| `validate.py` | conformance gate: banner byte-identity, front-matter, `{{TARGET}}`, do-not-finalize, END marker, no orchestrator-only leakage. |
-| `wire.py <repo>…` | insert each agent into `pentest.md` (roster **and** signal matrix — newline-safe, preserves Front-API CRLF) and `apply-settings.sh`. Idempotent. |
+| `validate.py` | conformance gate: banner byte-identity, front-matter (opencode's own agent keys only, read like opencode), `{{TARGET}}`, do-not-finalize, END marker, no orchestrator-only leakage. |
+| `wire.py <repo>…` | insert each agent into `pentest.md` (roster **and** signal matrix — newline-safe, preserves Front-API CRLF) and `apply-settings.sh` (an opencode.json `"mode": "subagent"` block and a `darkmoon-agents.json` registry line). Idempotent. |
 | `mirror.sh` | copy `out/*.md` into all three repos' `conf/agents/`. |
 | `profiles/*.json` | one per agent: id, description, objective (`{{TARGET}}`), strict_constraints, preflight, offensive, priorities, stop_note. |
 

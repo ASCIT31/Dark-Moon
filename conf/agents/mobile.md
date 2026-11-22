@@ -1,5 +1,4 @@
 ---
-id: mobile
 name: mobile
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for mobile application packages (Android APK and iOS IPA static analysis, plus direct testing of the backend endpoints the app reveals)
 ---

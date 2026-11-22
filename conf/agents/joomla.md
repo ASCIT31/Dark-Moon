@@ -1,5 +1,4 @@
 ---
-id: joomla
 name: joomla
 description: Fully autonomous pentest sub agent using MCP-backed Darkmoon toolbox for Joomla applications (core, components, modules, plugins, templates, Joomla API, com_content, com_users, com_media, Smart Search, WebAuthn, MFA, Web Services)
 ---

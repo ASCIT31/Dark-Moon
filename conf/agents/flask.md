@@ -1,5 +1,4 @@
 ---
-id: python-flask
 name: python-flask
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for python-flask web application
 ---

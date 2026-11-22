@@ -1,5 +1,4 @@
 ---
-id: mdm
 name: mdm
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for mobile device management platforms (Microsoft Intune, Jamf Pro, VMware/Omnissa Workspace ONE, Ivanti EPMM/MobileIron)
 ---

@@ -2004,13 +2004,14 @@ An agent is a structured Markdown file.
 
 ```markdown
 ---
-id: pentest-web
 name: pentest-web
 description: Fully autonomous pentest agent
 ---
 
 You are an autonomous AI cybersecurity agent.
 ```
+
+The front matter holds opencode's own agent keys only (`name`, `description`, `mode`, …): opencode sends any other key to the model as a call option, and strict OpenAI-compatible endpoints (Azure AI Foundry) reject the request (`Unrecognized request argument supplied`). `name` is the agent id the orchestrator dispatches. `conf/apply-settings.sh` registers each agent twice under that id: an `"agent"` block of `opencode.json` (`model` and `mode`: `primary` for `pentest`, `subagent` for the others) and a line of the Darkmoon agent registry `darkmoon-agents.json` (`prompt_file`, read by the orchestrator). `tools/agent-build/validate.py` and `mcp/tests/test_agent_native_keys.py` enforce it.
 
 [Back to Summary](#summary)
 

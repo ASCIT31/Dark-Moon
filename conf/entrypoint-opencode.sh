@@ -43,7 +43,7 @@ log "Applying OpenCode configuration (forced)"
 
 log "Runtime environment variables available:"
 # Redact secret values (anything whose name contains KEY/TOKEN/SECRET/PASSWORD)
-env | grep -E 'OPENROUTER_|OPENCODE_' | sed -E 's/^([^=]*(KEY|TOKEN|SECRET|PASSWORD)[^=]*)=.*/\1=REDACTED/I' || true
+env | grep -E 'OPENROUTER_|OPENCODE_|AZURE_' | sed -E 's/^([^=]*(KEY|TOKEN|SECRET|PASSWORD)[^=]*)=.*/\1=REDACTED/I' || true
 
 [ -x "$APPLY_SCRIPT" ] || fatal "Apply script not executable: $APPLY_SCRIPT"
 
@@ -69,6 +69,21 @@ if [ -z "$(ls -A "$AGENTS_DIR" 2>/dev/null)" ]; then
 else
   log "Agents dir already populated → skip"
 fi
+
+# >>> agents-registry-upgrade (mcp/tests/test_agents_registry_upgrade.py)
+# The agents directory is seeded once and kept across image updates. A set seeded before the Darkmoon agent registry
+# (darkmoon-agents.json) has an orchestrator that looks for the agent files in opencode.json, which no longer lists
+# them, and front-matter "id:" keys that opencode sends to the model as call options (strict endpoints reject the
+# request). Such a set is refreshed from the image once; every previous file is kept in a backup next to opencode.json.
+if [ -f "$AGENTS_DIR/pentest.md" ] && grep -q "entry in opencode.json" "$AGENTS_DIR/pentest.md"; then
+  AGENTS_BACKUP="$(dirname "$OPENCODE_CONFIG_FILE")/agents-backup-$(date '+%Y%m%d-%H%M%S')"
+  if mkdir -p "$AGENTS_BACKUP" && cp -a "$AGENTS_DIR/." "$AGENTS_BACKUP/" && cp -a "$DEFAULT_AGENTS/." "$AGENTS_DIR/"; then
+    log "Agents seeded before the agent registry → refreshed from the image (previous files kept in $AGENTS_BACKUP)"
+  else
+    log "WARNING: could not refresh the agents seeded before the agent registry: copy $DEFAULT_AGENTS into $AGENTS_DIR"
+  fi
+fi
+# <<< agents-registry-upgrade
 
 #######################################
 # Seed workflows (VOLUME-SAFE)

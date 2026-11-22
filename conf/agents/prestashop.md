@@ -1,5 +1,4 @@
 ---
-id: prestashop
 name: prestashop
 description: Fully autonomous pentest sub agent using MCP-backed Darkmoon toolbox for PrestaShop applications (core, modules, themes, Web Services API, Back Office, cart/checkout/payment, Smarty templates, ObjectModel, overrides)
 ---

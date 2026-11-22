@@ -1,5 +1,4 @@
 ---
-id: aspnet
 name: aspnet
 ------------------------------------------------------------------
 NON-BLOCKING EXECUTION (MANDATORY)

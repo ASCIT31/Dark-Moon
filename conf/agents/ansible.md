@@ -1,5 +1,4 @@
 ---
-id: ansible
 name: ansible
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for an Ansible / AWX / Automation Controller configuration-management plane (inventories, playbooks, Vault, become, AWX REST API)
 ---

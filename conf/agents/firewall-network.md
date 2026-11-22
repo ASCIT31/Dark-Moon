@@ -1,5 +1,4 @@
 ---
-id: firewall-network
 name: firewall-network
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for firewalls and network infrastructure (Palo Alto/Fortinet/Check Point/pfSense/Cisco ASA plus IOS/Juniper/Aruba/MikroTik gear plus BIND/PowerDNS/Infoblox/DHCP/IPAM management planes)
 ---

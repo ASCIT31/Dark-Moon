@@ -1,5 +1,4 @@
 ---
-id: email-infrastructure
 name: email-infrastructure
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for mail infrastructure (Exchange on-prem Autodiscover/EWS/OWA/ECP, Postfix/Exim/Dovecot, SMTP relays, SPF-DKIM-DMARC spoofing, mailbox data mining)
 ---
