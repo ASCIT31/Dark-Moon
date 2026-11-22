@@ -198,7 +198,7 @@ The screenshots below are the **paid Darkmoon Pro** web dashboard. They are **no
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/pics/pro/dashboard.png" alt="Darkmoon Pro dashboard: 5 projects, 5 targets, 19 campaigns and 442 vulnerabilities, vulnerabilities by severity with percentages, a security posture table with Cyber Score grade, latest assessment and first action per project (OWASP Juice Shop first), and the start of the Last campaigns table with per-severity counts, risk, date and comparison with the previous scan" />
+<img src="docs/pics/pro/dashboard.png" alt="Darkmoon Pro dashboard: 3 projects, 3 targets, 14 campaigns and 371 vulnerabilities, vulnerabilities by severity with percentages, a security posture table with Cyber Score grade, latest assessment and first action per project (OWASP Juice Shop first), and the start of the Last campaigns table with per-severity counts, risk, date and comparison with the previous scan" />
 <p align="center"><b>Pro: live web dashboard with campaign history.</b> Projects, targets, campaigns and vulnerabilities at a glance, findings split by severity, a security posture table giving each project its Cyber Score grade, latest assessment and first treatment action, and every campaign with its counts and a comparison with the previous scan.</p>
 </td>
 <td width="50%" valign="top">
