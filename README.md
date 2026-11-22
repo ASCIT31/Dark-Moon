@@ -108,7 +108,11 @@ cd Dark-Moon
 ./install.sh --help    # show usage
 ```
 
-Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…) and **local models** (Ollama, llama.cpp). Then run your first assessment and watch it live:
+Supports **cloud providers** (Anthropic, OpenAI, OpenRouter…), **local models** (Ollama, llama.cpp, any OpenAI-compatible URL) and **Azure AI Foundry / Azure OpenAI** in native mode ([configuration](docs/full.md#ii3c-role-of-the-variables); which models finish a campaign: [Compatible Models & Hardware](docs/full.md#ii3d-compatible-models--hardware)).
+
+> **Re-running `install.sh` on an existing install** lists what the rebuild would delete (custom or modified agents included), asks `Continue? [y/N]` (default No), and on yes moves `data`, `darkmoon-settings` and `workflows` to timestamped `*.backup-<date>` folders instead of deleting them. Unattended: `./install.sh --yes` or `DARKMOON_ASSUME_YES=1`. [Details](docs/full.md#re-running-installsh-on-an-existing-install).
+
+Then run your first assessment and watch it live (`--log` streams the session's commands while they run):
 
 ```bash
 ./darkmoon.sh "TARGET: example.com"

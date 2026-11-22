@@ -252,6 +252,52 @@ evidence is masked before it reaches the screen.
 | `W` | Maintenance windows of the project in context |
 | `?` | All keys |
 
+**Opening and closing.** `/explore` in the console, `<leader>d`, or *Darkmoon explorer* in the command palette
+(category *Darkmoon*). `q` returns to the screen you came from; `esc` goes back one view and, at the top, stays in the
+explorer (*Press q to return to the console.*), so stray keystrokes never reach the chat.
+
+**Navigation keys** (`?` shows them in the explorer):
+
+| Key | Action |
+|---|---|
+| `↑` `↓` / `j` `k` | Move or scroll |
+| `PgUp` `PgDn` / `ctrl+u` `ctrl+d` | Page up / down |
+| `enter` / `→` / `l` | Open |
+| `esc` / `←` / `h` / `backspace` | Back |
+| `tab` | Switch pane (list / inspector, path, document) |
+| `/` | Search; `n` / `N` next / previous match |
+| `f` `s` `t` | Filter by severity / proof status / target (`t` toggles the contents panel in a report) |
+| `o` | Sort findings |
+| `c` | Clear filters and search |
+| `]` `[` | Next / previous page, finding or report chapter |
+| `g` | Go to a report chapter |
+| `F` `R` `P` | Findings, report, attack paths of the campaign in context (`F` in a report: findings cited in the chapter) |
+| `T` `X` `A` `L` `W` | Treatment plan, frameworks, application profile, legend, maintenance windows |
+| `r` | Refresh (data is cached for 60 seconds) |
+| `q` | Back to the console |
+
+**Terminal width (80 columns and up).** The layout adapts to the width of the terminal:
+
+| Width | Section bar | Panes |
+|---|---|---|
+| 150 columns and more | full labels (`1 Workspace` … `7 Reports`) | list and detail side by side (wide) |
+| 130 to 149 | full labels | list and detail side by side |
+| 100 to 129 | short labels (`Work`, `Proj`, `Camp`, `Find`, `Plan`, `Paths`, `Docs`) | list and detail side by side |
+| 80 to 99 | four-letter labels: every tab stays readable at 80 columns | one pane at a time (compact); dialogs such as the legend wrap to the width |
+| under 80 | no section bar (the number keys still work) | one pane at a time |
+
+Narrow lists drop secondary columns (severity and effort in the plan, the « not assessable » count in frameworks, the
+provenance word in the profile) rather than truncating the main text. A truecolor terminal gives the exact colours;
+with a non-UTF-8 locale, or `DARKMOON_ASCII=1`, borders and marks fall back to ASCII.
+
+**Safety.** Read-only: no write, no model call (browsing leaves the session's message count unchanged). Every string
+from the data is cleaned of terminal escape sequences (OSC, CSI, DCS, C0/C1 controls, bidi overrides) before display.
+
+**Masking.** Evidence is masked by the redaction engine vendored with the plugin (`_vendor/`) before it reaches the
+screen. If that engine cannot load, evidence is withheld rather than shown: *Evidence withheld: it could not be masked
+on this machine.* The local store is read by `python3 -I -B darkmoon_explore.py` (20 s timeout): no daemon, no cache
+file, no network, no write. The plugin is loaded by the `tui.json` that `conf/apply-settings.sh` writes at start.
+
 The same data from a shell: `python3 conf/plugins/darkmoon-explorer/darkmoon_explore.py --help` lists the commands
 (`projects`, `campaigns`, `campaign`, `finding`, `vulnerabilities`, `report`, `paths`, `plan`, `frameworks`,
 `profile`, `executive`, `executive --project`, `legend`), each printing JSON.
@@ -763,6 +809,22 @@ ANTHROPIC_API_KEY=sk-...
 
 A local / custom URL on `*.openai.azure.com`, `*.services.ai.azure.com` or `*.cognitiveservices.azure.com` is switched to the native Azure mode automatically (the generic OpenAI-compatible adapter sends `max_tokens`, which OpenAI reasoning deployments reject with `Use 'max_completion_tokens' instead`). Never hand-edit or bind-mount the generated `opencode.json`: it is rewritten at every start.
 
+*Added 2026-11-22 (PR #77).* Details of the native Azure mode:
+
+- **Automatic switch.** With `OPENCODE_LOCAL_MODE=true` and an Azure `OPENCODE_LOCAL_BASE_URL`, the resource name is
+  taken from the host, the deployment from `OPENCODE_LOCAL_MODEL`, and the key from `OPENCODE_LOCAL_API_KEY` (unless
+  `AZURE_API_KEY` is set). The log says *Local provider URL is an Azure resource endpoint: using the native Azure
+  provider*. An existing `.opencode.env` made with a custom URL on Azure therefore works with no edit.
+- **The key is never written** to `opencode.json`: the file references it (`{env:AZURE_API_KEY}` or
+  `{env:OPENCODE_LOCAL_API_KEY}`), and the start-up log shows `AZURE_*` key variables as `REDACTED`.
+- **Names are checked.** `AZURE_RESOURCE_NAME` takes letters, digits and `-`; `AZURE_MODEL` letters, digits and
+  `-` `.` `_` `:`. Otherwise the log warns *Azure mode not applied*.
+- **Priority:** explicit Azure (`AZURE_RESOURCE_NAME` + `AZURE_MODEL`), then an Azure custom URL, then the local
+  provider, then the on-prem Anthropic-compatible endpoint, then the cloud provider.
+- **`OPENCODE_LOCAL_NPM`** accepts only adapters bundled in the opencode binary (nothing is downloaded).
+- **Apply a change** to `.opencode.env` with `docker compose up -d` (the `opencode` container is recreated with the new
+  values; re-running `install.sh` is not needed).
+
 **On-prem Anthropic-compatible variables:**
 
 | Variable             | Role                                                            |
@@ -860,6 +922,59 @@ The Opus-class models above are 355B–1T-parameter MoE. Figures assume the list
 - **RAM:** 128 GB (256 GB for 4-bit Opus-class MoE offload)
 - **Disk:** NVMe SSD, 200 GB+ free (Docker images + quantized weights — a 4-bit 355B model is ~135–200 GB)
 - **OS:** Linux x86_64 (native preferred; WSL2 supported)
+
+#### Public benchmark: what it says and what it does not
+
+Darkmoon's LLM pentest study on OWASP Juice Shop is public: the
+[article](https://dark-moon.org/blog/llm-pentesting-benchmark/) and the data, protocol and scoring code in
+[Darkmoon-Benchmarks](https://github.com/ASCIT31/Darkmoon-Benchmarks) (study `llm-pentest-juice-shop-2026`). It
+covers 21 runs of 16 configurations on one target. The best single runs collected about 11% of the available points:
+43 points (Darkmoon open-source CLI with `claude-sonnet-4-6`, 16 challenges, 118.8 active minutes, USD 17.44 with
+97.6% of the prompt tokens served from cache) and 42 points (`kimi-k3`, tool not recorded). For the fifteen other
+configurations the tool is not recorded and there are at most two runs each (for example `deepseek-v4-pro` 17 points,
+`gpt-5.6-sol` 4 and 1 points, `gpt-5.3-codex` 2 points). The study states itself that this dataset **cannot crown a
+model**: run lengths were set by the operator and repeated runs solve different challenges. It scores solved
+challenges only and says nothing about refusals.
+
+#### Verified on Azure AI Foundry (2026-11-22)
+
+Tested with the native Azure mode on a Foundry subscription of ours, against a lab target:
+
+| Foundry deployment | Result |
+|---|---|
+| Kimi K3.1 Pro | Full campaigns: specialist sub-agent dispatched, findings pushed, campaign finalised (4 findings in native Azure mode). |
+| gpt-5.3-codex | Campaign started and a specialist dispatched that ran its own commands on the lab (smoke check, stopped once verified). |
+| gpt-5-mini | Campaigns ran and never refused (0 of 9), with shallow results (2 to 6 commands, 0 to 2 findings). |
+| gpt-oss-120b | Campaign started, but its specialist sub-agent returned an empty result: too weak for the specialist role. |
+| DeepSeek V4 Pro | Not run: it needs a tokens-per-minute (TPM) quota above Darkmoon's first prompt, about **40K tokens**. With a 20K TPM quota every call is rejected with HTTP 429. |
+| Claude through Foundry | Not validated: the Azure Marketplace purchase step was refused on our test subscription. |
+
+**Which model to use.** The reference stays Claude Opus 4.7 / 4.6, then Claude Sonnet 4.6. On Azure AI Foundry, use
+**Kimi K3.1 Pro**, or **DeepSeek V4 Pro** with enough TPM quota for a ~40K-token first prompt.
+
+#### When the model declines the task
+
+A model can decline an offensive-security task in its own words; GPT models are the most likely to. A user report
+showed an OpenAI model on Azure AI Foundry answering, right after the session handshake, that it could not run an
+autonomous exploit-testing campaign. This is the model's own safety behaviour, **not a Darkmoon guard**: no Darkmoon
+prompt asks the model to refuse. In our own Foundry tests,
+gpt-5-mini, gpt-5.3-codex, gpt-oss-120b and Kimi K3.1 Pro never declined. A content filter is something else: when
+Azure blocks a request or a response, the provider returns an error and the run ends as failed with that error (in our
+tests, Azure's default content filter blocked one response of a headless-browser sub-agent).
+
+What you can do:
+
+- **Switch model** to one of the models above.
+- **OpenAI "Trusted Access for Cyber"**: vetted access to more permissive models for cyber work, through the OpenAI
+  API (not Azure). Enterprise intake: <https://openai.com/form/enterprise-trusted-access-for-cyber/>.
+- **Microsoft Foundry "Limited Access"**: modified content filters (guardrails) and modified abuse monitoring are
+  granted on application, to customers managed by a Microsoft account team or in an eligible programme:
+  <https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/openai/limited-access>.
+- **Foundry custom content filter (Guardrails)**, without any application: a custom policy with every harm threshold
+  at High and the jailbreak shield and protected-material (text) filters set to annotate only, attached to the
+  deployment. Foundry accepted such a policy on our subscription without approval; its effect on a campaign has not
+  been measured.
+- Anthropic models: see the Cyber Verification Program note above.
 
 > [!NOTE]
 > **No server-grade GPU?** Use the cloud path with `claude-opus-4-7` — zero local hardware, best results. Local Opus-class models are for fully air-gapped / on-premise constraints; for a single 24 GB GPU, `Qwen3-Coder-30B-A3B` is the most practical starting point.
@@ -991,7 +1106,8 @@ When executed, `install.sh` performs the following operations:
 
 3. **Removes local bind mounts**
 
-   The following directories are deleted to ensure a clean environment:
+   The following directories are cleared to ensure a clean environment (on an existing install they are moved to a
+   timestamped backup after your confirmation, see [Re-running install.sh](#re-running-installsh-on-an-existing-install)):
 
    * `./data`
    * `./darkmoon-settings`
@@ -1022,6 +1138,30 @@ When executed, `install.sh` performs the following operations:
    Containers are recreated and started in detached mode.
 
 ---
+
+##### Re-running `install.sh` on an existing install
+
+*Added 2026-11-22 (PR #80).* When `./data`, `./darkmoon-settings` or `./workflows` already hold files, `install.sh`
+stops before touching anything and shows what a rebuild would delete:
+
+- each folder with its number of files;
+- every agent in `darkmoon-settings/agents/` that is not a shipped default, flagged `(custom)` (new) or
+  `(modified)` (differs from `conf/agents/`);
+- a reminder that `.opencode.env` is kept unless you pass `--init`.
+
+It then asks `Continue? [y/N]` on the terminal (`/dev/tty`). The default is **No**: the install stops with
+*Aborted: nothing was deleted.* and a hint to copy `darkmoon-settings` first. Without a terminal (CI, cron) it stops
+the same way, unless you pass `--yes` (`-y`) or set `DARKMOON_ASSUME_YES=1`.
+
+On **yes**, the folders are not deleted: each one is moved to `<folder>.backup-<YYYYMMDD-HHMMSS>` next to
+`install.sh` (if a move fails, the install stops and nothing is deleted). At the end the installer prints where your
+previous settings are, for example:
+
+```bash
+cp darkmoon-settings.backup-<date>/agents/my-agent.md darkmoon-settings/agents/
+```
+
+The backups are never removed by Darkmoon; delete them yourself once you no longer need them.
 
 ##### When to use `install.sh`
 
@@ -1292,6 +1432,19 @@ The user receives a **monitoring command** to observe the assessment in real tim
 This allows the user to track the progress of the audit while it runs.
 
 <img src="pics/log.png" height="500">
+
+`./darkmoon.sh --log <session_id>` (or `darkmoon --log <session_id>`) opens a live console that prints every command
+the agent runs on that session, with its output, as it runs. *Fixed 2026-11-22:* the console now listens on the
+session's own stream (`/tmp/darkmoon_mcp_stream_<session_id>.sock`, where the MCP server broadcasts the commands of
+that session) as well as the shared one; before, it ignored the session id and showed only
+`darkmoon(live)> streaming MCP output...`. The session id must be letters, digits, `-` or `_` (64 characters at most).
+
+It is a live stream, not a replay: only output produced while the console is open is shown. After 20 seconds without
+any output it prints a hint: *no command output yet. This console shows commands while they run; if the session has
+already ended, or its agent never ran a command (for example the model declined the task), there is nothing to
+stream: see the web dashboard (Live output / run history).* (The web dashboard is part of Darkmoon Pro; in
+Community, the agent's transcript is the console session itself.) `Ctrl+C` quits.
+
 
 ---
 
