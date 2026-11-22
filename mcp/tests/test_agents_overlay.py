@@ -166,6 +166,9 @@ def test_old_compose_mount_is_left_as_it_was_with_a_warning(env):
     assert listing(env["overlay"]) == env["old"]
     assert "still mounts darkmoon-settings/agents" in out
     assert not list(env["settings"].glob("agents-backup-*"))
+    # install.sh deletes darkmoon-settings (customised agents included, no backup): the warning must not send a user
+    # with customisations there
+    assert "docker compose up -d" in out and "Do not use ./install.sh" in out
 
 
 # --- the shipped list -------------------------------------------------------------------------------------------

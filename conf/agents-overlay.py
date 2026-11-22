@@ -171,8 +171,8 @@ def run(image, overlay, runtime, shipped_list):
             shutil.copytree(image, runtime, dirs_exist_ok=True)
         log("WARNING: docker-compose.yml still mounts darkmoon-settings/agents on /root/.opencode/agents (layout from "
             "before the agent overlay): the shipped agents in that folder are NOT updated by this image. Update "
-            "docker-compose.yml (git pull, then ./install.sh or docker compose up -d) to run the agents of the image "
-            "with your own changes on top.")
+            "docker-compose.yml (git pull, then docker compose up -d) to run the agents of the image with your own "
+            "changes on top. Do not use ./install.sh for this: it deletes darkmoon-settings, your agents included.")
         return
     os.makedirs(overlay, exist_ok=True)
     migrate(image, overlay, shipped_list)
