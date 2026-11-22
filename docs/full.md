@@ -706,6 +706,17 @@ OPENCODE_LOCAL_MODEL=Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf
 OPENCODE_LOCAL_API_KEY=sk-...
 ```
 
+**Azure AI Foundry / Azure OpenAI (native mode, opencode's built-in `azure` provider):**
+
+```env
+# Darkmoon — Azure AI Foundry / Azure OpenAI
+AZURE_RESOURCE_NAME=my-resource      # <resource>.openai.azure.com / .services.ai.azure.com / .cognitiveservices.azure.com
+AZURE_API_KEY=...
+AZURE_MODEL=my-deployment            # the deployment name
+# Optional — chat/completions instead of the Responses API, for a deployment that does not serve it
+# AZURE_USE_COMPLETION_URLS=true
+```
+
 **On-prem Anthropic-compatible:**
 
 ```env
@@ -737,6 +748,20 @@ ANTHROPIC_API_KEY=sk-...
 | `OPENCODE_LOCAL_PROVIDER_NAME`| Display name                              |
 | `OPENCODE_LOCAL_BASE_URL`     | OpenAI-compatible endpoint URL            |
 | `OPENCODE_LOCAL_MODEL`        | Model name served by the local server     |
+| `OPENCODE_LOCAL_API_KEY`      | Optional Bearer key of the endpoint       |
+| `OPENCODE_LOCAL_NPM`          | Optional adapter: `@ai-sdk/openai-compatible` (default, `chat/completions` with `max_tokens`) or `@ai-sdk/openai` (Responses API, for OpenAI reasoning models behind OpenAI's own API or an OpenAI-native proxy). Any other value falls back to the default with a warning |
+| `OPENCODE_LOCAL_AZURE_NATIVE` | `false` keeps an Azure URL on the generic adapter (see below)   |
+
+**Azure AI Foundry / Azure OpenAI variables (native mode):**
+
+| Variable                    | Role                                                                  |
+| --------------------------- | --------------------------------------------------------------------- |
+| `AZURE_RESOURCE_NAME`       | Azure resource name (the first label of the endpoint host)            |
+| `AZURE_API_KEY`             | Resource key, read from the environment (never written to `opencode.json`) |
+| `AZURE_MODEL`               | Deployment name                                                       |
+| `AZURE_USE_COMPLETION_URLS` | `true` = `chat/completions` instead of the Responses API              |
+
+A local / custom URL on `*.openai.azure.com`, `*.services.ai.azure.com` or `*.cognitiveservices.azure.com` is switched to the native Azure mode automatically (the generic OpenAI-compatible adapter sends `max_tokens`, which OpenAI reasoning deployments reject with `Use 'max_completion_tokens' instead`). Never hand-edit or bind-mount the generated `opencode.json`: it is rewritten at every start.
 
 **On-prem Anthropic-compatible variables:**
 
