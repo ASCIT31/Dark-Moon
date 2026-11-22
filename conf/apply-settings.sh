@@ -491,6 +491,39 @@ EOF
 
 echo "✅ OpenCode config written to $OPENCODE_CONFIG_FILE"
 
+# Compatibility with a customised orchestrator from before the native dispatch. The orchestrator now takes its
+# sub-agents from the task tool's own list (opencode lists every "subagent" with its description) and never reads agent
+# files. An older pentest.md, customised by the user (darkmoon-settings/agents overrides the shipped agent,
+# conf/agents-overlay.py) or still in place under an old docker-compose.yml, reads each agent's "prompt_file" from the
+# "agent" map of opencode.json. That key is then restored there (only that one, only in this case) so it keeps
+# dispatching exactly as before the update; the start log says what to merge. Strict OpenAI-compatible endpoints
+# (Azure AI Foundry) reject the key, as they did before.
+DARKMOON_AGENTS_DIR="${DARKMOON_AGENTS_DIR:-/root/.opencode/agents}"
+if [ -f "$DARKMOON_AGENTS_DIR/pentest.md" ] && grep -q "entry in opencode.json" "$DARKMOON_AGENTS_DIR/pentest.md"; then
+  python3 - "$OPENCODE_CONFIG_FILE" "$DARKMOON_AGENTS_DIR" <<'COMPATEOF'
+import json, os, re, sys
+cfg_path, agents_dir = sys.argv[1], sys.argv[2]
+files = {}
+for f in sorted(os.listdir(agents_dir)):
+    if not f.endswith(".md"):
+        continue
+    text = open(os.path.join(agents_dir, f), encoding="utf-8", errors="replace").read().replace("\r\n", "\n")
+    name = f[:-3]
+    if text.startswith("---") and text[3:4] != "-":        # opencode's name for the file: front-matter name, else file
+        m = re.search(r"^name:\s*(\S+)\s*$", text[3:].split("\n---", 1)[0], re.M)
+        name = m.group(1) if m else name
+    files[name] = os.path.join(agents_dir, f)
+cfg = json.load(open(cfg_path))
+for name, block in cfg.get("agent", {}).items():
+    if name in files:
+        block["prompt_file"] = files[name]
+with open(cfg_path, "w") as fh:
+    json.dump(cfg, fh, indent=2)
+    fh.write("\n")
+COMPATEOF
+  log "WARNING: the pentest.md in use predates the native agent dispatch (customised in darkmoon-settings/agents, or an old docker-compose.yml): compatibility mode, \"prompt_file\" kept in opencode.json. Merge the shipped /opt/darkmoon/default-agents/pentest.md into yours (sub-agents now come from the task tool's own list, no agent file is read); strict endpoints (Azure AI Foundry) reject the key until then"
+fi
+
 # TUI config (opencode >= 1.19): the Darkmoon Terminal Explorer, a read-only TUI plugin that browses the local
 # projects, campaigns, findings, reports and attack paths (/explore; no model call). Community reads the local
 # store through darkmoon_explore.py; evidence is masked before display, or withheld if it cannot be masked.
