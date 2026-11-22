@@ -147,7 +147,7 @@ RUN printf '%s\n' \
   '#!/usr/bin/env bash' \
   'cd /opt/darkmoon/mcp/server' \
   'source .venv/bin/activate' \
-  'exec python -m src.mcp_monitoring' \
+  'exec python -m src.mcp_monitoring "$@"' \
   > /usr/local/bin/darkmoon-cli \
  && chmod +x /usr/local/bin/darkmoon-cli
 

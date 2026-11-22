@@ -26,6 +26,24 @@ OPENCODE_LOCAL_PROVIDER_NAME="${OPENCODE_LOCAL_PROVIDER_NAME:-Local model}"
 OPENCODE_LOCAL_BASE_URL="${OPENCODE_LOCAL_BASE_URL:-}"
 OPENCODE_LOCAL_MODEL="${OPENCODE_LOCAL_MODEL:-}"
 OPENCODE_LOCAL_API_KEY="${OPENCODE_LOCAL_API_KEY:-}"
+# AI SDK adapter of the local / custom provider. Default: the generic OpenAI-compatible adapter (chat/completions with
+# max_tokens), right for Ollama, llama.cpp, vLLM, LiteLLM... OpenAI reasoning models reject max_tokens and need the
+# OpenAI adapter (Responses API, max_output_tokens). Azure endpoints get the native Azure mode below without this
+# setting; OPENCODE_LOCAL_NPM=@ai-sdk/openai remains for OpenAI's own API or an OpenAI-native proxy serving reasoning
+# models through the custom-URL provider. Only adapters bundled in the opencode binary are accepted (nothing is fetched).
+OPENCODE_LOCAL_NPM="${OPENCODE_LOCAL_NPM:-}"
+# A local / custom URL on Azure (*.openai.azure.com, *.services.ai.azure.com, *.cognitiveservices.azure.com) is turned
+# into the native Azure mode; OPENCODE_LOCAL_AZURE_NATIVE=false keeps it on the generic adapter.
+OPENCODE_LOCAL_AZURE_NATIVE="${OPENCODE_LOCAL_AZURE_NATIVE:-true}"
+
+# Azure AI Foundry / Azure OpenAI, native mode: opencode's built-in "azure" provider (@ai-sdk/azure, Responses API).
+# AZURE_RESOURCE_NAME and AZURE_API_KEY are opencode's own variables; AZURE_MODEL is the deployment name.
+# AZURE_USE_COMPLETION_URLS=true sends chat/completions instead, for a deployment that does not serve the Responses API.
+AZURE_RESOURCE_NAME="${AZURE_RESOURCE_NAME:-}"
+AZURE_API_KEY="${AZURE_API_KEY:-}"
+AZURE_MODEL="${AZURE_MODEL:-}"
+AZURE_USE_COMPLETION_URLS="${AZURE_USE_COMPLETION_URLS:-false}"
+AZURE_KEY_ENV="AZURE_API_KEY"
 
 # On-prem Anthropic-compatible vars (opencode reads ANTHROPIC_BASE_URL / ANTHROPIC_API_KEY from env)
 ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-}"
@@ -35,11 +53,39 @@ ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-}"
 # Decide model strategy
 # Priority: local > anthropic > cloud > fallback
 #######################################
+USE_AZURE=false
 USE_LOCAL=false
 USE_ANTHROPIC=false
 USE_OPENROUTER=false
 
-if [ "${OPENCODE_LOCAL_MODE}" = "true" ] && \
+# Native Azure mode, explicit (AZURE_*) or from a local / custom URL that is an Azure resource endpoint. The generic
+# OpenAI-compatible adapter fails there: it sends max_tokens, which OpenAI reasoning deployments reject.
+_azure_resource_of(){  # <url> -> resource name when the host is an Azure resource endpoint, else nothing
+  local h="${1#*://}"; h="${h%%/*}"; h="${h%%:*}"; h="$(printf '%s' "$h" | tr 'A-Z' 'a-z')"
+  case "$h" in
+    *.openai.azure.com|*.services.ai.azure.com|*.cognitiveservices.azure.com)
+      local r="${h%%.*}"; [[ "$r" =~ ^[a-z0-9][a-z0-9-]*$ ]] && printf '%s' "$r" ;;
+  esac
+}
+if [ -n "${AZURE_RESOURCE_NAME}" ] && [ -n "${AZURE_MODEL}" ]; then
+  # both are written into opencode.json: plain names only (no quote, backslash or space can reach the JSON)
+  if [[ "${AZURE_RESOURCE_NAME}" =~ ^[A-Za-z0-9][A-Za-z0-9-]*$ ]] && [[ "${AZURE_MODEL}" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]*$ ]]; then
+    USE_AZURE=true
+  else
+    log "WARNING: AZURE_RESOURCE_NAME / AZURE_MODEL must be plain names (letters, digits, - . _ :) -- Azure mode not applied"
+  fi
+elif [ "${OPENCODE_LOCAL_MODE}" = "true" ] && [ "${OPENCODE_LOCAL_AZURE_NATIVE}" != "false" ] && \
+     [[ "${OPENCODE_LOCAL_MODEL:-}" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]*$ ]] && [ -n "$(_azure_resource_of "${OPENCODE_LOCAL_BASE_URL:-}")" ]; then
+  USE_AZURE=true
+  AZURE_RESOURCE_NAME="$(_azure_resource_of "${OPENCODE_LOCAL_BASE_URL}")"
+  AZURE_MODEL="${OPENCODE_LOCAL_MODEL}"
+  [ -n "${AZURE_API_KEY}" ] || AZURE_KEY_ENV="OPENCODE_LOCAL_API_KEY"
+  log "Local provider URL is an Azure resource endpoint: using the native Azure provider (OPENCODE_LOCAL_AZURE_NATIVE=false to keep the generic adapter)"
+fi
+
+if [ "$USE_AZURE" = true ]; then
+  :
+elif [ "${OPENCODE_LOCAL_MODE}" = "true" ] && \
    [ -n "${OPENCODE_LOCAL_PROVIDER_ID:-}" ] && \
    [ -n "${OPENCODE_LOCAL_BASE_URL:-}" ] && \
    [ -n "${OPENCODE_LOCAL_MODEL:-}" ]; then
@@ -52,11 +98,21 @@ elif [ -n "${OPENROUTER_PROVIDER:-}" ] && \
   USE_OPENROUTER=true
 fi
 
-if [ "$USE_LOCAL" = true ]; then
+if [ "$USE_AZURE" = true ]; then
+  FINAL_MODEL="azure/${AZURE_MODEL}"
+  log "Using Azure provider (native): resource ${AZURE_RESOURCE_NAME} → model: ${FINAL_MODEL}"
+  [ "${AZURE_USE_COMPLETION_URLS}" = "true" ] && log "Azure: chat/completions API (AZURE_USE_COMPLETION_URLS=true)"
+elif [ "$USE_LOCAL" = true ]; then
   # Local provider: model string is just the model name (no provider/ prefix)
   FINAL_MODEL="${OPENCODE_LOCAL_PROVIDER_ID}/${OPENCODE_LOCAL_MODEL}"
   log "Using local provider: ${OPENCODE_LOCAL_PROVIDER_NAME} → model: ${FINAL_MODEL}"
   log "Base URL: ${OPENCODE_LOCAL_BASE_URL}"
+  case "${OPENCODE_LOCAL_NPM}" in
+    ""|@ai-sdk/openai-compatible) OPENCODE_LOCAL_NPM="@ai-sdk/openai-compatible" ;;
+    @ai-sdk/openai) log "Local provider adapter: ${OPENCODE_LOCAL_NPM}" ;;
+    *) log "WARNING: OPENCODE_LOCAL_NPM='${OPENCODE_LOCAL_NPM}' is not supported (use @ai-sdk/openai-compatible or @ai-sdk/openai; for Azure, use the native Azure mode: AZURE_RESOURCE_NAME + AZURE_API_KEY + AZURE_MODEL) -- falling back to @ai-sdk/openai-compatible"
+       OPENCODE_LOCAL_NPM="@ai-sdk/openai-compatible" ;;
+  esac
   # Cache-health guard: an openai-compatible local provider pointed at an Anthropic
   # endpoint silently disables prompt caching (the cache_control marker is sent in
   # OpenAI form, which Anthropic's OpenAI-compat endpoint ignores -> up to 50-90%
@@ -88,13 +144,37 @@ mkdir -p "$OPENCODE_CONFIG_DIR" "$OPENCODE_AUTH_DIR"
 #######################################
 
 # Build optional provider block.
+# - azure mode  : configures opencode's built-in "azure" provider (no npm to resolve).
 # - local mode  : declares a full OpenAI-compatible provider.
 # - anthropic   : registers the custom model id under the built-in "anthropic"
 #                 provider, otherwise opencode validates the configured model
 #                 against its hard-coded catalogue and rejects it with
 #                 ProviderModelNotFoundError.
 PROVIDER_BLOCK=""
-if [ "$USE_LOCAL" = true ]; then
+if [ "$USE_AZURE" = true ]; then
+  # The key is referenced, never written: opencode resolves {env:…} at load time from its own environment
+  # (.opencode.env), so opencode.json never holds it.
+  AZURE_MODEL_OPTIONS=""
+  [ "${AZURE_USE_COMPLETION_URLS}" = "true" ] && AZURE_MODEL_OPTIONS=$(printf ',\n          "options": { "useCompletionUrls": true }')
+  PROVIDER_BLOCK=$(cat <<PROVEOF
+,
+
+  "provider": {
+    "azure": {
+      "options": {
+        "resourceName": "${AZURE_RESOURCE_NAME}",
+        "apiKey": "{env:${AZURE_KEY_ENV}}"
+      },
+      "models": {
+        "${AZURE_MODEL}": {
+          "name": "${AZURE_MODEL}"${AZURE_MODEL_OPTIONS}
+        }
+      }
+    }
+  }
+PROVEOF
+)
+elif [ "$USE_LOCAL" = true ]; then
   # Optional API key for authenticated OpenAI-compatible endpoints (Bearer auth).
   # JSON-escaped via python3 so keys containing quotes/backslashes can't break the config.
   LOCAL_API_KEY_OPTION=""
@@ -106,7 +186,7 @@ if [ "$USE_LOCAL" = true ]; then
 
   "provider": {
     "${OPENCODE_LOCAL_PROVIDER_ID}": {
-      "npm": "@ai-sdk/openai-compatible",
+      "npm": "${OPENCODE_LOCAL_NPM}",
       "name": "${OPENCODE_LOCAL_PROVIDER_NAME}",
       "options": {
         "baseURL": "${OPENCODE_LOCAL_BASE_URL}"${LOCAL_API_KEY_OPTION}
@@ -537,6 +617,9 @@ if [ "$USE_OPENROUTER" = true ]; then
 }
 EOF
   echo "✅ OpenCode auth written to $OPENCODE_AUTH_FILE"
+elif [ "$USE_AZURE" = true ]; then
+  rm -f "$OPENCODE_AUTH_FILE"
+  log "Azure provider — key read from the environment, no auth.json needed"
 elif [ "$USE_LOCAL" = true ]; then
   rm -f "$OPENCODE_AUTH_FILE"
   log "Local provider — no auth.json needed"
