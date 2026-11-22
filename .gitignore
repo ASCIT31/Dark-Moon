@@ -28,3 +28,6 @@ desktop.ini
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Backups made by install.sh before re-installing over an existing install
+*.backup-*/

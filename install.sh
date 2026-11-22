@@ -23,6 +23,8 @@ RESET="\033[0m"
 # Parse args
 # ─────────────────────────────────────────────────────────────────
 FORCE_RESET=false
+ASSUME_YES=false
+case "${DARKMOON_ASSUME_YES:-}" in 1|true|TRUE|yes|YES|y|Y) ASSUME_YES=true ;; esac
 for ARG in "$@"; do
   case "${ARG}" in
     --help|-h)
@@ -30,6 +32,8 @@ for ARG in "$@"; do
       echo ""
       echo "Options:"
       echo "  --init    Force LLM provider reconfiguration (ignores existing .opencode.env)"
+      echo "  --yes     Re-install over an existing install without asking (a backup is still made)"
+      echo "            Same as DARKMOON_ASSUME_YES=1. Required when there is no terminal (CI, cron)."
       echo "  --help    Show this help"
       echo ""
       echo "Examples:"
@@ -37,6 +41,7 @@ for ARG in "$@"; do
       echo "  ./install.sh --init    # rebuild and reconfigure LLM provider"
       exit 0 ;;
     --reset|--init) FORCE_RESET=true ;;
+    --yes|-y) ASSUME_YES=true ;;
   esac
 done
 
@@ -78,6 +83,80 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 
 echo -e "${GREEN}✔ Docker and Docker Compose detected${RESET}"
+
+# ─────────────────────────────────────────────────────────────────
+# Existing install: confirm before purging user data
+# ─────────────────────────────────────────────────────────────────
+# The rebuild below deletes the bind-mounted folders (./darkmoon-settings holds
+# the opencode config, its local state and every agent, custom ones included).
+# On an existing install, say exactly what goes and ask first; on "yes" the
+# folders are moved to a timestamped backup instead of being lost.
+EXISTING_PATHS=()
+BACKUP_STAMP=""
+for path in "${BIND_PATHS[@]}"; do
+  if [ -d "$path" ] && [ -n "$(ls -A "$path" 2>/dev/null)" ]; then
+    EXISTING_PATHS+=("$path")
+  fi
+done
+
+if [ "${#EXISTING_PATHS[@]}" -gt 0 ]; then
+  echo ""
+  echo -e "${BOLD}${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo -e "  ⚠  EXISTING DARKMOON INSTALL DETECTED"
+  echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+  echo -e "${YELLOW}Re-running the installer stops the stack, rebuilds it and DELETES:${RESET}"
+  for path in "${EXISTING_PATHS[@]}"; do
+    count="$(find "$path" -type f 2>/dev/null | wc -l | tr -d ' ')"
+    echo -e "  ${RED}- ${SCRIPT_DIR}/${path#./}${RESET}  (${count} files)"
+  done
+
+  # Agents that are not the shipped ones (new or edited) are the user's own work.
+  CUSTOM_AGENTS=()
+  if [ -d "./darkmoon-settings/agents" ]; then
+    for agent in ./darkmoon-settings/agents/*; do
+      [ -f "$agent" ] || continue
+      shipped="./conf/agents/$(basename "$agent")"
+      if [ ! -f "$shipped" ]; then
+        CUSTOM_AGENTS+=("$(basename "$agent") (custom)")
+      elif ! cmp -s "$agent" "$shipped"; then
+        CUSTOM_AGENTS+=("$(basename "$agent") (modified)")
+      fi
+    done
+  fi
+  if [ "${#CUSTOM_AGENTS[@]}" -gt 0 ]; then
+    echo -e "${YELLOW}Including ${#CUSTOM_AGENTS[@]} agent file(s) that are not the shipped defaults:${RESET}"
+    for agent in "${CUSTOM_AGENTS[@]}"; do
+      echo -e "  ${RED}- darkmoon-settings/agents/${agent}${RESET}"
+    done
+  fi
+  echo -e "${YELLOW}(.opencode.env is kept unless you pass --init.)${RESET}"
+  echo ""
+
+  BACKUP_HINT="To keep a copy first:  cp -a darkmoon-settings darkmoon-settings.backup-\$(date +%Y%m%d-%H%M%S)"
+  if [ "${ASSUME_YES}" = true ]; then
+    echo -e "${YELLOW}--yes / DARKMOON_ASSUME_YES=1 set: continuing (a backup is made first).${RESET}"
+  elif ! (exec 3</dev/tty) 2>/dev/null; then
+    echo -e "${RED}❌ No terminal to confirm on: nothing was deleted, install aborted.${RESET}"
+    echo -e "${YELLOW}${BACKUP_HINT}${RESET}"
+    echo -e "${YELLOW}To re-install unattended (backup made automatically): ./install.sh --yes  or  DARKMOON_ASSUME_YES=1 ./install.sh${RESET}"
+    exit 1
+  else
+    read -r -p "$(echo -e "${YELLOW}Continue? [y/N]: ${RESET}")" CONFIRM </dev/tty || CONFIRM=""
+    case "${CONFIRM}" in
+      y|Y|yes|YES|Yes) ;;
+      *)
+        echo -e "${GREEN}Aborted: nothing was deleted.${RESET}"
+        echo -e "${YELLOW}${BACKUP_HINT}${RESET}"
+        exit 1 ;;
+    esac
+  fi
+
+  # Taken at the purge step below, once the stack is stopped.
+  BACKUP_STAMP="$(date +%Y%m%d-%H%M%S)"
+  for path in "${EXISTING_PATHS[@]}"; do
+    echo -e "${GREEN}  Backup: ${SCRIPT_DIR}/${path#./}.backup-${BACKUP_STAMP}${RESET}"
+  done
+fi
 
 # ─────────────────────────────────────────────────────────────────
 # Save .opencode.env BEFORE purge (unless --init)
@@ -284,7 +363,15 @@ docker compose down --remove-orphans --volumes --rmi all
 
 echo -e "${BLUE}🧹 Purging bind mounts...${RESET}"
 for path in "${BIND_PATHS[@]}"; do
-  if [ -d "$path" ]; then
+  if [ -d "$path" ] && [ -n "$(ls -A "$path" 2>/dev/null)" ] && [ -n "${BACKUP_STAMP:-}" ]; then
+    # Confirmed above: keep the user's data as a timestamped backup, never a plain delete.
+    backup="${path}.backup-${BACKUP_STAMP}"
+    if ! mv "$path" "$backup"; then
+      echo -e "${RED}❌ Could not back up ${path} to ${backup}: it was NOT deleted, install aborted.${RESET}"
+      exit 1
+    fi
+    echo -e "${GREEN}  ✔ ${path} backed up to ${SCRIPT_DIR}/${backup#./}${RESET}"
+  elif [ -d "$path" ]; then
     echo -e "${YELLOW}  - removing ${path}${RESET}"
     rm -rf "$path"
   else
@@ -325,3 +412,7 @@ echo -e "${BLUE}🚀 Recreating containers...${RESET}"
 docker compose $COMPOSE_ARGS up -d --force-recreate
 
 echo -e "${GREEN}✅ Darkmoon stack rebuilt CLEAN${RESET}"
+if [ -n "${BACKUP_STAMP}" ] && [ -d "./darkmoon-settings.backup-${BACKUP_STAMP}" ]; then
+  echo -e "${YELLOW}Your previous settings (custom agents included) are in ${SCRIPT_DIR}/darkmoon-settings.backup-${BACKUP_STAMP}${RESET}"
+  echo -e "${YELLOW}Copy back what you need, e.g.: cp darkmoon-settings.backup-${BACKUP_STAMP}/agents/my-agent.md darkmoon-settings/agents/${RESET}"
+fi
