@@ -362,6 +362,17 @@ Multiple agents can execute **in parallel** across hybrid architectures.
 
 Planes that require credentials to be meaningful (cloud accounts, CI/CD, secret stores, databases, Active Directory, Kubernetes) are **never dispatched on inference**. They fire only when a concrete artifact is found (a key, a token, a reachable metadata endpoint) or when you authorize them explicitly, and are otherwise flagged in the report.
 
+The orchestrator dispatches its specialists natively, through opencode's `task` tool: it picks from the list of installed agents (name and description), and each specialist runs with its own playbook.
+
+**Custom agents.** The shipped agents always come from the image, so an update always brings their new version. Put your own agents in `darkmoon-settings/agents/`: a new file adds an agent; a file named like a shipped one (for example `aws.md`) replaces it. To customise a shipped agent, copy it there and edit it:
+
+```bash
+docker compose exec opencode cat /opt/darkmoon/default-agents/aws.md > darkmoon-settings/agents/aws.md
+docker compose restart opencode
+```
+
+Upgrading an older install: at the first start, `darkmoon-settings/agents` is backed up to `darkmoon-settings/agents-backup-<date>/`, unmodified copies of shipped agents are removed from it, and your modified files are kept and listed in the start log. An old `docker-compose.yml` that still mounts the agents folder keeps working with a warning: run `git pull`, then `docker compose up -d`.
+
 > **Note:** For the complete list of agents, their structure, lifecycle, and how to create custom agents, see [Full Documentation, AI Agents](docs/full.md#v-ai-agents).
 
 ### Architecture Overview
