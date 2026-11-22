@@ -79,10 +79,10 @@ A platform that allows you to conduct a complete penetration testing campaign
     - [V.5.c Communication](#v5c-communication)
   - [V.6. Where Agents Live](#v6-where-agents-live)
     - [V.6.a Before Build](#v6a-before-build)
-    - [V.6.b After Build (Recommended)](#v6b-after-build-recommended)
+    - [V.6.b After Build: your agents in darkmoon-settings/agents (overlay)](#v6b-after-build-your-agents-in-darkmoon-settingsagents-overlay)
   - [V.7. Agent Lifecycle](#v7-agent-lifecycle)
   - [V.8. Adding a New Agent](#v8-adding-a-new-agent)
-    - [V.8.a. Method 1 — After Build (Recommended)](#v8a-method-1--after-build-recommended)
+    - [V.8.a. Method 1 — After Build, in the overlay (Recommended)](#v8a-method-1--after-build-in-the-overlay-recommended)
     - [V.8.b. Method 2 — Before Build](#v8b-method-2--before-build)
   - [V.9. Best Practices](#v9-best-practices)
   - [V.10. Summary](#v10-summary)
@@ -1047,15 +1047,19 @@ Configuration files are persisted via Docker volumes.
 ```yaml
 - ./darkmoon-settings:/root/.config/opencode/:rw
 - ./darkmoon-settings:/root/.local/share/opencode/:rw
-- ./darkmoon-settings/agents:/root/.opencode/agents/:rw
 ```
+
+*Updated 2026-11-22 (PR #79).* `darkmoon-settings/agents` is no longer mounted on `/root/.opencode/agents`. It is
+reached through the first mount (`/root/.config/opencode/agents`) and holds only your own agents: an overlay on the
+agents shipped in the image (see [V.6.b](#v6b-after-build-your-agents-in-darkmoon-settingsagents-overlay)). A
+`docker-compose.yml` that still has the third line is the layout from before the overlay: the start log warns about it.
 
 [Back to Summary](#summary)
 
 ### II.5.b What this allows
 
 - Modify the configuration **without rebuild**
-- Add or modify AI agents
+- Add AI agents, or replace a shipped agent with your own version (overlay)
 - Keep logs and OpenCode state
 
 ## II.6. Build and launch Darkmoon
@@ -2168,7 +2172,9 @@ The front matter holds opencode's own agent keys only (`name`, `description`, `m
 
 **Custom agents (overlay).** The shipped agents always come from the image, so an update always brings their new version. `darkmoon-settings/agents/` holds **only your own agents**: put a new `<name>.md` there to add an agent, or a file named like a shipped one (`aws.md`, `pentest.md`…) to replace it with your version. The shipped versions are readable in the container (`docker compose exec opencode ls /opt/darkmoon/default-agents/`), so you can start from a copy: `docker compose exec opencode cat /opt/darkmoon/default-agents/aws.md > darkmoon-settings/agents/aws.md`. At each start the stack composes the image's agents and yours into `/root/.opencode/agents` (rebuilt every time, never persisted); the start log (`docker logs opencode`) lists the agents you replace or add. After adding, changing or deleting a file, restart (`docker compose restart opencode`): until then a changed agent keeps its previous version (a new file is listed at once). To go back to a shipped agent, delete your file and restart.
 
-*Upgrading an install from before the overlay:* `darkmoon-settings/agents/` used to receive a copy of every shipped agent. At the first start with the new `docker-compose.yml`, the whole folder is backed up to `darkmoon-settings/agents-backup-<date>/`, then every file byte-identical to a version Darkmoon shipped (`conf/agents-shipped.sha256`) is removed from it, since it was never customised. Files you modified stay as your customisations and are listed once in the start log. A customised `pentest.md` from before the native agent dispatch (it reads `prompt_file` entries from `opencode.json`) keeps working in a compatibility mode until you merge it, except on strict endpoints (Azure AI Foundry), which reject that mode's `prompt_file` key. With the old `docker-compose.yml`, which mounted `darkmoon-settings/agents` on `/root/.opencode/agents`, nothing changes and a warning asks you to update it: `git pull`, then `docker compose up -d`. Do not use `./install.sh` for this: it deletes `darkmoon-settings` (your agents included, with no backup), so copy your own agents out first if you run it.
+*Upgrading an install from before the overlay:* `darkmoon-settings/agents/` used to receive a copy of every shipped agent. At the first start with the new `docker-compose.yml`, the whole folder is backed up to `darkmoon-settings/agents-backup-<date>/`, then every file byte-identical to a version Darkmoon shipped (`conf/agents-shipped.sha256`) is removed from it, since it was never customised. Files you modified stay as your customisations and are listed once in the start log. A customised `pentest.md` from before the native agent dispatch (it reads `prompt_file` entries from `opencode.json`) keeps working in a compatibility mode until you merge it, except on strict endpoints (Azure AI Foundry), which reject that mode's `prompt_file` key. With the old `docker-compose.yml`, which mounted `darkmoon-settings/agents` on `/root/.opencode/agents`, nothing changes and a warning asks you to update it: `git pull`, then `docker compose up -d`. `./install.sh` is not the way to do this: it rebuilds the install from scratch. Since PR #80 it first lists your custom agents, asks `Continue? [y/N]` and moves `darkmoon-settings` to `darkmoon-settings.backup-<date>` rather than deleting it (see [Re-running install.sh](#re-running-installsh-on-an-existing-install)), but you then have to copy your agents back yourself.
+
+*Updated 2026-11-22: native dispatch is shipped (PR #79, merge `e84c771`).* Before this release the orchestrator looked its specialists up in an agent registry and read their files, and the agent blocks carried Darkmoon keys (`id`, `mcp`, `secondary`, `prompt_file`) that strict endpoints rejected. Compared on the same lab target and model before the merge, the previous build dispatched no specialist and the new one two to three per run.
 
 [Back to Summary](#summary)
 
@@ -2283,41 +2289,90 @@ conf/agents/
 
 These agents are:
 
-- integrated into the image,
-- automatically copied at first launch.
+- integrated into the image (`/opt/darkmoon/default-agents/`),
+- used at every start, so an update always brings their new version (they are never copied into `darkmoon-settings`).
 
 [Back to Summary](#summary)
 
-### V.6.b After Build (Recommended)
+### V.6.b After Build: your agents in darkmoon-settings/agents (overlay)
 
 ```
 darkmoon-settings/agents/
 ```
 
+*Updated 2026-11-22 (PR #79).* This folder holds **only your own agents**:
+
+- a file with a new name (`my-agent.md`) **adds** an agent;
+- a file named like a shipped agent (`aws.md`, `graphql.md`, `pentest.md`…) **replaces** the shipped one with your version.
+
+To override a shipped agent, copy it into the folder under the same name, edit the copy, then restart:
+
+```bash
+docker compose exec opencode ls /opt/darkmoon/default-agents/          # the shipped agents
+docker compose exec opencode cat /opt/darkmoon/default-agents/aws.md > darkmoon-settings/agents/aws.md
+# edit darkmoon-settings/agents/aws.md
+docker compose restart opencode
+```
+
+At each start, `conf/agents-overlay.py` rebuilds `/root/.opencode/agents` (container filesystem, never persisted)
+from the image's agents plus yours, and the start log (`docker logs opencode`) lists the agents you replace and the
+ones you add. A changed or deleted file takes effect at the next restart. To go back to the shipped version, delete
+your file and restart. A file you keep there is not updated by Darkmoon updates: compare it with the shipped version
+after an update.
+
 Advantages:
 
 - modify without rebuild,
 - persistence,
-- external versioning.
+- external versioning,
+- shipped agents stay up to date.
+
+**Upgrading an install from before the overlay (one time).** The old layout copied every shipped agent into
+`darkmoon-settings/agents` once. At the first start with the new `docker-compose.yml`:
+
+1. the whole folder is copied to `darkmoon-settings/agents-backup-<YYYYMMDD-HHMMSS>/` (never removed by Darkmoon);
+2. every file byte-identical to a version Darkmoon shipped (`conf/agents-shipped.sha256`, generated by
+   `tools/agent-build/shipped_hashes.py`) is removed from the folder: you never changed it and the image provides it;
+3. every other file stays as your customisation, and a NOTICE in the start log lists it once, with how to read the
+   shipped version, and flags a file whose front matter still has an `id:` line (delete that line: `name` is the
+   agent id);
+4. a marker file, `darkmoon-settings/.darkmoon-agents-overlay`, makes this run only once. Afterwards, a copy you put
+   in the folder is a deliberate override.
+
+If the list of shipped versions cannot be read, nothing is removed and the log says so.
+
+**Customised `pentest.md` from before native dispatch.** It is kept and keeps working: `apply-settings.sh` restores
+the former `prompt_file` lookup in `opencode.json` for it (compatibility mode), and the start log says that the agent
+registry is gone and that specialists now come from the `task` tool's list. Strict endpoints (Azure AI Foundry)
+reject that `prompt_file` key, as they did before the update: merge your changes into the shipped `pentest.md` to
+leave compatibility mode.
+
+**Old `docker-compose.yml`** (still mounting `darkmoon-settings/agents` on `/root/.opencode/agents`): the folder is
+left exactly as it is, and a WARNING in the start log says that the shipped agents in it are not updated by the image.
+Update the compose file (`git pull`, then `docker compose up -d`).
 
 [Back to Summary](#summary)
 
 ## V.7. Agent Lifecycle
 
-1. OpenCode starts
-2. Checks if agents already exist
-3. Initial seed if needed
-4. Dynamic loading
+1. The container starts: `conf/agents-overlay.py` composes `/root/.opencode/agents` from the image's agents and
+   `darkmoon-settings/agents` (one-time migration of an old install first)
+2. `apply-settings.sh` writes each shipped agent's `model` and `mode` (`primary` for `pentest`, `subagent` for the
+   others) into `opencode.json`
+3. OpenCode loads every agent file under its front-matter `name`
+4. The `pentest` orchestrator dispatches specialists through the `task` tool, from the list it shows
+   (`<name>: <description>`); an unknown agent is reported `AGENT NOT AVAILABLE`, never replaced by a generic agent
 5. On-demand execution
 
 > [!NOTE]
-> The seed only happens **once**.
+> *Updated 2026-11-22 (PR #79).* There is no one-time seed any more: the runtime agent directory is rebuilt at
+> every start.
 
 [Back to Summary](#summary)
 
 ## V.8. Adding a New Agent
 
-### V.8.a. Method 1 — After Build (Recommended)
+### V.8.a. Method 1 — After Build, in the overlay (Recommended)
 
 1. Create a `.md` file in:
 
@@ -2325,8 +2380,19 @@ Advantages:
 darkmoon-settings/agents/
 ```
 
-2. Restart Darkmoon
-3. The agent is immediately available
+   with a front matter of opencode keys only: `name`, a `description` that names the plane it covers (the
+   orchestrator chooses from it), and `mode: subagent`. No `id:` key.
+
+```markdown
+---
+name: my-agent
+description: Fully autonomous pentest sub agent for <plane>
+mode: subagent
+---
+```
+
+2. Restart the `opencode` container (`docker compose restart opencode`)
+3. The agent is listed by the `task` tool and the orchestrator can dispatch it; the start log lists it under *user agents*
 
 [Back to Summary](#summary)
 
@@ -2338,8 +2404,9 @@ darkmoon-settings/agents/
 conf/agents/
 ```
 
-2. Rebuild the stack
-3. The agent will be automatically seeded
+2. Add its block to the `"agent"` map of `conf/apply-settings.sh` (`model` and `mode: subagent`, nothing else) and its
+   signal to the matrix of `pentest.md`
+3. Rebuild the image: the agent ships with the image and is listed by the `task` tool
 
 [Back to Summary](#summary)
 
