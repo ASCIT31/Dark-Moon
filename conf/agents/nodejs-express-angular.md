@@ -1,5 +1,4 @@
 ---
-id: nodejs
 name: nodejs
 description: Autonomous pentest sub-agent using Darkmoon MCP for Node.js (Express / Angular / SPA) applications
 ---

@@ -1,5 +1,4 @@
 ---
-id: pki-adcs
 name: pki-adcs
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for a certificate authority plane (AD CS templates ESC1-ESC16, CA object and registry abuse, NTLM relay to enrollment, generic PKI/ACME/EST/SCEP/client-certificate mapping)
 ---

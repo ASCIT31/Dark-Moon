@@ -1,5 +1,4 @@
 ---
-id: backup
 name: backup
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for an enterprise backup platform (Veeam/Commvault/Rubrik/Cohesity/Veritas/Nakivo/Bacula/Restic/Borg: credential stores, repositories, restore-as-exfiltration)
 ---

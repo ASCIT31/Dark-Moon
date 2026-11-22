@@ -31,6 +31,24 @@ def canonical_banner():
     return "\n".join(lines[open_i:close_i + 1])
 
 
+# opencode's agent config keys (packages/core/src/v1/config/agent.ts, KNOWN_KEYS, at the fork ref pinned in
+# Dockerfile.opencode). Any other key of an agent block or agent front matter is sent to the model as a call option.
+# mcp/tests/test_agent_native_keys.py checks this list against the opencode source when it is available.
+OPENCODE_AGENT_KEYS = ("name", "model", "variant", "prompt", "description", "temperature", "top_p", "mode", "hidden",
+                       "color", "steps", "maxSteps", "options", "permission", "disable", "tools")
+
+
+def frontmatter(text):
+    """The front matter as opencode reads it (gray-matter 4): the file opens with exactly « --- » (a longer dash line is
+    no front matter) and the block ends at the first line that starts with « --- » (ad.md closes on a dash rule)."""
+    text = text.replace("\r\n", "\n")  # a CRLF agent file must not slip past the checks
+    if not text.startswith("---") or text[3:4] == "-":
+        return ""
+    body = text[3:]
+    end = body.find("\n---")
+    return (body if end < 0 else body[:end]).lstrip("\n")
+
+
 # Blocks that belong ONLY to the orchestrator (pentest.md). A secondary that
 # carries them would try to dispatch its own siblings.
 ORCH_ONLY = [
@@ -50,15 +68,17 @@ def validate(path, banner):
     if "\r" in text:
         errs.append("contains CR (must be LF-only)")
 
-    m_id = re.search(r"^id:\s*(\S+)\s*$", text, re.M)
-    m_name = re.search(r"^name:\s*(\S+)\s*$", text, re.M)
-    m_desc = re.search(r"^description:\s*(\S.+)$", text, re.M)
-    if not m_id:
-        errs.append("missing front-matter id")
+    fm = frontmatter(text)
+    m_name = re.search(r"^name:\s*(\S+)\s*$", fm, re.M)
+    m_desc = re.search(r"^description:\s*(\S.+)$", fm, re.M)
+    # opencode's own agent keys only: an unknown front-matter key (the old « id: ») becomes a model call option, and
+    # strict OpenAI-compatible endpoints reject it (« Unrecognized request argument supplied: id »). The agent id is
+    # its « name » (its key in the "agent" map of conf/apply-settings.sh, and its subagent_type).
+    for key in re.findall(r"^([A-Za-z_][\w-]*)\s*:", fm, re.M):
+        if key not in OPENCODE_AGENT_KEYS:
+            errs.append(f"front-matter key '{key}' is not an opencode agent key")
     if not m_name:
         errs.append("missing front-matter name")
-    if m_id and m_name and m_id.group(1) != m_name.group(1):
-        errs.append(f"id ({m_id.group(1)}) != name ({m_name.group(1)})")
     if not m_desc:
         errs.append("missing front-matter description")
 

@@ -1,3 +1,7 @@
+---
+name: kubernetes
+description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for Kubernetes cluster
+---
 --------------------------------------------------------------------
 ID: kubernetes
 NAME: kubernetes

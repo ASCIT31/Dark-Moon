@@ -1,5 +1,4 @@
 ---
-id: edge-proxy
 name: edge-proxy
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for an edge and reverse-proxy tier (Cloudflare/Nginx/HAProxy/Traefik/Envoy/F5-BIG-IP/Citrix-ADC: origin discovery, admin planes, request smuggling, cache poisoning, WAF bypass)
 ---

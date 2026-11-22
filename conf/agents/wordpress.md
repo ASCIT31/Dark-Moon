@@ -1,5 +1,4 @@
 ---
-id: wordpress
 name: wordpress
 description: Fully autonomous pentest sub agent using MCP-backed Darkmoon toolbox for WordPress applications (core, plugins, themes, WP REST API, XML-RPC, WooCommerce)
 ---

@@ -1,5 +1,4 @@
 ---
-id: graphql
 name: graphql
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for graphql application
 ---

@@ -1,5 +1,4 @@
 ---
-id: headless-browser
 name: headless-browser
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for web application navigation with headless browser
 ---

@@ -1,5 +1,4 @@
 ---
-id: hypervisor
 name: hypervisor
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for a virtualization control plane (VMware vSphere/vCenter/ESXi, Proxmox VE, Microsoft Hyper-V, Nutanix Prism, Citrix Virtual Apps and Desktops)
 ---

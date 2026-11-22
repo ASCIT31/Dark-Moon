@@ -1,5 +1,4 @@
 ---
-id: container-registry
 name: container-registry
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for OCI/Docker container registries (Harbor, Docker Registry v2, GHCR, GitLab Registry, Quay, JFrog Artifactory, Nexus, ECR/ACR/GAR)
 ---

@@ -1,5 +1,4 @@
 ---
-id: springboot
 name: springboot
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for java spring boot application
 ---

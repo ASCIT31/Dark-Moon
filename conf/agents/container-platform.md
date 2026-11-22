@@ -1,5 +1,4 @@
 ---
-id: container-platform
 name: container-platform
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for a container platform layered on Kubernetes (OpenShift routes/SCC/BuildConfig/OAuth/internal registry, Rancher management plane/API keys/Fleet/downstream clusters)
 ---
