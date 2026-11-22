@@ -1,6 +1,6 @@
 ---
-id: php
 name: php
+description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for php application
 ------------------------------------------------------------------
 NON-BLOCKING EXECUTION (MANDATORY)
 ------------------------------------------------------------------

@@ -82,12 +82,15 @@ RUN apt-get update && apt-get install -y \
  && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
-# OpenCode Agents (Darkmoon) - ensuite c'est l'entrypoint qui copie-collera dans /root/.opencode/agents
+# OpenCode Agents (Darkmoon): the entrypoint composes them with the user's overlay into /root/.opencode/agents
 # ------------------------------------------------------------
 
 # Agents par défaut (dans l'image)
 RUN mkdir -p /opt/darkmoon/default-agents
 COPY conf/agents/ /opt/darkmoon/default-agents/
+# Every agent file version ever shipped: tells a never-modified file of an old darkmoon-settings/agents from a
+# customisation (one-time migration to the agent overlay, conf/agents-overlay.py)
+COPY conf/agents-shipped.sha256 /opt/darkmoon/agents-shipped.sha256
 
 # Darkmoon privacy plugin (issue #40, section 3): pre-model prompt tokenization.
 # A stable file:// opencode plugin (uses only the public `chat.message` hook +
@@ -215,6 +218,9 @@ EOF
 COPY conf/apply-settings.sh /root/conf/apply-settings.sh
 RUN sed -i 's/\r$//' /root/conf/apply-settings.sh \
  && chmod +x /root/conf/apply-settings.sh
+
+COPY conf/agents-overlay.py /root/conf/agents-overlay.py
+RUN sed -i 's/\r$//' /root/conf/agents-overlay.py
 
 COPY conf/entrypoint-opencode.sh /entrypoint-opencode.sh
 RUN sed -i 's/\r$//' /entrypoint-opencode.sh \

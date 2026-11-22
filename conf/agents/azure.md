@@ -1,5 +1,4 @@
 ---
-id: azure
 name: azure
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for a Microsoft Azure resource plane (subscriptions/RBAC/managed-identities/VMs/Storage/KeyVault/AppService/Functions/AKS/SQL/Automation/ARM)
 ---

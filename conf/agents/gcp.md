@@ -1,5 +1,4 @@
 ---
-id: gcp
 name: gcp
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for a Google Cloud Platform environment (IAM/service-accounts/impersonation/GCS/GCE/Functions/Run/GKE/SecretManager/BigQuery/CloudSQL/metadata)
 ---

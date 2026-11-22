@@ -1,5 +1,4 @@
 ---
-id: sql-databases
 name: sql-databases
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for relational databases (PostgreSQL/MySQL-MariaDB/MSSQL/Oracle) covering roles-grants, network exposure, file-read-write and command-execution primitives, and data extraction
 ---

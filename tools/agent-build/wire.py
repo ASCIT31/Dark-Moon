@@ -40,7 +40,10 @@ NEW_AGENTS = [
 
 ROSTER_ANCHOR = "    nest\n    any future agent"
 SIGNAL_ANCHOR = "PHASE 3 — REACTIVE FEEDBACK LOOP (CORE MECHANISM)"
-APPLY_ANCHOR = '"prompt_file": "/root/.opencode/agents/pentest.md"'
+# The orchestrator's block in the opencode.json heredoc. opencode.json carries opencode's own agent keys only (model,
+# mode): an unknown agent key is sent to the model as a call option. opencode loads each agent's playbook natively from
+# its file, and the orchestrator finds the sub-agents in the task tool's own list.
+APPLY_ANCHOR = '      "mode": "primary"\n    },\n'
 
 
 def detect_nl(raw_bytes):
@@ -127,9 +130,7 @@ def apply_block(aid):
     return (
         f'    "{aid}": {{\n'
         f'      "model": "$FINAL_MODEL",\n'
-        f'      "mcp": ["darkmoon"],\n'
-        f'      "secondary": true,\n'
-        f'      "prompt_file": "/root/.opencode/agents/{aid}.md"\n'
+        f'      "mode": "subagent"\n'
         f'    }},\n'
     )
 
@@ -140,9 +141,8 @@ def wire_apply(path):
         return False
     if APPLY_ANCHOR not in text:
         return False
-    idx = text.index(APPLY_ANCHOR)
-    # find the closing "    },\n" of the pentest block right after the anchor
-    close = text.index("\n    },\n", idx) + len("\n    },\n")
+    # right after the closing "    },\n" of the pentest block
+    close = text.index(APPLY_ANCHOR) + len(APPLY_ANCHOR)
     blocks = "\n" + "".join(apply_block(aid) for aid, _ in NEW_AGENTS)
     text = text[:close] + blocks + text[close:]
     write(path, text, nl)

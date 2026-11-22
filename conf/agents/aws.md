@@ -1,5 +1,4 @@
 ---
-id: aws
 name: aws
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for an Amazon Web Services account (IAM/STS/S3/EC2/Lambda/ECS/EKS/API-Gateway/Cognito/Secrets/RDS/CloudFormation/metadata)
 ---

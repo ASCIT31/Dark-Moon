@@ -247,351 +247,282 @@ cat > "$OPENCODE_CONFIG_FILE" <<EOF
   "agent": {
     "pentest": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "primary": true,
-      "prompt_file": "/root/.opencode/agents/pentest.md"
+      "mode": "primary"
     },
 
     "aws": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/aws.md"
+      "mode": "subagent"
     },
     "azure": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/azure.md"
+      "mode": "subagent"
     },
     "entra-id": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/entra-id.md"
+      "mode": "subagent"
     },
     "gcp": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/gcp.md"
+      "mode": "subagent"
     },
     "github": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/github.md"
+      "mode": "subagent"
     },
     "gitlab": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/gitlab.md"
+      "mode": "subagent"
     },
     "jenkins": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/jenkins.md"
+      "mode": "subagent"
     },
     "terraform": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/terraform.md"
+      "mode": "subagent"
     },
     "ansible": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/ansible.md"
+      "mode": "subagent"
     },
     "docker": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/docker.md"
+      "mode": "subagent"
     },
     "container-registry": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/container-registry.md"
+      "mode": "subagent"
     },
     "hashicorp-vault": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/hashicorp-vault.md"
+      "mode": "subagent"
     },
     "sql-databases": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/sql-databases.md"
+      "mode": "subagent"
     },
     "messaging-cache": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/messaging-cache.md"
+      "mode": "subagent"
     },
     "firmware": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/firmware.md"
+      "mode": "subagent"
     },
 
     "sso-idp": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/sso-idp.md"
+      "mode": "subagent"
     },
 
     "gitops": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/gitops.md"
+      "mode": "subagent"
     },
 
     "observability": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/observability.md"
+      "mode": "subagent"
     },
 
     "storage": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/storage.md"
+      "mode": "subagent"
     },
 
     "edge-proxy": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/edge-proxy.md"
+      "mode": "subagent"
     },
 
     "vpn-remote-access": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/vpn-remote-access.md"
+      "mode": "subagent"
     },
 
     "firewall-network": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/firewall-network.md"
+      "mode": "subagent"
     },
 
     "email-infrastructure": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/email-infrastructure.md"
+      "mode": "subagent"
     },
 
     "backup": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/backup.md"
+      "mode": "subagent"
     },
 
     "pki-adcs": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/pki-adcs.md"
+      "mode": "subagent"
     },
 
     "nosql-databases": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/nosql-databases.md"
+      "mode": "subagent"
     },
 
     "container-platform": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/container-platform.md"
+      "mode": "subagent"
     },
 
     "hypervisor": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/hypervisor.md"
+      "mode": "subagent"
     },
 
     "business-platforms": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/business-platforms.md"
+      "mode": "subagent"
     },
 
     "mobile": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/mobile.md"
+      "mode": "subagent"
     },
 
     "mdm": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/mdm.md"
+      "mode": "subagent"
     },
 
     "active-directory": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/ad.md"
+      "mode": "subagent"
     },
 
     "aspnet": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/aspnet.md"
+      "mode": "subagent"
     },
 
     "python-flask": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/flask.md"
+      "mode": "subagent"
     },
 
     "graphql": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/graphql.md"
+      "mode": "subagent"
     },
 
     "llm": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/llm.md"
+      "mode": "subagent"
     },
 
     "golang": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/golang.md"
+      "mode": "subagent"
     },
 
     "headless-browser": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/headless-browser.md"
+      "mode": "subagent"
     },
 
     "kubernetes": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/kubernetes.md"
+      "mode": "subagent"
     },
 
     "nest": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/nest.md"
+      "mode": "subagent"
     },
 
     "php": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/php.md"
+      "mode": "subagent"
     },
 
     "ruby-on-rails": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/ruby.md"
+      "mode": "subagent"
     },
 
     "springboot": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/springboot.md"
+      "mode": "subagent"
     },
 
     "nodejs": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/nodejs-express-angular.md"
+      "mode": "subagent"
     },
 
     "wordpress": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/wordpress.md"
+      "mode": "subagent"
     },
 
     "prestashop": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/prestashop.md"
+      "mode": "subagent"
     },
 
     "moodle": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/moodle.md"
+      "mode": "subagent"
     },
 
     "magento": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/magento.md"
+      "mode": "subagent"
     },
 
     "joomla": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/joomla.md"
+      "mode": "subagent"
     },
 
     "drupal": {
       "model": "$FINAL_MODEL",
-      "mcp": ["darkmoon"],
-      "secondary": true,
-      "prompt_file": "/root/.opencode/agents/drupal.md"
+      "mode": "subagent"
     }
   }
 }
 EOF
 
 echo "✅ OpenCode config written to $OPENCODE_CONFIG_FILE"
+
+# Compatibility with a customised orchestrator from before the native dispatch. The orchestrator now takes its
+# sub-agents from the task tool's own list (opencode lists every "subagent" with its description) and never reads agent
+# files. An older pentest.md, customised by the user (darkmoon-settings/agents overrides the shipped agent,
+# conf/agents-overlay.py) or still in place under an old docker-compose.yml, reads each agent's "prompt_file" from the
+# "agent" map of opencode.json. That key is then restored there (only that one, only in this case) so it keeps
+# dispatching exactly as before the update; the start log says what to merge. Strict OpenAI-compatible endpoints
+# (Azure AI Foundry) reject the key, as they did before.
+DARKMOON_AGENTS_DIR="${DARKMOON_AGENTS_DIR:-/root/.opencode/agents}"
+if [ -f "$DARKMOON_AGENTS_DIR/pentest.md" ] && grep -q "entry in opencode.json" "$DARKMOON_AGENTS_DIR/pentest.md"; then
+  python3 - "$OPENCODE_CONFIG_FILE" "$DARKMOON_AGENTS_DIR" <<'COMPATEOF'
+import json, os, re, sys
+cfg_path, agents_dir = sys.argv[1], sys.argv[2]
+files = {}
+for f in sorted(os.listdir(agents_dir)):
+    if not f.endswith(".md"):
+        continue
+    text = open(os.path.join(agents_dir, f), encoding="utf-8", errors="replace").read().replace("\r\n", "\n")
+    name = f[:-3]
+    if text.startswith("---") and text[3:4] != "-":        # opencode's name for the file: front-matter name, else file
+        m = re.search(r"^name:\s*(\S+)\s*$", text[3:].split("\n---", 1)[0], re.M)
+        name = m.group(1) if m else name
+    files[name] = os.path.join(agents_dir, f)
+cfg = json.load(open(cfg_path))
+for name, block in cfg.get("agent", {}).items():
+    if name in files:
+        block["prompt_file"] = files[name]
+with open(cfg_path, "w") as fh:
+    json.dump(cfg, fh, indent=2)
+    fh.write("\n")
+COMPATEOF
+  log "WARNING: the pentest.md in use predates the native agent dispatch (customised in darkmoon-settings/agents, or an old docker-compose.yml): compatibility mode, \"prompt_file\" kept in opencode.json. Merge the shipped /opt/darkmoon/default-agents/pentest.md into yours (sub-agents now come from the task tool's own list, no agent file is read); strict endpoints (Azure AI Foundry) reject the key until then"
+fi
 
 # TUI config (opencode >= 1.19): the Darkmoon Terminal Explorer, a read-only TUI plugin that browses the local
 # projects, campaigns, findings, reports and attack paths (/explore; no model call). Community reads the local

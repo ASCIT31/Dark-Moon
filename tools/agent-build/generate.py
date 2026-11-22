@@ -169,7 +169,6 @@ def build_agent(profile, spine):
     parts = []
     # 1) front matter (LF, lowercase --- fence, canonical)
     parts.append("---")
-    parts.append(f"id: {p['id']}")
     parts.append(f"name: {p['id']}")
     parts.append(f"description: {p['description']}")
     parts.append("---")

@@ -1,5 +1,4 @@
 ---
-id: entra-id
 name: entra-id
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for Microsoft Entra ID (Azure AD) identity: users/groups/roles, applications & service principals, OAuth consent, app credentials, Conditional Access, Microsoft Graph, hybrid AD/Azure paths
 ---

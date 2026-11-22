@@ -1,5 +1,4 @@
 ---
-id: firmware
 name: firmware
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for embedded / IoT firmware and devices (firmware image extraction, hardcoded credentials & secrets, backdoors, embedded web/CGI/LuCI interfaces, insecure network services, outdated components — OpenWrt/BusyBox/Dropbear/uhttpd class devices)
 ---

@@ -21,6 +21,9 @@ WORKFLOWS_DIR="/opt/darkmoon/mcp/server/src/tools/workflows/"
 OPENCODE_CONFIG_FILE="/root/.config/opencode/opencode.json"
 OPENCODE_AUTH_FILE="/root/.local/share/opencode/auth.json"
 APPLY_SCRIPT="/root/conf/apply-settings.sh"
+AGENTS_OVERLAY="/root/.config/opencode/agents"
+AGENTS_OVERLAY_SCRIPT="/root/conf/agents-overlay.py"
+AGENTS_SHIPPED="/opt/darkmoon/agents-shipped.sha256"
 
 #######################################
 # Sanity checks
@@ -32,9 +35,20 @@ APPLY_SCRIPT="/root/conf/apply-settings.sh"
 #######################################
 log "Preparing directories"
 mkdir -p \
-  "$AGENTS_DIR" \
   "$(dirname "$OPENCODE_CONFIG_FILE")" \
   "$(dirname "$OPENCODE_AUTH_FILE")"
+
+#######################################
+# Agents: image + user overlay (VOLUME-SAFE)
+#######################################
+# Shipped agents come from the image; darkmoon-settings/agents (= $AGENTS_OVERLAY) holds only the agents the user added
+# or customised, which replace the shipped ones of the same name. $AGENTS_DIR is rebuilt from both at every start
+# (conf/agents-overlay.py). Before apply-settings, which looks at the orchestrator in place (compatibility mode for a
+# customised orchestrator from before the native agent dispatch).
+log "Composing agents (image + darkmoon-settings/agents)"
+python3 "$AGENTS_OVERLAY_SCRIPT" "$DEFAULT_AGENTS" "$AGENTS_OVERLAY" "$AGENTS_DIR" "$AGENTS_SHIPPED" \
+  || log "WARNING: agent setup incomplete (see above)"
+[ -f "$AGENTS_DIR/pentest.md" ] || fatal "Failed to seed agents (no pentest.md in $AGENTS_DIR)"
 
 #######################################
 # Apply OpenCode config (ALWAYS)
@@ -49,25 +63,6 @@ env | grep -E 'OPENROUTER_|OPENCODE_|AZURE_' | sed -E 's/^([^=]*(KEY|TOKEN|SECRE
 
 if ! "$APPLY_SCRIPT"; then
   fatal "apply-settings failed"
-fi
-
-#######################################
-# Seed agents (VOLUME-SAFE)
-#######################################
-log "Checking agents directory"
-
-mkdir -p "$AGENTS_DIR"
-
-if [ -z "$(ls -A "$AGENTS_DIR" 2>/dev/null)" ]; then
-  log "Agents dir empty → seeding from image"
-
-  if ! cp -a "$DEFAULT_AGENTS/." "$AGENTS_DIR/"; then
-    fatal "Failed to seed agents"
-  fi
-
-  log "Agents seeded successfully"
-else
-  log "Agents dir already populated → skip"
 fi
 
 #######################################

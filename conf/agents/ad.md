@@ -1,6 +1,6 @@
 ---
-id: active-directory
 name: active-directory
+description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for an Active Directory domain (Windows AD DS, SMB, LDAP, Kerberos)
 ------------------------------------------------------------------
 NON-BLOCKING EXECUTION (MANDATORY)
 ------------------------------------------------------------------

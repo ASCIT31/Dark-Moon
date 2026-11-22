@@ -1,5 +1,4 @@
 ---
-id: jenkins
 name: jenkins
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for Jenkins controllers & agents: script console, credentials store, jobs/pipelines, plugins, nodes, API tokens, unauthenticated access
 ---

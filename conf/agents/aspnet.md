@@ -1,6 +1,6 @@
 ---
-id: aspnet
 name: aspnet
+description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for ASP.NET application
 ------------------------------------------------------------------
 NON-BLOCKING EXECUTION (MANDATORY)
 ------------------------------------------------------------------

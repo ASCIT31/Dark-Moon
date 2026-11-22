@@ -1,5 +1,4 @@
 ---
-id: golang
 name: golang
 description: Fully autonomous pentest sub agent using MCP-backed fastcmp toolbox for Go (Gin / Echo / Fiber / Beego / net-http) web applications
 ---
