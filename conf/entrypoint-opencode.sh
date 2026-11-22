@@ -21,6 +21,9 @@ WORKFLOWS_DIR="/opt/darkmoon/mcp/server/src/tools/workflows/"
 OPENCODE_CONFIG_FILE="/root/.config/opencode/opencode.json"
 OPENCODE_AUTH_FILE="/root/.local/share/opencode/auth.json"
 APPLY_SCRIPT="/root/conf/apply-settings.sh"
+AGENTS_OVERLAY="/root/.config/opencode/agents"
+AGENTS_OVERLAY_SCRIPT="/root/conf/agents-overlay.py"
+AGENTS_SHIPPED="/opt/darkmoon/agents-shipped.sha256"
 
 #######################################
 # Sanity checks
@@ -32,9 +35,20 @@ APPLY_SCRIPT="/root/conf/apply-settings.sh"
 #######################################
 log "Preparing directories"
 mkdir -p \
-  "$AGENTS_DIR" \
   "$(dirname "$OPENCODE_CONFIG_FILE")" \
   "$(dirname "$OPENCODE_AUTH_FILE")"
+
+#######################################
+# Agents: image + user overlay (VOLUME-SAFE)
+#######################################
+# Shipped agents come from the image; darkmoon-settings/agents (= $AGENTS_OVERLAY) holds only the agents the user added
+# or customised, which replace the shipped ones of the same name. $AGENTS_DIR is rebuilt from both at every start
+# (conf/agents-overlay.py). Before apply-settings, which looks at the orchestrator in place (compatibility mode for a
+# customised orchestrator from before the agent registry).
+log "Composing agents (image + darkmoon-settings/agents)"
+python3 "$AGENTS_OVERLAY_SCRIPT" "$DEFAULT_AGENTS" "$AGENTS_OVERLAY" "$AGENTS_DIR" "$AGENTS_SHIPPED" \
+  || log "WARNING: agent setup incomplete (see above)"
+[ -f "$AGENTS_DIR/pentest.md" ] || fatal "Failed to seed agents (no pentest.md in $AGENTS_DIR)"
 
 #######################################
 # Apply OpenCode config (ALWAYS)
@@ -50,40 +64,6 @@ env | grep -E 'OPENROUTER_|OPENCODE_|AZURE_' | sed -E 's/^([^=]*(KEY|TOKEN|SECRE
 if ! "$APPLY_SCRIPT"; then
   fatal "apply-settings failed"
 fi
-
-#######################################
-# Seed agents (VOLUME-SAFE)
-#######################################
-log "Checking agents directory"
-
-mkdir -p "$AGENTS_DIR"
-
-if [ -z "$(ls -A "$AGENTS_DIR" 2>/dev/null)" ]; then
-  log "Agents dir empty → seeding from image"
-
-  if ! cp -a "$DEFAULT_AGENTS/." "$AGENTS_DIR/"; then
-    fatal "Failed to seed agents"
-  fi
-
-  log "Agents seeded successfully"
-else
-  log "Agents dir already populated → skip"
-fi
-
-# >>> agents-registry-upgrade (mcp/tests/test_agents_registry_upgrade.py)
-# The agents directory is seeded once and kept across image updates. A set seeded before the Darkmoon agent registry
-# (darkmoon-agents.json) has an orchestrator that looks for the agent files in opencode.json, which no longer lists
-# them, and front-matter "id:" keys that opencode sends to the model as call options (strict endpoints reject the
-# request). Such a set is refreshed from the image once; every previous file is kept in a backup next to opencode.json.
-if [ -f "$AGENTS_DIR/pentest.md" ] && grep -q "entry in opencode.json" "$AGENTS_DIR/pentest.md"; then
-  AGENTS_BACKUP="$(dirname "$OPENCODE_CONFIG_FILE")/agents-backup-$(date '+%Y%m%d-%H%M%S')"
-  if mkdir -p "$AGENTS_BACKUP" && cp -a "$AGENTS_DIR/." "$AGENTS_BACKUP/" && cp -a "$DEFAULT_AGENTS/." "$AGENTS_DIR/"; then
-    log "Agents seeded before the agent registry → refreshed from the image (previous files kept in $AGENTS_BACKUP)"
-  else
-    log "WARNING: could not refresh the agents seeded before the agent registry: copy $DEFAULT_AGENTS into $AGENTS_DIR"
-  fi
-fi
-# <<< agents-registry-upgrade
 
 #######################################
 # Seed workflows (VOLUME-SAFE)

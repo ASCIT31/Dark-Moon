@@ -558,6 +558,28 @@ cat > "$DARKMOON_AGENTS_FILE" <<'REGEOF'
 }
 REGEOF
 
+# Compatibility with a customised orchestrator from before the agent registry. A pentest.md the user customised is kept
+# (darkmoon-settings/agents overrides the shipped agent, conf/agents-overlay.py), and an old one still reads each agent's
+# "prompt_file" from the "agent" map of opencode.json. That key is then restored there (only that one, only in this case)
+# so the user's orchestrator keeps dispatching exactly as before the update; the start log says what to merge. Strict
+# OpenAI-compatible endpoints (Azure AI Foundry) reject the key, as they did before the registry.
+DARKMOON_AGENTS_DIR="${DARKMOON_AGENTS_DIR:-/root/.opencode/agents}"
+if [ -f "$DARKMOON_AGENTS_DIR/pentest.md" ] && grep -q "entry in opencode.json" "$DARKMOON_AGENTS_DIR/pentest.md"; then
+  python3 - "$OPENCODE_CONFIG_FILE" "$DARKMOON_AGENTS_FILE" <<'COMPATEOF'
+import json, sys
+cfg_path, reg_path = sys.argv[1], sys.argv[2]
+cfg = json.load(open(cfg_path))
+reg = json.load(open(reg_path))["agents"]
+for name, block in cfg.get("agent", {}).items():
+    if name in reg:
+        block["prompt_file"] = reg[name]["prompt_file"]
+with open(cfg_path, "w") as fh:
+    json.dump(cfg, fh, indent=2)
+    fh.write("\n")
+COMPATEOF
+  log "WARNING: the pentest.md in use predates the agent registry (customised in darkmoon-settings/agents, or an old docker-compose.yml): compatibility mode, \"prompt_file\" kept in opencode.json. Merge the shipped /opt/darkmoon/default-agents/pentest.md into darkmoon-settings/agents/pentest.md (the registry is now darkmoon-agents.json); strict endpoints (Azure AI Foundry) reject the key until then"
+fi
+
 # TUI config (opencode >= 1.19): the Darkmoon Terminal Explorer, a read-only TUI plugin that browses the local
 # projects, campaigns, findings, reports and attack paths (/explore; no model call). Community reads the local
 # store through darkmoon_explore.py; evidence is masked before display, or withheld if it cannot be masked.
