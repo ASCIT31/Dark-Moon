@@ -52,3 +52,13 @@ jobs:
       - name: Run the core tests in the pinned bun image
         working-directory: conf/plugins/darkmoon-explorer
         run: docker run --rm -v "$PWD":/w:ro -w /w oven/bun:1.4.4@sha256:1d22548f177f4ff38e0c15baa3c2c46c6c2060ba2d1bc573bb4720b407548f1d bun test core.test.ts
+
+  installer:
+    name: install.sh re-install warning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Re-install asks before deleting user data
+        run: bash tools/install-tests/test-reinstall-warning.sh
