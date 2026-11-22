@@ -9,6 +9,7 @@ listed once. These tests run the real script, the real apply-settings.sh and rea
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -95,7 +96,7 @@ def test_customised_pre_registry_orchestrator_is_explained(env):
     seed_old_install(env, **{"pentest.md": mine})
     out = run(env)
     assert (env["runtime"] / "pentest.md").read_bytes() == mine
-    assert "darkmoon-agents.json" in out and "compatibility mode" in out
+    assert "no agent registry" in out and "task tool's own list" in out and "compatibility mode" in out
 
 
 def test_user_added_agent_is_never_touched_and_runs(env):
@@ -215,8 +216,8 @@ def test_image_and_entrypoint_wiring():
 
 def _apply(tmp_path, pentest_text):
     agents = tmp_path / "agents"
-    agents.mkdir()
-    (agents / "pentest.md").write_text(pentest_text)
+    shutil.copytree(AGENTS, agents)                             # the runtime directory: shipped agents ...
+    (agents / "pentest.md").write_text(pentest_text)            # ... with this orchestrator
     script = (ROOT / "conf" / "apply-settings.sh").read_text() \
         .replace('OPENCODE_CONFIG_DIR="/root/.config/opencode"', f'OPENCODE_CONFIG_DIR="{tmp_path}/cfg"') \
         .replace('OPENCODE_AUTH_DIR="/root/.local/share/opencode"', f'OPENCODE_AUTH_DIR="{tmp_path}/share"')
@@ -231,10 +232,13 @@ def _apply(tmp_path, pentest_text):
 
 def test_customised_pre_registry_orchestrator_still_finds_its_agents(tmp_path):
     cfg, out = _apply(tmp_path, OLD_PENTEST + "my house rule\n")
-    reg = json.loads((tmp_path / "cfg" / "darkmoon-agents.json").read_text())["agents"]
+    agents = tmp_path / "agents"
     for name, block in cfg["agent"].items():
-        assert block["prompt_file"] == reg[name]["prompt_file"], name
-        assert set(block) == {"model", "mode", "prompt_file"}       # only the key the old orchestrator reads
+        assert set(block) == {"model", "mode", "prompt_file"}, name    # only the key the old orchestrator reads
+        assert Path(block["prompt_file"]).is_file() and Path(block["prompt_file"]).parent == agents
+    assert cfg["agent"]["active-directory"]["prompt_file"].endswith("/ad.md")
+    assert cfg["agent"]["nodejs"]["prompt_file"].endswith("/nodejs-express-angular.md")
+    assert cfg["agent"]["kubernetes"]["prompt_file"].endswith("/kubernetes.md")
     assert "compatibility mode" in out
 
 

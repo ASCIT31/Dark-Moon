@@ -3,8 +3,6 @@ set -euo pipefail
 
 OPENCODE_CONFIG_DIR="/root/.config/opencode"
 OPENCODE_CONFIG_FILE="$OPENCODE_CONFIG_DIR/opencode.json"
-# Darkmoon agent registry (agent id -> agent file), read by the orchestrator; written below
-DARKMOON_AGENTS_FILE="$OPENCODE_CONFIG_DIR/darkmoon-agents.json"
 
 OPENCODE_AUTH_DIR="/root/.local/share/opencode"
 OPENCODE_AUTH_FILE="$OPENCODE_AUTH_DIR/auth.json"
@@ -493,91 +491,37 @@ EOF
 
 echo "✅ OpenCode config written to $OPENCODE_CONFIG_FILE"
 
-# Darkmoon agent registry: which file holds each agent's playbook. The orchestrator (pentest.md, PHASES 1 and 6) reads
-# it to enumerate the agents and to inline the right file when it dispatches one; the agent id and the file name differ
-# for some agents (active-directory -> ad.md, nodejs -> nodejs-express-angular.md, ...). It is Darkmoon's own data, so it
-# lives here and never in opencode.json: opencode keeps every unknown key of an agent block as a model call option, and
-# strict OpenAI-compatible endpoints (Azure AI Foundry) reject the request ("Unrecognized request argument supplied").
-# opencode itself loads the same files natively from /root/.opencode/agents. Same agent set as the "agent" map above
-# (mcp/tests/test_agent_native_keys.py).
-cat > "$DARKMOON_AGENTS_FILE" <<'REGEOF'
-{
-  "agents": {
-    "pentest": { "prompt_file": "/root/.opencode/agents/pentest.md" },
-    "aws": { "prompt_file": "/root/.opencode/agents/aws.md" },
-    "azure": { "prompt_file": "/root/.opencode/agents/azure.md" },
-    "entra-id": { "prompt_file": "/root/.opencode/agents/entra-id.md" },
-    "gcp": { "prompt_file": "/root/.opencode/agents/gcp.md" },
-    "github": { "prompt_file": "/root/.opencode/agents/github.md" },
-    "gitlab": { "prompt_file": "/root/.opencode/agents/gitlab.md" },
-    "jenkins": { "prompt_file": "/root/.opencode/agents/jenkins.md" },
-    "terraform": { "prompt_file": "/root/.opencode/agents/terraform.md" },
-    "ansible": { "prompt_file": "/root/.opencode/agents/ansible.md" },
-    "docker": { "prompt_file": "/root/.opencode/agents/docker.md" },
-    "container-registry": { "prompt_file": "/root/.opencode/agents/container-registry.md" },
-    "hashicorp-vault": { "prompt_file": "/root/.opencode/agents/hashicorp-vault.md" },
-    "sql-databases": { "prompt_file": "/root/.opencode/agents/sql-databases.md" },
-    "messaging-cache": { "prompt_file": "/root/.opencode/agents/messaging-cache.md" },
-    "firmware": { "prompt_file": "/root/.opencode/agents/firmware.md" },
-    "sso-idp": { "prompt_file": "/root/.opencode/agents/sso-idp.md" },
-    "gitops": { "prompt_file": "/root/.opencode/agents/gitops.md" },
-    "observability": { "prompt_file": "/root/.opencode/agents/observability.md" },
-    "storage": { "prompt_file": "/root/.opencode/agents/storage.md" },
-    "edge-proxy": { "prompt_file": "/root/.opencode/agents/edge-proxy.md" },
-    "vpn-remote-access": { "prompt_file": "/root/.opencode/agents/vpn-remote-access.md" },
-    "firewall-network": { "prompt_file": "/root/.opencode/agents/firewall-network.md" },
-    "email-infrastructure": { "prompt_file": "/root/.opencode/agents/email-infrastructure.md" },
-    "backup": { "prompt_file": "/root/.opencode/agents/backup.md" },
-    "pki-adcs": { "prompt_file": "/root/.opencode/agents/pki-adcs.md" },
-    "nosql-databases": { "prompt_file": "/root/.opencode/agents/nosql-databases.md" },
-    "container-platform": { "prompt_file": "/root/.opencode/agents/container-platform.md" },
-    "hypervisor": { "prompt_file": "/root/.opencode/agents/hypervisor.md" },
-    "business-platforms": { "prompt_file": "/root/.opencode/agents/business-platforms.md" },
-    "mobile": { "prompt_file": "/root/.opencode/agents/mobile.md" },
-    "mdm": { "prompt_file": "/root/.opencode/agents/mdm.md" },
-    "active-directory": { "prompt_file": "/root/.opencode/agents/ad.md" },
-    "aspnet": { "prompt_file": "/root/.opencode/agents/aspnet.md" },
-    "python-flask": { "prompt_file": "/root/.opencode/agents/flask.md" },
-    "graphql": { "prompt_file": "/root/.opencode/agents/graphql.md" },
-    "llm": { "prompt_file": "/root/.opencode/agents/llm.md" },
-    "golang": { "prompt_file": "/root/.opencode/agents/golang.md" },
-    "headless-browser": { "prompt_file": "/root/.opencode/agents/headless-browser.md" },
-    "kubernetes": { "prompt_file": "/root/.opencode/agents/kubernetes.md" },
-    "nest": { "prompt_file": "/root/.opencode/agents/nest.md" },
-    "php": { "prompt_file": "/root/.opencode/agents/php.md" },
-    "ruby-on-rails": { "prompt_file": "/root/.opencode/agents/ruby.md" },
-    "springboot": { "prompt_file": "/root/.opencode/agents/springboot.md" },
-    "nodejs": { "prompt_file": "/root/.opencode/agents/nodejs-express-angular.md" },
-    "wordpress": { "prompt_file": "/root/.opencode/agents/wordpress.md" },
-    "prestashop": { "prompt_file": "/root/.opencode/agents/prestashop.md" },
-    "moodle": { "prompt_file": "/root/.opencode/agents/moodle.md" },
-    "magento": { "prompt_file": "/root/.opencode/agents/magento.md" },
-    "joomla": { "prompt_file": "/root/.opencode/agents/joomla.md" },
-    "drupal": { "prompt_file": "/root/.opencode/agents/drupal.md" }
-  }
-}
-REGEOF
-
-# Compatibility with a customised orchestrator from before the agent registry. A pentest.md the user customised is kept
-# (darkmoon-settings/agents overrides the shipped agent, conf/agents-overlay.py), and an old one still reads each agent's
-# "prompt_file" from the "agent" map of opencode.json. That key is then restored there (only that one, only in this case)
-# so the user's orchestrator keeps dispatching exactly as before the update; the start log says what to merge. Strict
-# OpenAI-compatible endpoints (Azure AI Foundry) reject the key, as they did before the registry.
+# Compatibility with a customised orchestrator from before the native dispatch. The orchestrator now takes its
+# sub-agents from the task tool's own list (opencode lists every "subagent" with its description) and never reads agent
+# files. An older pentest.md, customised by the user (darkmoon-settings/agents overrides the shipped agent,
+# conf/agents-overlay.py) or still in place under an old docker-compose.yml, reads each agent's "prompt_file" from the
+# "agent" map of opencode.json. That key is then restored there (only that one, only in this case) so it keeps
+# dispatching exactly as before the update; the start log says what to merge. Strict OpenAI-compatible endpoints
+# (Azure AI Foundry) reject the key, as they did before.
 DARKMOON_AGENTS_DIR="${DARKMOON_AGENTS_DIR:-/root/.opencode/agents}"
 if [ -f "$DARKMOON_AGENTS_DIR/pentest.md" ] && grep -q "entry in opencode.json" "$DARKMOON_AGENTS_DIR/pentest.md"; then
-  python3 - "$OPENCODE_CONFIG_FILE" "$DARKMOON_AGENTS_FILE" <<'COMPATEOF'
-import json, sys
-cfg_path, reg_path = sys.argv[1], sys.argv[2]
+  python3 - "$OPENCODE_CONFIG_FILE" "$DARKMOON_AGENTS_DIR" <<'COMPATEOF'
+import json, os, re, sys
+cfg_path, agents_dir = sys.argv[1], sys.argv[2]
+files = {}
+for f in sorted(os.listdir(agents_dir)):
+    if not f.endswith(".md"):
+        continue
+    text = open(os.path.join(agents_dir, f), encoding="utf-8", errors="replace").read().replace("\r\n", "\n")
+    name = f[:-3]
+    if text.startswith("---") and text[3:4] != "-":        # opencode's name for the file: front-matter name, else file
+        m = re.search(r"^name:\s*(\S+)\s*$", text[3:].split("\n---", 1)[0], re.M)
+        name = m.group(1) if m else name
+    files[name] = os.path.join(agents_dir, f)
 cfg = json.load(open(cfg_path))
-reg = json.load(open(reg_path))["agents"]
 for name, block in cfg.get("agent", {}).items():
-    if name in reg:
-        block["prompt_file"] = reg[name]["prompt_file"]
+    if name in files:
+        block["prompt_file"] = files[name]
 with open(cfg_path, "w") as fh:
     json.dump(cfg, fh, indent=2)
     fh.write("\n")
 COMPATEOF
-  log "WARNING: the pentest.md in use predates the agent registry (customised in darkmoon-settings/agents, or an old docker-compose.yml): compatibility mode, \"prompt_file\" kept in opencode.json. Merge the shipped /opt/darkmoon/default-agents/pentest.md into darkmoon-settings/agents/pentest.md (the registry is now darkmoon-agents.json); strict endpoints (Azure AI Foundry) reject the key until then"
+  log "WARNING: the pentest.md in use predates the native agent dispatch (customised in darkmoon-settings/agents, or an old docker-compose.yml): compatibility mode, \"prompt_file\" kept in opencode.json. Merge the shipped /opt/darkmoon/default-agents/pentest.md into yours (sub-agents now come from the task tool's own list, no agent file is read); strict endpoints (Azure AI Foundry) reject the key until then"
 fi
 
 # TUI config (opencode >= 1.19): the Darkmoon Terminal Explorer, a read-only TUI plugin that browses the local

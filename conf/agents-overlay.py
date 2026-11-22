@@ -6,8 +6,8 @@ Layout (docker-compose.yml):
   overlay  /root/.config/opencode/agents  = darkmoon-settings/agents on the host: ONLY the agents the user added or
                                           customised. A file named like a shipped one replaces it; any other is added.
   runtime  /root/.opencode/agents         container filesystem, rebuilt at every start = image + overlay. opencode loads
-                                          it after the overlay (~/.opencode comes after ~/.config/opencode), and the
-                                          Darkmoon agent registry (darkmoon-agents.json) points the orchestrator at it.
+                                          it after the overlay (~/.opencode comes after ~/.config/opencode), so a
+                                          customised agent wins; the task tool lists every agent from it.
 Shipped agents are never copied into darkmoon-settings, so an update can never leave a stale shipped file behind.
 
 One-time migration of an install from before the overlay (the old docker-compose.yml mounted darkmoon-settings/agents
@@ -28,7 +28,7 @@ import sys
 import time
 
 MARKER = ".darkmoon-agents-overlay"          # in the overlay's parent (darkmoon-settings): migration done
-PRE_REGISTRY_MARK = b"entry in opencode.json"  # orchestrator from before the agent registry (darkmoon-agents.json)
+PRE_REGISTRY_MARK = b"entry in opencode.json"  # orchestrator from before the native dispatch (reads prompt_file)
 
 
 def log(msg):
@@ -86,9 +86,10 @@ def notes_for(overlay, names):
         try:
             if name == "pentest.md" and PRE_REGISTRY_MARK in open(path, "rb").read():
                 lines += [
-                    "pentest.md: your orchestrator predates the Darkmoon agent registry. The registry is now",
-                    "darkmoon-agents.json (next to opencode.json): the shipped pentest.md reads each agent's",
-                    "\"prompt_file\" there, no longer in the \"agent\" map of opencode.json. Until you merge, a",
+                    "pentest.md: your orchestrator predates the native agent dispatch. There is no agent registry",
+                    "any more: the shipped pentest.md takes its sub-agents from the task tool's own list (every",
+                    "installed agent with its description) and never reads an agent file; yours still reads each",
+                    "agent's \"prompt_file\" from opencode.json. Until you merge the shipped version, a",
                     "compatibility mode keeps \"prompt_file\" in opencode.json so your orchestrator still finds the",
                     "agents. Strict OpenAI-compatible endpoints (Azure AI Foundry, Azure OpenAI) reject that key",
                     "(\"Unrecognized request argument supplied: prompt_file\"): with them, merge before running."]

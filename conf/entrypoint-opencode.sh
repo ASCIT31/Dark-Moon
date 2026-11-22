@@ -44,7 +44,7 @@ mkdir -p \
 # Shipped agents come from the image; darkmoon-settings/agents (= $AGENTS_OVERLAY) holds only the agents the user added
 # or customised, which replace the shipped ones of the same name. $AGENTS_DIR is rebuilt from both at every start
 # (conf/agents-overlay.py). Before apply-settings, which looks at the orchestrator in place (compatibility mode for a
-# customised orchestrator from before the agent registry).
+# customised orchestrator from before the native agent dispatch).
 log "Composing agents (image + darkmoon-settings/agents)"
 python3 "$AGENTS_OVERLAY_SCRIPT" "$DEFAULT_AGENTS" "$AGENTS_OVERLAY" "$AGENTS_DIR" "$AGENTS_SHIPPED" \
   || log "WARNING: agent setup incomplete (see above)"

@@ -8,8 +8,8 @@ options into the request body. Darkmoon wrote its own keys into the agent blocks
 
 They now map to opencode's native schema or to Darkmoon's own file:
   primary / secondary   -> "mode": "primary" / "subagent"       (opencode.json)
-  prompt_file           -> darkmoon-agents.json, the Darkmoon agent registry read by the orchestrator; opencode loads
-                           the same files natively from /root/.opencode/agents
+  prompt_file           -> nothing: opencode loads each agent's playbook natively from its file (/root/.opencode/agents),
+                           and the orchestrator takes its sub-agents from the task tool's own list (name + description)
   mcp: ["darkmoon"]     -> nothing per agent: the global "*": "allow" permission already gives every agent the
                            Darkmoon MCP tools (the key had no reader and no effect)
   front-matter id       -> nothing: equal to the native "name" in every file
@@ -54,8 +54,8 @@ def generated(tmp_path_factory):
     p = subprocess.run(["bash", str(s)], env=env, capture_output=True, text=True, timeout=60)
     assert p.returncode == 0, p.stdout + p.stderr
     cfg = json.loads((tmp / "cfg" / "opencode.json").read_text())
-    registry = json.loads((tmp / "cfg" / "darkmoon-agents.json").read_text())
-    return cfg, registry, tmp
+    assert not (tmp / "cfg" / "darkmoon-agents.json").exists()      # no registry: the dispatch is native
+    return cfg, None, tmp
 
 
 def _front_matter_keys(text):
@@ -84,13 +84,13 @@ def test_agent_front_matter_carries_opencode_keys_only():
 
 
 def test_front_matter_is_read_like_opencode():
-    """gray-matter (opencode's parser) needs exactly « --- » to open the block: kubernetes.md's dash rule and its
-    ID / NAME / DESCRIPTION lines are prompt text, not keys (opencode names that agent after the file)."""
+    """gray-matter (opencode's parser) needs exactly « --- » to open the block: a dash rule followed by ID / NAME /
+    DESCRIPTION lines (kubernetes.md's old header, kept as prompt text) is no front matter."""
     assert V.frontmatter("---\nname: a\ndescription: d\n---\nbody") == "name: a\ndescription: d"
     assert V.frontmatter("---\nname: a\n------------\nbody") == "name: a"          # ad.md closes on a dash rule
     assert V.frontmatter("------------\nID: k\nNAME: k\n------------\nbody") == ""
     assert V.frontmatter("---\r\nname: a\r\n---\r\nbody") == "name: a"
-    assert _front_matter_keys((AGENTS / "kubernetes.md").read_text()) == []
+    assert _front_matter_keys((AGENTS / "kubernetes.md").read_text()) == ["name", "description"]
 
 
 def test_validate_rejects_a_non_native_front_matter_key(tmp_path):
@@ -110,21 +110,34 @@ def test_primary_and_subagents_use_the_native_mode(generated):
     assert set(modes.values()) == {"subagent"}, modes  # every other agent is dispatched by the orchestrator (task)
 
 
-def test_registry_maps_every_agent_to_the_file_opencode_loads_under_the_same_name(generated):
-    cfg, registry, _ = generated
-    agents = registry["agents"]
-    assert set(agents) == set(cfg["agent"])
-    for name, entry in agents.items():
-        assert set(entry) == {"prompt_file"}
-        path = entry["prompt_file"]
-        assert path.startswith("/root/.opencode/agents/") and path.endswith(".md"), path
-        f = AGENTS / Path(path).name
-        assert f.is_file(), path
-        # opencode's agent name for a file: its front-matter name, else the file name (config/agent.ts load)
+def _opencode_agents():
+    """{opencode agent name: file} the way opencode names an agent file: front-matter name, else the file name."""
+    out = {}
+    for f in sorted(AGENTS.glob("*.md")):
         m = re.search(r"^name:\s*(\S+)\s*$", V.frontmatter(f.read_text()), re.M)
-        assert (m.group(1) if m else f.stem) == name, f"{f.name} is loaded by opencode as another agent than {name}"
-    assert agents["active-directory"]["prompt_file"].endswith("/ad.md")
-    assert agents["nodejs"]["prompt_file"].endswith("/nodejs-express-angular.md")
+        out[m.group(1) if m else f.stem] = f
+    return out
+
+
+def test_every_declared_agent_has_a_file_opencode_loads_under_the_same_name(generated):
+    """task(subagent_type=<name>) runs the agent file opencode loaded under that name: each block of opencode.json must
+    match one (active-directory -> ad.md, nodejs -> nodejs-express-angular.md, ...)."""
+    cfg, _, _ = generated
+    files = _opencode_agents()
+    assert set(cfg["agent"]) == set(files)
+    assert files["active-directory"].name == "ad.md"
+    assert files["nodejs"].name == "nodejs-express-angular.md"
+
+
+def test_every_subagent_has_a_usable_description_in_its_front_matter():
+    """The task tool lists each sub-agent as « <name>: <description> »; without one opencode writes « This subagent
+    should only be called manually by the user » and the orchestrator cannot tell which plane it covers."""
+    descs = {}
+    for name, f in _opencode_agents().items():
+        m = re.search(r"^description:\s*(\S.{20,})$", V.frontmatter(f.read_text()), re.M)
+        assert m, f"{f.name}: no usable description in its front matter"
+        descs[name] = m.group(1).strip()
+    assert len(set(descs.values())) == len(descs), "two agents share a description"
 
 
 def test_every_agent_keeps_the_darkmoon_mcp_tools(generated):
@@ -137,16 +150,13 @@ def test_every_agent_keeps_the_darkmoon_mcp_tools(generated):
         assert "permission" not in block and "tools" not in block, name
 
 
-def test_the_orchestrator_can_read_the_registry(generated):
-    cfg, _, _ = generated
-    assert cfg["permission"] == {"*": "allow"}                # read included
-    script = SCRIPT.read_text()
-    assert 'OPENCODE_CONFIG_DIR="/root/.config/opencode"' in script
-    assert 'DARKMOON_AGENTS_FILE="$OPENCODE_CONFIG_DIR/darkmoon-agents.json"' in script   # the path pentest.md reads
-    assert "/root/.config/opencode/darkmoon-agents.json" in (AGENTS / "pentest.md").read_text()
+def test_the_orchestrator_dispatches_natively():
+    """No registry and no agent file read: sub-agents come from the task tool's own list and run their own file."""
     text = (AGENTS / "pentest.md").read_text()
-    assert "darkmoon-agents.json" in text and '"prompt_file" value of the sub-agent\'s entry in darkmoon-agents.json' in text
-    assert "entry in opencode.json" not in text
+    assert "darkmoon-agents.json" not in text and "prompt_file" not in text
+    assert "entry in opencode.json" not in text                 # the marker of the old orchestrator (compatibility mode)
+    assert "Available agent types" in text and "subagent_type = the" in text
+    assert "INJECTED BYTE-FOR-BYTE" not in text and "read the agent file" not in text.lower()
 
 
 def test_no_runtime_filter_plugin(generated):
@@ -250,3 +260,12 @@ def test_openai_compatible_request_body_has_no_darkmoon_key(generated):
     for b in bodies:
         leaked = {k for k in b if k.lower() in {"mcp", "primary", "secondary", "prompt_file", "id", "name"}}
         assert not leaked, f"Darkmoon agent keys in the provider request: {sorted(leaked)}"
+    # the native dispatch list the orchestrator reads: every Darkmoon sub-agent, each with its own description
+    task = next(t["function"]["description"] for b in bodies for t in b.get("tools", [])
+                if t.get("function", {}).get("name") == "task")
+    listed = dict(line[2:].split(": ", 1) for line in task.split("Available agent types", 1)[1].splitlines()
+                  if line.startswith("- "))
+    for name, block in cfg["agent"].items():
+        if block["mode"] == "subagent":
+            assert name in listed, f"{name} missing from the task tool list"
+            assert "manually" not in listed[name], f"{name} has no description in the task tool list"

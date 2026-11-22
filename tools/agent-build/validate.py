@@ -73,7 +73,7 @@ def validate(path, banner):
     m_desc = re.search(r"^description:\s*(\S.+)$", fm, re.M)
     # opencode's own agent keys only: an unknown front-matter key (the old « id: ») becomes a model call option, and
     # strict OpenAI-compatible endpoints reject it (« Unrecognized request argument supplied: id »). The agent id is
-    # its « name » (the key of the registry, conf/apply-settings.sh).
+    # its « name » (its key in the "agent" map of conf/apply-settings.sh, and its subagent_type).
     for key in re.findall(r"^([A-Za-z_][\w-]*)\s*:", fm, re.M):
         if key not in OPENCODE_AGENT_KEYS:
             errs.append(f"front-matter key '{key}' is not an opencode agent key")
