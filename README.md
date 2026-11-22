@@ -182,17 +182,17 @@ The screenshots below are the **paid Darkmoon Pro** web dashboard. They are **no
 <table>
 <tr>
 <td colspan="2" valign="top">
-<img src="docs/pics/pro/campaign-map.png" alt="Darkmoon Pro campaign map of the anonymised OWASP Juice Shop campaign: Internet, Edge, Application and Data zones holding 30 assets (target host, open ports, technologies, endpoints, databases), edges labelled contains, stack, endpoint, runs and root, and per-asset finding counts with the Juice Shop Express application carrying 47 findings" />
-<p align="center"><b>Pro: campaign map.</b> Every asset the agents found, placed in its zone (Internet, Edge, Application, Data) and wired with labelled edges (<code>contains</code>, <code>stack</code>, <code>endpoint</code>, <code>runs</code>, <code>root</code>), with the finding count on each asset. Shown here: an anonymised real OWASP Juice Shop campaign, 30 assets and 57 findings.</p>
+<img src="docs/pics/pro/campaign-map.png" alt="Darkmoon Pro campaign map of the anonymised OWASP Juice Shop campaign: Internet, Edge, Application and Data zones holding 43 assets (target host, open ports, technologies, API routes and endpoints, databases), edges labelled contains, stack, endpoint, runs and root, and per-asset finding counts with the Juice Shop Express application carrying 8 findings" />
+<p align="center"><b>Pro: campaign map.</b> Every asset the agents found, placed in its zone (Internet, Edge, Application, Data) and wired with labelled edges (<code>contains</code>, <code>stack</code>, <code>endpoint</code>, <code>runs</code>, <code>root</code>), with the finding count on each asset. Shown here: an anonymised real OWASP Juice Shop campaign, 43 assets and 57 findings.</p>
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/pics/pro/infra-orbital.png" alt="Darkmoon Pro orbital 3D infrastructure map of the OWASP Juice Shop campaign: assets on Internet and Edge, Application and Data rings, with Prometheus Metrics, FTP Directory, SQLite Database, the Juice Shop Express application with 47 findings, JWT Public Key, JWT RS256 and Application Config labelled with their finding counts, and the list of six inferred attack paths in the side rail" />
+<img src="docs/pics/pro/infra-orbital.png" alt="Darkmoon Pro orbital 3D infrastructure map of the OWASP Juice Shop campaign: assets on Internet and Edge, Application and Data rings, with API routes such as /rest/user, /api/Users and /api/Feedbacks, Prometheus Metrics, FTP Directory, Swagger UI, JWT Public Key, Application Config and the Juice Shop Express application with 8 findings labelled with their finding counts, and the list of eleven inferred attack paths and 43 assets in the side rail" />
 <p align="center"><b>Pro: orbital 3D infrastructure map.</b> The same campaign as a three.js scene: assets on Internet / Edge, Application and Data rings, the assets that carry findings labelled with their counts, and the attack paths in the side rail. Renders in the browser and in VR.</p>
 </td>
 <td width="50%" valign="top">
-<img src="docs/pics/pro/attack-paths.png" alt="Darkmoon Pro attack paths view of the OWASP Juice Shop campaign: six possible attack paths marked Inferred in the side rail, an explanation that no path could be proven from the evidence, and the first inferred path drawn as a dashed two-step route on the zoned map" />
+<img src="docs/pics/pro/attack-paths.png" alt="Darkmoon Pro attack paths view of the OWASP Juice Shop campaign: eleven possible attack paths marked Inferred in the side rail, an explanation that no path could be proven from the evidence, and the first inferred path drawn as a dashed three-step route on the zoned map" />
 <p align="center"><b>Pro: attack paths.</b> Paths are labelled by provenance: proven paths come from chained evidence, possible paths are inferred from topology and confirmed findings and are marked <code>Inferred</code>, never shown as proof. The selected path is drawn step by step on the map.</p>
 </td>
 </tr>
