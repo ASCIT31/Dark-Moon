@@ -117,7 +117,7 @@ Le gateway ne refuse donc plus une commande. Quand un placeholder se trouve à u
 - **Usernames** (`USER`) reste **register-only** : pas d'auto-détection depuis du texte libre.
 - Les **credentials en clair** sont désormais auto-détectés dans les sorties d'outil (flag `-p`, `clé: valeur`, en-tête `Authorization`, userinfo d'URI, paire de hashes NT) et enregistrés en `CRED`. Auparavant `CRED` n'avait **aucun** chemin d'enregistrement en production : un mot de passe imprimé par un outil arrivait tel quel dans le contexte du modèle alors que la documentation promettait l'inverse.
 - Un `CRED` est **réinjecté localement** dans une commande dont la destination est la cible protégée — c'est ce qui rend le test authentifié possible sans que le modèle ne détienne jamais le secret. Il n'est jamais restauré dans un sink d'impression, ni à côté d'une destination littérale, ni sans cible protégée nommée dans la même commande, ni dans un paramètre de workflow. `DARKMOON_PRIVACY_CRED_INJECT=0` désactive complètement l'injection.
-- Le **prompt initial de campagne** (`TARGET`/`CREDS`/`TOKEN` fournis au lancement) est actuellement transmis tel quel au modèle : la tokenisation **pré-modèle** du prompt (vault de session partagé entre la couche prompt et le MCP) est un chantier de frontière de confiance planifié, non encore livré. Tant qu'il n'est pas en place, ne pas considérer les secrets passés dans le prompt de lancement comme masqués vis-à-vis d'un fournisseur de modèle cloud.
+- Le **prompt initial de campagne** (`TARGET`/`CREDS`/`TOKEN` fournis au lancement) passe désormais par le plugin `darkmoon-privacy`, qui demande la tokenisation au socket Unix local du MCP et au vault de session partagé avant l'appel au modèle (issue #40). Avec `DARKMOON_PRIVACY` activé (défaut), la tokenisation du prompt activée (défaut) et le fallback fermé (défaut), les valeurs reconnues sont remplacées par des placeholders ; si le socket reste indisponible, le plugin remplace le prompt par un marqueur au lieu de l'envoyer. Ce comportement n'est pas une garantie de détection de toute donnée sensible. `DARKMOON_PRIVACY=0`, `DARKMOON_PROMPT_TOKENIZE=0` ou `DARKMOON_PROMPT_TOKENIZE_FALLBACK=open`/`degrade` désactive cette protection ou autorise explicitement le fallback en clair.
 
 Cœur open-source ; durcissement entreprise (vault scellé par le runtime guard, audit trail, mention conformité dans le rapport signé) en édition Pro.
 
@@ -173,4 +173,4 @@ Darkmoon est :
 - défensif par conception,
 - contrôlé par architecture.
 
-👉 **La sécurité est une contrainte fondatrice, pas un ajout.**
+👉 **La sécurité est une contrainte fondatrice, pas un ajout.**
